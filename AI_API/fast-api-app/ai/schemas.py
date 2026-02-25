@@ -31,7 +31,7 @@ interview_session_schema = {
     "session_report": {
         "session_name": "",
         "basic_details": {
-            "candidate_name": "",
+            "user_name": "",
             "interview_date": "",
             "interview_type": ""
         },

@@ -104,7 +104,7 @@ def export_session_fields(
         )
 
     return {
-        "username": session_obj.user.username
+        "full_name": session_obj.user.full_name
         if session_obj.user
         else None,
         "session_name": session_obj.name,

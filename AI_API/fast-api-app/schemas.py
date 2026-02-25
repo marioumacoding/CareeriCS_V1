@@ -261,7 +261,7 @@ class ReferenceSchema(BaseModel):
     model_config = {"from_attributes": True}
 
 
-class CandidateSchema(BaseModel):
+class UserSchema(BaseModel):
     id: Optional[int]  
     full_name: str
     professional_title: Optional[str]

@@ -42,7 +42,7 @@ def build_session_report_pdf(db: Session, session_id: int):
     
     basic = report_data.get("basic_details", {})
     details_data = [
-        [Paragraph("<b>Candidate Name:</b>", body_style), basic.get("candidate_name")],
+        [Paragraph("<b>Name:</b>", body_style), basic.get("user_name")],
         [Paragraph("<b>Interview Type:</b>", body_style), basic.get("interview_type")],
         [Paragraph("<b>Interview Date:</b>", body_style), basic.get("interview_date") or "N/A"]
     ]

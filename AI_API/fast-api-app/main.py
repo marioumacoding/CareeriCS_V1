@@ -6,6 +6,7 @@ from db.session import engine
 from db.base import Base
 from core.config import settings
 from routers.interview.interview import routers as interview_routers
+from routers.cv.cv import routers as cv_routers
 
 Base.metadata.create_all(bind=engine)
 
@@ -25,4 +26,7 @@ app.add_middleware(
 )
 
 for router in interview_routers:
+    app.include_router(router)
+
+for router in cv_routers:
     app.include_router(router)

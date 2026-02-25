@@ -12,7 +12,7 @@ from services.interview.session_service import (
     get_session_by_id_service,
     delete_session_service,
 )
-from services.interview.session_summary_service import build_session_report_pdf
+from utils.util import build_session_report_pdf
 
 
 router = APIRouter(

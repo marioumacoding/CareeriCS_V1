@@ -25,6 +25,10 @@ env/
 .DS_Store
 Thumbs.db
 
+# Secret files
+appsettings.json
+appsettings.Development.json
+
 # Ignore all build and output directories
 **/bin/
 **/obj/

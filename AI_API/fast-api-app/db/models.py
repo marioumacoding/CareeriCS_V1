@@ -32,8 +32,9 @@ class User(Base):
     linkedin = Column(String)
     portfolio = Column(String)
     summary = Column(Text)
+    username = Column(String)
 
-    password_hash = Column(Text, nullable=False)
+    #password_hash = Column(Text, nullable=False)
 
     created_at = Column(
         DateTime(timezone=True),

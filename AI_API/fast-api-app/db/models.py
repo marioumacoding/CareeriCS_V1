@@ -7,9 +7,11 @@ from sqlalchemy import (
     ForeignKey,
     Text,
     JSON,
+    DateTime,
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import ARRAY
+from sqlalchemy.sql import func
 
 from db.base import Base
 
@@ -30,6 +32,14 @@ class User(Base):
     linkedin = Column(String)
     portfolio = Column(String)
     summary = Column(Text)
+
+    password_hash = Column(Text, nullable=False)
+
+    created_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False
+    )
 
     skills = relationship("Skill", back_populates="user", cascade="all, delete-orphan")
     experiences = relationship("Experience", back_populates="user", cascade="all, delete-orphan")
@@ -184,7 +194,7 @@ class Sentiment(Base):
 class Skill(Base):
     __tablename__ = "skills"
     id = Column(Integer, primary_key=True, index=True)
-    candidate_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     skill_name = Column(String, nullable=False)
     proficiency = Column(String)
 
@@ -197,7 +207,7 @@ class Skill(Base):
 class Experience(Base):
     __tablename__ = "experiences"
     id = Column(Integer, primary_key=True, index=True)
-    candidate_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     role = Column(String, nullable=False)
     organization = Column(String)
     period = Column(String)
@@ -213,7 +223,7 @@ class Experience(Base):
 class Education(Base):
     __tablename__ = "education"
     id = Column(Integer, primary_key=True, index=True)
-    candidate_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     qualification = Column(String)
     institution = Column(String)
     period = Column(String)
@@ -228,7 +238,7 @@ class Education(Base):
 class Certification(Base):
     __tablename__ = "certifications"
     id = Column(Integer, primary_key=True, index=True)
-    candidate_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     title = Column(String)
     organization = Column(String)
     period = Column(String)
@@ -242,7 +252,7 @@ class Certification(Base):
 class Project(Base):
     __tablename__ = "projects"
     id = Column(Integer, primary_key=True, index=True)
-    candidate_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     title = Column(String)
     description = Column(Text)
     role = Column(String)
@@ -258,7 +268,7 @@ class Project(Base):
 class Language(Base):
     __tablename__ = "languages"
     id = Column(Integer, primary_key=True, index=True)
-    candidate_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     language = Column(String)
     proficiency = Column(String)
 
@@ -271,7 +281,7 @@ class Language(Base):
 class Award(Base):
     __tablename__ = "awards"
     id = Column(Integer, primary_key=True, index=True)
-    candidate_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     title = Column(String)
     organization = Column(String)
     date = Column(String)
@@ -286,7 +296,7 @@ class Award(Base):
 class Reference(Base):
     __tablename__ = "references"
     id = Column(Integer, primary_key=True, index=True)
-    candidate_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     name = Column(String)
     role = Column(String)
     organization = Column(String)

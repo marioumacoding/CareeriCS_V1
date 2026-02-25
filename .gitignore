@@ -1,7 +1,7 @@
 ### --- Python / FastAPI --- ###
 AI_API/fast-api-app/.env
-AI_API/answers/
-AI_API/followups/
+AI_API/fast-api-app/answers/
+AI_API/fast-api-app/followups/
 *.pyc
 __pycache__/
 .venv/

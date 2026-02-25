@@ -1,4 +1,36 @@
+### --- Python / FastAPI --- ###
 AI_API/fast-api-app/.env
 AI_API/fast-api-app/answers/
 AI_API/fast-api-app/followups/
 *.pyc
+__pycache__/
+.venv/
+env/
+
+### --- .NET / Visual Studio --- ###
+# This line fixes your "Permission Denied" error:
+.vs/
+
+# Ignore build outputs
+[Bb]in/
+[Oo]bj/
+
+# User-specific and temporary files
+*.user
+*.userres
+*.suo
+*.sln.docstates
+
+### --- General --- ###
+.DS_Store
+Thumbs.db
+
+# Secret files
+appsettings.json
+appsettings.Development.json
+
+# Ignore all build and output directories
+**/bin/
+**/obj/
+**/Debug/
+**/Release/

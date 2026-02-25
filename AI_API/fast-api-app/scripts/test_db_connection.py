@@ -1,5 +1,13 @@
+import os
 import sys
 from dotenv import load_dotenv
+
+# Make the application package importable when running the script directly.
+# This inserts the parent folder (fast-api-app) into sys.path so `core` and `db`
+# modules can be imported.
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if BASE_DIR not in sys.path:
+    sys.path.insert(0, BASE_DIR)
 
 load_dotenv()
 

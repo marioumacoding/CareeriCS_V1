@@ -24,3 +24,9 @@ env/
 ### --- General --- ###
 .DS_Store
 Thumbs.db
+
+# Ignore all build and output directories
+**/bin/
+**/obj/
+**/Debug/
+**/Release/

@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session, joinedload
 
 import db.models as models
 import schemas
-
+from uuid import UUID
 
 # ---------------------
 # Create Session
@@ -24,7 +24,7 @@ def create_session_service(
 # Get Sessions by User
 # ---------------------
 def get_sessions_by_user_service(
-    db: Session, user_id: int
+    db: Session, user_id: UUID
 ) -> List[models.Session]:
 
     sessions = (
@@ -46,7 +46,7 @@ def get_sessions_by_user_service(
 # Get Session by ID
 # ---------------------
 def get_session_by_id_service(
-    db: Session, session_id: int
+    db: Session, session_id: UUID
 ) -> models.Session:
 
     session = db.get(models.Session, session_id)
@@ -64,7 +64,7 @@ def get_session_by_id_service(
 # Delete Session
 # ---------------------
 def delete_session_service(
-    db: Session, session_id: int
+    db: Session, session_id: UUID
 ) -> None:
 
     session = db.get(models.Session, session_id)
@@ -83,7 +83,7 @@ def delete_session_service(
 # Export Session Fields
 # ---------------------
 def export_session_fields(
-    db: Session, session_id: int
+    db: Session, session_id: UUID
 ):
 
     session_obj = (

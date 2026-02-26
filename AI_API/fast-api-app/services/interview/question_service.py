@@ -5,6 +5,7 @@ import db.models as models
 import schemas
 from utils.util import _generate_tts
 from core.config import settings
+from uuid import UUID
 
 
 # -----------------------------
@@ -68,7 +69,7 @@ def get_questions_by_type_service(
 # -----------------------------
 def get_question_service(
     db: DBSession,
-    question_id: int
+    question_id: UUID
 ) -> models.Question:
     question = db.get(models.Question, question_id)
 

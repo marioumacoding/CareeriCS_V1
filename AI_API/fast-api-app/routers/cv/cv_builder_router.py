@@ -1,3 +1,4 @@
+from uuid import UUID
 from fastapi import APIRouter, Depends, Body
 from sqlalchemy.orm import Session
 
@@ -10,7 +11,7 @@ router = APIRouter(prefix="/cv", tags=["CV"])
 
 @router.post("/build/{user_id}")
 def generate_cv(
-    user_id: int,
+    user_id: UUID,
     update_data: dict | None = Body(default=None),
     db: Session = Depends(get_db),
 ):

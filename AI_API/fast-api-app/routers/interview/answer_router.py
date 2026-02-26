@@ -1,3 +1,4 @@
+from uuid import UUID
 from fastapi import APIRouter, Depends, Form, File, UploadFile
 from sqlalchemy.orm import Session
 from dependencies import get_db
@@ -17,8 +18,8 @@ router = APIRouter(
 # ============================================================
 @router.post("/")
 async def submit_answer(
-    session_id: int = Form(...),
-    question_id: int = Form(...),
+    session_id: UUID = Form(...),
+    question_id: UUID = Form(...),
     audio: UploadFile = File(...),
     db: Session = Depends(get_db),
 ):
@@ -35,8 +36,8 @@ async def submit_answer(
 # ============================================================
 @router.post("/evaluate/")
 async def evaluate_answer(
-    session_id: int = Form(...),
-    question_id: int = Form(...),
+    session_id: UUID = Form(...),
+    question_id: UUID = Form(...),
     db: Session = Depends(get_db),
 ):
     return await evaluate_answer_service_wrapper(

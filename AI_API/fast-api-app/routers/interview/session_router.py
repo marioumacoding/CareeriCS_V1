@@ -1,3 +1,4 @@
+from uuid import UUID
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -31,7 +32,7 @@ def create_session(
 
 @router.get("/user/{user_id}", response_model=List[schemas.SessionRead])
 def get_sessions_by_user(
-    user_id: int,
+    user_id: UUID,
     db: Session = Depends(get_db),
 ):
     return get_sessions_by_user_service(db, user_id)
@@ -39,7 +40,7 @@ def get_sessions_by_user(
 
 @router.get("/{session_id}", response_model=schemas.SessionRead)
 def get_session(
-    session_id: int,
+    session_id: UUID,
     db: Session = Depends(get_db),
 ):
     return get_session_by_id_service(db, session_id)
@@ -47,7 +48,7 @@ def get_session(
 
 @router.delete("/{session_id}")
 def delete_session(
-    session_id: int,
+    session_id: UUID,
     db: Session = Depends(get_db),
 ):
     delete_session_service(db, session_id)
@@ -56,7 +57,7 @@ def delete_session(
 
 @router.get("/{session_id}/report")
 def generate_session_report(
-    session_id: int,
+    session_id: UUID,
     db: Session = Depends(get_db),
 ):
     try:

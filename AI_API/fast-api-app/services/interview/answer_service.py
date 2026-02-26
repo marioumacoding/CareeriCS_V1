@@ -3,6 +3,7 @@ from fastapi import HTTPException, UploadFile
 import db.models as models
 from core.config import settings
 from ai.completion import transcribe
+from uuid import UUID
 
 from utils.util import (
     save_uploaded_file, 
@@ -20,8 +21,8 @@ from utils.util import (
 # ============================================================
 async def submit_answer_service(
     db: DBSession,
-    session_id: int,
-    question_id: int,
+    session_id: UUID,
+    question_id: UUID,
     audio: UploadFile,
 ):
 
@@ -67,8 +68,8 @@ async def submit_answer_service(
 # ============================================================
 async def evaluate_answer_service_wrapper(
     db: DBSession,
-    session_id: int,
-    question_id: int,
+    session_id: UUID,
+    question_id: UUID,
 ):
 
     answer = (
@@ -135,7 +136,7 @@ async def evaluate_answer_service_wrapper(
 # FOLLOW-UP HANDLING
 # ======================================================
 
-def _handle_followup(db: DBSession, answer_id: int, followup_text: str):
+def _handle_followup(db: DBSession, answer_id: UUID, followup_text: str):
     """
     Create follow-up question with generated audio.
     """

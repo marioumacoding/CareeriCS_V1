@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, EmailStr
 from typing import Optional, List, Dict
 from uuid import UUID
 
@@ -6,6 +6,7 @@ from uuid import UUID
 # ======================================================
 # USER
 # ======================================================
+
 class UserBase(BaseModel):
     job_title: str
     username: str
@@ -16,14 +17,14 @@ class UserCreate(UserBase):
 
 
 class UserRead(UserBase):
-    id: int
-
+    id: UUID
     model_config = ConfigDict(from_attributes=True)
 
 
 # ======================================================
 # QUESTION
 # ======================================================
+
 class QuestionBase(BaseModel):
     type: str
     question_text: str
@@ -35,14 +36,14 @@ class QuestionCreate(QuestionBase):
 
 
 class QuestionRead(QuestionBase):
-    id: int
-
+    id: UUID
     model_config = ConfigDict(from_attributes=True)
 
 
 # ======================================================
 # SESSION
 # ======================================================
+
 class SessionBase(BaseModel):
     name: str
     type: str
@@ -50,7 +51,7 @@ class SessionBase(BaseModel):
 
 
 class SessionCreate(SessionBase):
-    user_id: int
+    user_id: UUID
 
 
 class SessionUpdate(BaseModel):
@@ -61,124 +62,121 @@ class SessionUpdate(BaseModel):
 
 
 class SessionRead(SessionBase):
-    id: int
-    user_id: int
-
+    id: UUID
+    user_id: UUID
     emotion_evaluation: Optional[Dict] = None
     tone_evaluation: Optional[Dict] = None
     sentiment_evaluation: Optional[Dict] = None
-
     model_config = ConfigDict(from_attributes=True)
 
 
 # ======================================================
 # FOLLOWUP
 # ======================================================
+
 class FollowupBase(BaseModel):
     fquestion_text: str
     fquestion_audio: Optional[str] = None
 
 
 class FollowupCreate(FollowupBase):
-    answer_id: int
+    answer_id: UUID
 
 
 class FollowupRead(FollowupBase):
-    id: int
-    answer_id: int
-
+    id: UUID
+    answer_id: UUID
     model_config = ConfigDict(from_attributes=True)
 
 
 # ======================================================
 # ANSWER
 # ======================================================
+
 class AnswerBase(BaseModel):
     answer_text: Optional[str] = None
     answer_audio: Optional[str] = None
     answer_video: Optional[str] = None
-
     feedback: Optional[str] = None
-    grade: Optional[int] = None
+    grade: Optional[str] = None
     isfollowup: bool = False
-
     emotion_evaluation: Optional[Dict] = None
     tone_evaluation: Optional[Dict] = None
     sentiment_evaluation: Optional[Dict] = None
 
 
 class AnswerCreate(AnswerBase):
-    session_id: int
-    question_id: Optional[int] = None
-    followup_id: Optional[int] = None
+    session_id: UUID
+    question_id: Optional[UUID] = None
+    followup_id: Optional[UUID] = None
 
 
 class AnswerRead(AnswerBase):
-    id: int
-    session_id: int
-    question_id: Optional[int] = None
-    followup_id: Optional[int] = None
-
+    id: UUID
+    session_id: UUID
+    question_id: Optional[UUID] = None
+    followup_id: Optional[UUID] = None
     model_config = ConfigDict(from_attributes=True)
 
 
 # ======================================================
 # EMOTION
 # ======================================================
+
 class EmotionBase(BaseModel):
     name: str
 
 
 class EmotionCreate(EmotionBase):
-    answer_id: int
+    answer_id: UUID
 
 
 class EmotionRead(EmotionBase):
-    id: int
-    answer_id: int
-
+    id: UUID
+    answer_id: UUID
     model_config = ConfigDict(from_attributes=True)
 
 
 # ======================================================
 # TONE
 # ======================================================
+
 class ToneBase(BaseModel):
     name: str
 
 
 class ToneCreate(ToneBase):
-    answer_id: int
+    answer_id: UUID
 
 
 class ToneRead(ToneBase):
-    id: int
-    answer_id: int
-
+    id: UUID
+    answer_id: UUID
     model_config = ConfigDict(from_attributes=True)
 
 
 # ======================================================
 # SENTIMENT
 # ======================================================
+
 class SentimentBase(BaseModel):
     name: str
 
 
 class SentimentCreate(SentimentBase):
-    answer_id: int
+    answer_id: UUID
 
 
 class SentimentRead(SentimentBase):
-    id: int
-    answer_id: int
-
+    id: UUID
+    answer_id: UUID
     model_config = ConfigDict(from_attributes=True)
 
 
 # ======================================================
-# OPTIONAL NESTED RESPONSE MODELS
+# NESTED RESPONSE MODELS
 # ======================================================
+
 class AnswerWithFollowupRead(AnswerRead):
     followup: Optional[FollowupRead] = None
 
@@ -187,82 +185,81 @@ class SessionWithAnswersRead(SessionRead):
     answers: List[AnswerWithFollowupRead] = []
 
 
-from pydantic import BaseModel, EmailStr
-from typing import List, Optional
-from uuid import UUID
-
+# ======================================================
+# USER RELATED SCHEMAS
+# ======================================================
 
 class SkillSchema(BaseModel):
+    id: Optional[UUID] = None
     skill_name: str
     proficiency: Optional[str]
-
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ExperienceSchema(BaseModel):
+    id: Optional[UUID] = None
     role: str
     organization: Optional[str]
     period: Optional[str]
     responsibilities: Optional[List[str]]
     achievements: Optional[str]
-
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 
 class EducationSchema(BaseModel):
+    id: Optional[UUID] = None
     qualification: Optional[str]
     institution: Optional[str]
     period: Optional[str]
     details: Optional[str]
-
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 
 class CertificationSchema(BaseModel):
+    id: Optional[UUID] = None
     title: Optional[str]
     organization: Optional[str]
     period: Optional[str]
-
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ProjectSchema(BaseModel):
+    id: Optional[UUID] = None
     title: Optional[str]
     description: Optional[str]
     role: Optional[str]
     technologies: Optional[List[str]]
     achievements: Optional[str]
-
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 
 class LanguageSchema(BaseModel):
+    id: Optional[UUID] = None
     language: str
     proficiency: Optional[str]
-
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 
 class AwardSchema(BaseModel):
+    id: Optional[UUID] = None
     title: str
     organization: Optional[str]
     date: Optional[str]
     description: Optional[str]
-
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ReferenceSchema(BaseModel):
+    id: Optional[UUID] = None
     name: str
     role: Optional[str]
     organization: Optional[str]
     contact_info: Optional[str]
-
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 
 class UserSchema(BaseModel):
-    id: Optional[int]  
+    id: Optional[UUID] = None
     full_name: str
     professional_title: Optional[str]
     email: Optional[EmailStr]
@@ -280,6 +277,4 @@ class UserSchema(BaseModel):
     languages: Optional[List[LanguageSchema]] = []
     awards: Optional[List[AwardSchema]] = []
     references: Optional[List[ReferenceSchema]] = []
-
-    model_config = {"from_attributes": True}
-
+    model_config = ConfigDict(from_attributes=True)

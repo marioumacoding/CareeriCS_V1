@@ -1,3 +1,4 @@
+from uuid import UUID
 from fastapi import APIRouter, Depends, UploadFile, File
 from sqlalchemy.orm import Session
 
@@ -10,7 +11,7 @@ router = APIRouter(prefix="/cv", tags=["CV"])
 
 @router.post("/upload/{user_id}")
 async def upload_cv(
-    user_id: int,
+    user_id: UUID,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
 ):

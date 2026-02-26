@@ -1,3 +1,4 @@
+from uuid import UUID
 import json
 from sqlalchemy.orm import Session
 
@@ -7,7 +8,7 @@ from ai.completion import deepseek_response
 from ai.prompts import interview_session_fields_prompt
 
 
-def extract_session_data(db: Session, session_id: int):
+def extract_session_data(db: Session, session_id: UUID):
 
     session_json = export_session_fields(db, session_id)
 

@@ -1,5 +1,6 @@
 import os
 import json
+from uuid import UUID
 import tempfile
 from fastapi import HTTPException, UploadFile
 from sqlalchemy.orm import Session
@@ -29,7 +30,7 @@ from utils.util import (
 # Upload CV to DB
 # =========================
 
-def upload_cv_to_db(db: Session, user_id: int, cv_data: dict):
+def upload_cv_to_db(db: Session, user_id: UUID, cv_data: dict):
 
     try:
         with db.begin():
@@ -191,7 +192,7 @@ def process_and_generate_cv(file_path: str, db: Session):
 
 async def handle_cv_upload(
     file: UploadFile,
-    user_id: int,
+    user_id: UUID,
     db: Session
 ):
 

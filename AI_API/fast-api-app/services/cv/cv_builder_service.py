@@ -2,6 +2,7 @@ from fastapi import HTTPException
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session, joinedload
 
+from uuid import UUID
 import schemas
 from db.models import User
 from utils.util import build_cv_pdf
@@ -18,7 +19,7 @@ ALLOWED_UPDATE_FIELDS = {
 
 def generate_user_cv_response(
     db: Session,
-    user_id: int,
+    user_id: UUID,
     update_data: dict | None = None,
 ):
 

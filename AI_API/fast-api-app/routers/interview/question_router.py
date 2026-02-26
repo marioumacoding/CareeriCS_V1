@@ -1,3 +1,4 @@
+from uuid import UUID
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from typing import List
@@ -27,7 +28,7 @@ def get_questions_by_type(question_type: str, db: Session = Depends(get_db)):
 
 
 @router.get("/{question_id}", response_model=schemas.QuestionRead)
-def get_question(question_id: int, db: Session = Depends(get_db)):
+def get_question(question_id: UUID, db: Session = Depends(get_db)):
     return get_question_service(db, question_id)
 
 

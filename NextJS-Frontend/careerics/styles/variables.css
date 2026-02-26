@@ -1,0 +1,26 @@
+
+:root{
+    /*Color Palette*/
+    --bg-color: #0A0A0A;
+    --bg-effect-color: #1560CA; 
+    --form-grey: #3D3D40;
+    --bg-grey: #BABABA;
+    --text-grey: #AAAAAA;
+    --dark-blue: #142143;
+    --meduim-blue: #1C427B;
+    --light-blue: #00B2FF;
+
+    /*Buttons Colors*/
+    --primary-green: #B8EF46;
+    --hover-green: #EEFFCB;
+    --hover-grey: #ACB2D2;
+
+    /*Landing Page Colors*/
+    --phase1-color: #FEF355;
+    --phase2-color: #B5E554;
+    --phase3-color: #52E996;
+    --phase4-color: #1FA1BB;
+    --phase5-color: #1152CA;
+}
+
+

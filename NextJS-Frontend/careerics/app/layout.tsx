@@ -1,16 +1,19 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Jura, Nova_Square } from "next/font/google";
 import { Providers } from "@/providers";
-import "./globals.css";
+import "../styles/globals.scss"; 
+import "../styles/mixins.scss"; 
+import "../styles/variables.css"; 
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const jura = Jura({
   subsets: ["latin"],
+  variable: "--font-jura",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const novaSquare = Nova_Square({
   subsets: ["latin"],
+  weight: "400",
+  variable: "--font-nova-square",
 });
 
 export const metadata: Metadata = {
@@ -29,7 +32,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${jura.variable} ${novaSquare.variable} antialiased`}
       >
         <Providers>
           {children}

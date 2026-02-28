@@ -33,6 +33,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body
         className={`${jura.variable} ${novaSquare.variable} antialiased`}
+        style={{ backgroundColor: "var(--bg-color)" }}
       >
         <Providers>
           {children}

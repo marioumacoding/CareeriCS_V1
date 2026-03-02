@@ -15,6 +15,8 @@ import { NextResponse, type NextRequest } from "next/server";
 const PUBLIC_ROUTES = new Set(["/", "/auth/login", "/auth/register", "/forgot-password"]);
 const AUTH_ROUTES = new Set(["/auth/login", "/auth/register"]);
 const TOKEN_COOKIE = "careerics_token";
+const SKIP_AUTH_LOCAL =
+  process.env.NODE_ENV !== "production" && process.env.SKIP_AUTH_LOCAL === "true";
 
 // ──────────────────────────────────────────────
 // Proxy handler
@@ -24,7 +26,7 @@ export function proxy(request: NextRequest) {
   const token = request.cookies.get(TOKEN_COOKIE)?.value;
 
   // Redirect unauthenticated users to login
-  if (!PUBLIC_ROUTES.has(pathname) && !pathname.startsWith("/api") && !token) {
+  if (!SKIP_AUTH_LOCAL && !PUBLIC_ROUTES.has(pathname) && !pathname.startsWith("/api") && !token) {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = "/auth/login";
     loginUrl.searchParams.set("callbackUrl", pathname);
@@ -32,7 +34,7 @@ export function proxy(request: NextRequest) {
   }
 
   // Redirect logged-in users away from login/register
-  if (AUTH_ROUTES.has(pathname) && token) {
+  if (!SKIP_AUTH_LOCAL && AUTH_ROUTES.has(pathname) && token) {
     const dashUrl = request.nextUrl.clone();
     dashUrl.pathname = "/dashboard";
     return NextResponse.redirect(dashUrl);

@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-
+import Link from "next/link";
 export default function Home() {
   const [signHover, setSignHover] = useState(false);
   const [googleHover, setGoogleHover] = useState(false);
@@ -10,6 +10,8 @@ export default function Home() {
   return (
     <div
       style={{
+        marginBottom: "5rem",
+        marginLeft: "5rem",
         zIndex: 1,
         backgroundColor: "var(--form-grey)",
         padding: "2.5rem",
@@ -31,7 +33,7 @@ export default function Home() {
 
       {/* Email */}
       <div style={{ marginBottom: "1rem" }}>
-        <label style={{ color: "white", fontSize: "1.5rem" }}>Email</label>
+        <label style={{ color: "white", fontSize: "1rem" }}>Email</label>
         <input
           type="email"
           placeholder="Enter your email"
@@ -48,7 +50,7 @@ export default function Home() {
 
       {/* Password */}
       <div style={{ marginBottom: "1rem" }}>
-        <label style={{ color: "white", fontSize: "1.5rem" }}>Password</label>
+        <label style={{ color: "white", fontSize: "1rem" }}>Password</label>
         <input
           type="password"
           placeholder="Enter your password"
@@ -98,7 +100,15 @@ export default function Home() {
         >
           Sign In
         </button>
-
+      <div
+        style={{
+          textAlign: "center",
+          marginTop: "0.6rem",
+          color: "var(--text-grey)",
+        }}
+      >
+        — or —
+      </div>
         <button
           style={{
             flex: 1.3,
@@ -117,21 +127,12 @@ export default function Home() {
           onMouseEnter={() => setGoogleHover(true)}
           onMouseLeave={() => setGoogleHover(false)}
         >
-          <img src="/google.png" alt="Google" style={{ height: 20 }} />
+          <img src="/image 1.png" alt="Google" style={{ height: 20 }} />
           Sign in using Google
         </button>
       </div>
 
-      <div
-        style={{
-          textAlign: "center",
-          margin: "0.5rem 0",
-          color: "var(--text-grey)",
-        }}
-      >
-        — or —
-      </div>
-
+      
       <p
         style={{
           textAlign: "center",
@@ -141,16 +142,18 @@ export default function Home() {
         }}
       >
         Don’t have an account yet?{" "}
-        <span
-          style={{
-            color: registerHover ? "#00cc66" : "white",
-            cursor: "pointer",
-          }}
-          onMouseEnter={() => setRegisterHover(true)}
-          onMouseLeave={() => setRegisterHover(false)}
-        >
-          Register Here
-        </span>
+        <Link href="/auth/register" style={{ textDecoration: "none" }}>
+  <span
+    style={{
+      color: registerHover ? "#00cc66" : "white",
+      cursor: "pointer",
+    }}
+    onMouseEnter={() => setRegisterHover(true)}
+    onMouseLeave={() => setRegisterHover(false)}
+  >
+    Register Here
+  </span>
+</Link>
       </p>
     </div>
   );

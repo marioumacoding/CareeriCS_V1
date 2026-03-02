@@ -10,6 +10,11 @@ export default function AuthLayout({
     <div className="auth-wrapper">
       {children}
 
+      {/* Title Top Right */}
+      <div className="auth-title">
+        Career<span>iCS</span>
+      </div>
+
       {/* Robot SVG bottom-right */}
       <div className="auth-robot">
         <img src="/Sign Robot.svg" alt="Robot" />
@@ -22,6 +27,25 @@ export default function AuthLayout({
           overflow: hidden;
           display: flex;
           align-items: flex-end;
+        }
+
+        .auth-title {
+          position: absolute;
+          top: 2rem;
+          right: 6rem;
+          font-size: 3rem;
+
+          z-index: 2;
+          font-family: var(--font-nova-square);
+          background: radial-gradient(circle at center, white 0%, #999999 100%);
+         -webkit-background-clip: text;
+         -webkit-text-fill-color: transparent;
+         background-clip: text;
+        color: transparent;
+        }
+
+        .auth-title span {
+          font-weight: bold;
         }
 
         .auth-robot {

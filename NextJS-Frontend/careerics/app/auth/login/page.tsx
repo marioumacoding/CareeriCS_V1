@@ -10,8 +10,8 @@ export default function Home() {
   return (
     <div
       style={{
-        marginBottom: "5rem",
-        marginLeft: "5rem",
+        marginBottom: "4rem",
+        marginLeft: "7rem",
         zIndex: 1,
         backgroundColor: "var(--form-grey)",
         padding: "2.5rem",
@@ -38,7 +38,8 @@ export default function Home() {
           type="email"
           placeholder="Enter your email"
           style={{
-            width: "100%",
+            width: "95%",
+            fontFamily: "var(--font-nova-square)",
             padding: "0.6rem",
             marginTop: "0.3rem",
             borderRadius: "6px",
@@ -55,7 +56,8 @@ export default function Home() {
           type="password"
           placeholder="Enter your password"
           style={{
-            width: "100%",
+            width: "95%",
+            fontFamily: "var(--font-nova-square)",
             padding: "0.6rem",
             marginTop: "0.3rem",
             borderRadius: "6px",
@@ -85,8 +87,9 @@ export default function Home() {
           style={{
             flex: 1,
             padding: "0.7rem",
-            borderRadius: "8px",
+            borderRadius: "15px",
             border: "none",
+            fontFamily: "var(--font-nova-square)",
             backgroundColor: signHover
               ? "var(--hover-green)"
               : "var(--primary-green)",
@@ -113,7 +116,7 @@ export default function Home() {
           style={{
             flex: 1.3,
             padding: "0.7rem",
-            borderRadius: "8px",
+            borderRadius: "15px",
             border: "none",
             backgroundColor: googleHover ? "#ACB2D2" : "white",
             cursor: "pointer",
@@ -145,7 +148,7 @@ export default function Home() {
         <Link href="/auth/register" style={{ textDecoration: "none" }}>
   <span
     style={{
-      color: registerHover ? "#00cc66" : "white",
+      color: registerHover ? "#B8EF46" : "white",
       cursor: "pointer",
     }}
     onMouseEnter={() => setRegisterHover(true)}

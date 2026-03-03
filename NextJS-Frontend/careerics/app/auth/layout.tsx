@@ -32,8 +32,8 @@ export default function AuthLayout({
         .auth-title {
           position: absolute;
           top: 2rem;
-          right: 6rem;
-          font-size: 3rem;
+          right: 2rem;
+          font-size: 4rem;
 
           z-index: 2;
           font-family: var(--font-nova-square);

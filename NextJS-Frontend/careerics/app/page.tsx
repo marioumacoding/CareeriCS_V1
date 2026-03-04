@@ -1,43 +1,206 @@
+"use client";
+
 import Link from "next/link";
+import Image from "next/image";
 
 export default function Home() {
   return (
-    <main
+    <div
       style={{
+        width: "100%",
         minHeight: "100vh",
-        backgroundColor: "#1C427B",
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "center",
-        alignItems: "center",
+        backgroundColor: "#050505",
         color: "white",
-        textAlign: "center",
-        padding: "2rem",
-        gap: "2rem",
+        fontFamily: "sans-serif",
       }}
     >
-      <h1>Welcome to CareeriCS</h1>
-
-      <p style={{ maxWidth: "600px", fontSize: "1.2rem" }}>
-        This page uses the global fonts defined in your styles.
-      </p>
-
-      <Link href="/auth/login">
-        <button
+      {/* Navbar */}
+      <div
+        style={{
+          width: "100%",
+          height: 80,
+          background: "#050505",
+          backdropFilter: "blur(50px)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "0 2rem",
+          boxSizing: "border-box",
+        }}
+      >
+        {/* Left: Title */}
+        <div
           style={{
-            padding: "12px 24px",
-            fontSize: "16px",
-            borderRadius: "8px",
-            border: "none",
-            cursor: "pointer",
-            backgroundColor: "#B8EF46",
-            color: "black",
-            fontWeight: "bold",
+            color: "white",
+            fontSize: 44,
+            fontFamily: "Nova Square, sans-serif",
+            fontWeight: 400,
           }}
         >
-          Go to Login
-        </button>
-      </Link>
-    </main>
+          CareeriCS
+        </div>
+
+        {/* Center: Navbar Links */}
+        <div
+          style={{
+            display: "flex",
+            gap: "2rem",
+            alignItems: "center",
+          }}
+        >
+          {["Home", "Toolkit", "Journey Flow"].map((item) => (
+            <div
+              key={item}
+              style={{
+                color: "white",
+                fontSize: 32,
+                fontFamily: "Jura",
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              {item}
+            </div>
+          ))}
+        </div>
+
+        {/* Right: Sign In Button wrapped in Link */}
+        <Link href="/auth/login" style={{ textDecoration: "none" }}>
+          <button
+            style={{
+              width: 150,
+              height: 50,
+              background: "white",
+              borderRadius: 20,
+              fontSize: 20,
+              fontFamily: "Jura, sans-serif",
+              fontWeight: 700,
+              color: "#1E1E1E",
+              cursor: "pointer",
+            }}
+          >
+            Sign In
+          </button>
+        </Link>
+      </div>
+
+      {/* Optional main content */}
+      <div style={{ marginTop: "5rem", textAlign: "center" }}>
+        <p style={{ // Choose from our various features 
+color: 'white', fontSize: 48, fontFamily: 'Jura', fontWeight: '700', wordWrap: 'break-word' }}>Choose from our various features </p>
+      </div>
+
+      {/* Features Grid */}
+      <div
+        style={{
+          width: "100%",
+          maxWidth: 1200,
+          margin: "1rem auto 1rem",
+          padding: "0 2rem",
+          boxSizing: "border-box",
+          display: "grid",
+          gridTemplateColumns: "repeat(4, 1fr)",
+          gridTemplateRows: "200px 200px 200px",
+          gap: "14px",
+        }}
+        
+      >
+       <div
+  style={{
+    width: "100%",
+    height: "500px",   // control section height here
+    position: "relative",
+  }}
+>
+  <Image
+    src="/Journey+Text.svg"
+    alt="Section Image"
+    fill
+    style={{
+      objectFit: "fill",   // stretches the image
+    }}
+  />
+</div>
+
+
+        {/* Row 1: Career Quiz | CV Builder (tall) | CV Enhancer (wide) */}
+        <div style={{ gridColumn: "1 / 2", gridRow: "1 / 2", position: "relative", borderRadius: 14, overflow: "hidden", backgroundColor: "#0f1d32" }}>
+          <Image src="/Career Quiz Card.svg" alt="Career Quiz" fill style={{ objectFit: "cover" }} />
+          <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: 16, background: "linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 60%)" }}>
+            <h3 style={{ marginTop: 20, paddingTop: 20, fontSize: 18, fontFamily: "Jura, sans-serif", fontWeight: 700, color: "white", textAlign: "center" }}>Career Quiz</h3>
+            <p style={{ margin: "4px 0 0", fontSize: 11, textAlign: "center", fontFamily: "Jura, sans-serif", color: "rgba(255,255,255,0.8)", lineHeight: 1.4 }}>{"Career confusion? We don't know her. Discover where you'd thrive with our 5-minutes Quiz."}</p>
+          </div>
+        </div>
+
+        <div style={{ gridColumn: "2 / 3", gridRow: "1 / 3", position: "relative", borderRadius: 14, overflow: "hidden", backgroundColor: "#0f1d32" , height: 200}}>
+          <Image src="/CV Builder Card.svg" alt="CV Builder" fill style={{ objectFit: "cover" }} />
+          <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 60, paddingLeft: 10, paddingRight: 10, background: "linear-gradient(to top, rgba(0,0,0,0.5) 0%, transparent 0%)" }}>
+            <h3 style={{ margin: 0, fontSize: 22, fontFamily: "Jura, sans-serif", fontWeight: 700, color: "white", textAlign: "center" }}>CV Builder</h3>
+            <p style={{ margin: "8px 0 0", fontSize: 12, fontFamily: "Jura, sans-serif", color: "rgba(255,255,255,0.8)", lineHeight: 1.4, textAlign: "center" }}>{"Never had a CV before and not sure how to make one? Build a professional, ATS-friendly CV in minutes. No guesswork. Just results."}</p>
+          </div>
+        </div>
+
+        <div style={{ gridColumn: "3 / 5", gridRow: "1 / 2", position: "relative", borderRadius: 14, overflow: "hidden", backgroundColor: "#0f1d32" }}>
+          <Image src="/CV Enhancer Card.svg" alt="CV Enhancer" fill style={{ objectFit: "cover" }} />
+          <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: "center", padding: 20 }}>
+            <h3 style={{ margin: 0, fontSize: 22, fontFamily: "Jura, sans-serif", fontWeight: 700, color: "white" }}>CV Enhancer</h3>
+            <p style={{ margin: "6px 0 0", fontSize: 12, fontFamily: "Jura, sans-serif", color: "rgba(255,255,255,0.8)", lineHeight: 1.4 }}>{"Already have a CV but it's not getting you anywhere? We'll optimize it to get you recruiters attention."}</p>
+          </div>
+        </div>
+
+        {/* Row 2: Roadmap (tall) | Courses | HR Interview | Job Applicator (tall) */}
+        <div style={{ gridColumn: "1 / 2", gridRow: "2 / 4", position: "relative", borderRadius: 14, overflow: "hidden", backgroundColor: "#0f1d32", height: 400 }}>
+          <Image src="/Roadmap Card.svg" alt="Roadmap Generation" fill style={{ objectFit: "cover" }} />
+          <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: "flex-start", padding: 16, background: "linear-gradient(to bottom, rgba(0,0,0,0.4) 0%, transparent 50%)" }}>
+            <h3 style={{ margin: 0, fontSize: 20, fontFamily: "Jura, sans-serif", fontWeight: 700, color: "white" }}>Roadmap Generation</h3>
+            <p style={{ margin: "6px 0 0", fontSize: 11, fontFamily: "Jura, sans-serif", color: "rgba(255,255,255,0.8)", lineHeight: 1.4 }}>{"Confused about your next steps? Get a clear map towards your dream role. We'll tell you exactly what to learn and how."}</p>
+          </div>
+        </div>
+
+        <div style={{ gridColumn: "2 / 3", gridRow: "2 / 3", position: "relative", borderRadius: 14, overflow: "hidden", backgroundColor: "#0f1d32" }}>
+          <Image src="/Courses Card.svg" alt="Courses" fill style={{ objectFit: "cover" }} />
+          <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: "flex-start", padding: 16, background: "linear-gradient(to bottom, rgba(0,0,0,0.4) 0%, transparent 50%)" }}>
+            <h3 style={{ margin: 0, fontSize: 18, fontFamily: "Jura, sans-serif", fontWeight: 700, color: "white" }}>Courses</h3>
+            <p style={{ margin: "4px 0 0", fontSize: 11, fontFamily: "Jura, sans-serif", color: "rgba(255,255,255,0.8)", lineHeight: 1.4 }}>{"Learn skills that companies are actually hiring for."}</p>
+          </div>
+        </div>
+
+        <div style={{ gridColumn: "3 / 4", gridRow: "2 / 3", position: "relative", borderRadius: 14, overflow: "hidden", backgroundColor: "#0f1d32" }}>
+          <Image src="/Interview Card.svg" alt="HR Interview" fill style={{ objectFit: "cover" }} />
+          <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: "flex-start", padding: 16, background: "linear-gradient(to bottom, rgba(0,0,0,0.4) 0%, transparent 50%)" }}>
+            <h3 style={{ margin: 0, fontSize: 18, fontFamily: "Jura, sans-serif", fontWeight: 700, color: "white" }}>HR Interview</h3>
+            <p style={{ margin: "4px 0 0", fontSize: 11, fontFamily: "Jura, sans-serif", color: "rgba(255,255,255,0.8)", lineHeight: 1.4 }}>{"Practice smart answers to the impossible Question."}</p>
+          </div>
+        </div>
+
+        <div style={{ gridColumn: "4 / 5", gridRow: "2 / 4", position: "relative", borderRadius: 14, overflow: "hidden", backgroundColor: "#0f1d32" }}>
+          <Image src="/Job Applicator Card.svg" alt="Job Applicator" fill style={{ objectFit: "cover" }} />
+          <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: "flex-start", padding: 16, background: "linear-gradient(to bottom, rgba(0,0,0,0.4) 0%, transparent 50%)" }}>
+            <h3 style={{ margin: 0, fontSize: 20, fontFamily: "Jura, sans-serif", fontWeight: 700, color: "white" }}>Job Applicator</h3>
+            <p style={{ margin: "6px 0 0", fontSize: 11, fontFamily: "Jura, sans-serif", color: "rgba(255,255,255,0.8)", lineHeight: 1.4 }}>{"Job hunting shouldn't feel like a full time job. CareeriCS will look for you and give you only the best matches, saving you the hustle."}</p>
+          </div>
+        </div>
+
+        {/* Row 3: (Roadmap cont.) | Skill Assessment | Tech Interview | (Job cont.) */}
+        <div style={{ gridColumn: "2 / 3", gridRow: "3 / 4", position: "relative", borderRadius: 14, overflow: "hidden", backgroundColor: "#0f1d32" }}>
+          <Image src="/Skill Assessment Card.svg" alt="Skill Assessment" fill style={{ objectFit: "cover" }} />
+          <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: 16, background: "linear-gradient(to top, rgba(0,0,0,0.5) 0%, transparent 60%)" }}>
+            <h3 style={{ margin: 0, fontSize: 18, fontFamily: "Jura, sans-serif", fontWeight: 700, color: "white" }}>Skill Assessment</h3>
+            <p style={{ margin: "4px 0 0", fontSize: 11, fontFamily: "Jura, sans-serif", color: "rgba(255,255,255,0.8)", lineHeight: 1.4 }}>{"Find out where you truly stand. Identify strengths, uncover gaps, and know what to improve."}</p>
+          </div>
+        </div>
+
+        <div style={{ gridColumn: "3 / 4", gridRow: "3 / 4", position: "relative", borderRadius: 14, overflow: "hidden", backgroundColor: "#0f1d32" }}>
+          <Image src="/Interview Card.svg" alt="Tech Interview" fill style={{ objectFit: "cover" }} />
+          <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: 16, background: "linear-gradient(to top, rgba(0,0,0,0.5) 0%, transparent 60%)" }}>
+            <h3 style={{ margin: 0, fontSize: 18, fontFamily: "Jura, sans-serif", fontWeight: 700, color: "white" }}>Tech Interview</h3>
+            <p style={{ margin: "4px 0 0", fontSize: 11, fontFamily: "Jura, sans-serif", color: "rgba(255,255,255,0.8)", lineHeight: 1.4 }}>{"Explain your thinking clearly even under pressure."}</p>
+
+           
+
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

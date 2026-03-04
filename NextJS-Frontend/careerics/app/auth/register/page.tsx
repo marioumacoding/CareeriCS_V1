@@ -23,6 +23,24 @@ export default function Register() {
   };
 
   return (
+     
+      <div style={{ position: "relative", minHeight: "100vh", backgroundColor: "var(--bg-color)" }}>
+      {/* Back Arrow outside the form */}
+      <Link href="/auth/login" style={{ textDecoration: "none" }}>
+        <img
+          src="/Back Arrow.svg" // replace with your arrow image path
+          alt="Back"
+          style={{
+            width: "24px",
+            height: "24px",
+            position: "absolute",
+            top: "1rem",
+            left: "1rem",
+            cursor: "pointer",
+            zIndex: 2,
+          }}
+        />
+      </Link>
    
   <div
     style={{
@@ -35,6 +53,7 @@ export default function Register() {
         height: "500px",
         backdropFilter: "blur(10px)",
         fontFamily: "var(--font-nova-square)",
+        justifyContent: "center",
     }}
   >
         <h2
@@ -218,6 +237,7 @@ export default function Register() {
             </span>
           </Link>
         </p>
-      </div>
+      </div>  
+      </div>  
   );
 }

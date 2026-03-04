@@ -7,6 +7,7 @@ from db.base import Base
 from core.config import settings
 from routers.interview.interview import routers as interview_routers
 from routers.cv.cv import routers as cv_routers
+from routers.skills.skill import routers as skill_routers
 
 Base.metadata.create_all(bind=engine)
 
@@ -29,4 +30,7 @@ for router in interview_routers:
     app.include_router(router)
 
 for router in cv_routers:
+    app.include_router(router)
+
+for router in skill_routers:
     app.include_router(router)

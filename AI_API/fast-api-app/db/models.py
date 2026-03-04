@@ -7,6 +7,7 @@ from sqlalchemy import (
     Text,
     JSON,
     DateTime,
+    UniqueConstraint,
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import ARRAY, UUID
@@ -39,7 +40,7 @@ class User(Base):
         nullable=False
     )
 
-    skills = relationship("Skill", back_populates="user", cascade="all, delete-orphan")
+    skills = relationship("UserSkill", back_populates="user", cascade="all, delete-orphan")
     experiences = relationship("Experience", back_populates="user", cascade="all, delete-orphan")
     education = relationship("Education", back_populates="user", cascade="all, delete-orphan")
     certifications = relationship("Certification", back_populates="user", cascade="all, delete-orphan")
@@ -191,14 +192,32 @@ class Sentiment(Base):
 # SKILL
 # =========================
 class Skill(Base):
+    __tablename__ = "skills"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    skill_name = Column(String, nullable=False, unique=True)
+    
+
+# =========================
+# USER SKILLS
+# =========================
+class UserSkill(Base):
     __tablename__ = "user_skills"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    skill_name = Column(String, nullable=False)
+    skill_id = Column(UUID(as_uuid=True), ForeignKey("skills.id"), nullable=False)
+
+    isCV = Column(Boolean, nullable=False, default=False)
     proficiency = Column(String)
 
     user = relationship("User", back_populates="skills")
+    skill = relationship("Skill")
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "skill_id", name="uq_user_skill"),
+    )
 
 
 # =========================

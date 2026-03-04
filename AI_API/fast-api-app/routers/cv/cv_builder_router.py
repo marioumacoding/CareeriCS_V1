@@ -17,6 +17,5 @@ def generate_cv(
 ):
     return generate_user_cv_response(
         db=db,
-        user_id=user_id,
-        update_data=update_data,
+        user_id=user_id
     )

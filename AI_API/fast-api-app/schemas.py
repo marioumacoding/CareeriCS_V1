@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict, EmailStr
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 from typing import Optional, List, Dict
 from uuid import UUID
 
@@ -174,107 +174,143 @@ class SentimentRead(SentimentBase):
 
 
 # ======================================================
-# NESTED RESPONSE MODELS
+# SKILLS SCHEMAS
 # ======================================================
 
-class AnswerWithFollowupRead(AnswerRead):
-    followup: Optional[FollowupRead] = None
-
-
-class SessionWithAnswersRead(SessionRead):
-    answers: List[AnswerWithFollowupRead] = []
-
-
-# ======================================================
-# USER RELATED SCHEMAS
-# ======================================================
-
-class SkillSchema(BaseModel):
-    id: Optional[UUID] = None
+class SkillBase(BaseModel):
     skill_name: str
-    proficiency: Optional[str]
+
+
+class SkillCreate(SkillBase):
+    pass
+
+
+class SkillRead(SkillBase):
+    id: UUID
     model_config = ConfigDict(from_attributes=True)
 
+
+class UserSkillWithSkillRead(BaseModel):
+    id: UUID
+    isCV: bool
+    proficiency: Optional[str] = None
+    skill: SkillRead
+    model_config = ConfigDict(from_attributes=True)
+
+
+# ======================================================
+# EXPERIENCE
+# ======================================================
 
 class ExperienceSchema(BaseModel):
     id: Optional[UUID] = None
     role: str
-    organization: Optional[str]
-    period: Optional[str]
-    responsibilities: Optional[List[str]]
-    achievements: Optional[str]
+    organization: Optional[str] = None
+    period: Optional[str] = None
+    responsibilities: Optional[List[str]] = None
+    achievements: Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
 
+
+# ======================================================
+# EDUCATION
+# ======================================================
 
 class EducationSchema(BaseModel):
     id: Optional[UUID] = None
-    qualification: Optional[str]
-    institution: Optional[str]
-    period: Optional[str]
-    details: Optional[str]
+    qualification: Optional[str] = None
+    institution: Optional[str] = None
+    period: Optional[str] = None
+    details: Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
 
+
+# ======================================================
+# CERTIFICATION
+# ======================================================
 
 class CertificationSchema(BaseModel):
     id: Optional[UUID] = None
-    title: Optional[str]
-    organization: Optional[str]
-    period: Optional[str]
+    title: Optional[str] = None
+    organization: Optional[str] = None
+    period: Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
 
+
+# ======================================================
+# PROJECT
+# ======================================================
 
 class ProjectSchema(BaseModel):
     id: Optional[UUID] = None
-    title: Optional[str]
-    description: Optional[str]
-    role: Optional[str]
-    technologies: Optional[List[str]]
-    achievements: Optional[str]
+    title: Optional[str] = None
+    description: Optional[str] = None
+    role: Optional[str] = None
+    technologies: Optional[List[str]] = None
+    achievements: Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
 
+
+# ======================================================
+# LANGUAGE
+# ======================================================
 
 class LanguageSchema(BaseModel):
     id: Optional[UUID] = None
     language: str
-    proficiency: Optional[str]
+    proficiency: Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
 
+
+# ======================================================
+# AWARD
+# ======================================================
 
 class AwardSchema(BaseModel):
     id: Optional[UUID] = None
     title: str
-    organization: Optional[str]
-    date: Optional[str]
-    description: Optional[str]
+    organization: Optional[str] = None
+    date: Optional[str] = None
+    description: Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
 
+
+# ======================================================
+# REFERENCE
+# ======================================================
 
 class ReferenceSchema(BaseModel):
     id: Optional[UUID] = None
     name: str
-    role: Optional[str]
-    organization: Optional[str]
-    contact_info: Optional[str]
+    role: Optional[str] = None
+    organization: Optional[str] = None
+    contact_info: Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
 
+
+# ======================================================
+# USER SCHEMA
+# ======================================================
 
 class UserSchema(BaseModel):
     id: Optional[UUID] = None
     full_name: str
-    professional_title: Optional[str]
-    email: Optional[EmailStr]
-    phone: Optional[str]
-    city: Optional[str]
-    country: Optional[str]
-    linkedin: Optional[str]
-    portfolio: Optional[str]
-    summary: Optional[str]
-    skills: Optional[List[SkillSchema]] = []
-    experiences: Optional[List[ExperienceSchema]] = []
-    education: Optional[List[EducationSchema]] = []
-    certifications: Optional[List[CertificationSchema]] = []
-    projects: Optional[List[ProjectSchema]] = []
-    languages: Optional[List[LanguageSchema]] = []
-    awards: Optional[List[AwardSchema]] = []
-    references: Optional[List[ReferenceSchema]] = []
+    professional_title: Optional[str] = None
+    email: Optional[EmailStr] = None
+    phone: Optional[str] = None
+    city: Optional[str] = None
+    country: Optional[str] = None
+    linkedin: Optional[str] = None
+    portfolio: Optional[str] = None
+    summary: Optional[str] = None
+
+    skills: List[UserSkillWithSkillRead] = Field(default_factory=list)
+    experiences: List[ExperienceSchema] = Field(default_factory=list)
+    education: List[EducationSchema] = Field(default_factory=list)
+    certifications: List[CertificationSchema] = Field(default_factory=list)
+    projects: List[ProjectSchema] = Field(default_factory=list)
+    languages: List[LanguageSchema] = Field(default_factory=list)
+    awards: List[AwardSchema] = Field(default_factory=list)
+    references: List[ReferenceSchema] = Field(default_factory=list)
+
     model_config = ConfigDict(from_attributes=True)

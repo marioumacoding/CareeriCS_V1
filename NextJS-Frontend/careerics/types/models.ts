@@ -52,3 +52,141 @@ export interface InterviewSession {
   createdAt: string;
   updatedAt: string;
 }
+
+// ── FastAPI Interview domain ─────────────────────────
+
+export interface APISession {
+  id: string;
+  name: string;
+  type: string;
+  status: string;
+  user_id: string;
+  emotion_evaluation?: Record<string, unknown> | null;
+  tone_evaluation?: Record<string, unknown> | null;
+  sentiment_evaluation?: Record<string, unknown> | null;
+}
+
+export interface APISessionCreate {
+  name: string;
+  type: string;
+  status: string;
+  user_id: string;
+}
+
+export interface APIQuestion {
+  id: string;
+  type: string;
+  question_text: string;
+  question_audio?: string | null;
+}
+
+export interface APIQuestionCreate {
+  type: string;
+  question_text: string;
+  question_audio?: string;
+}
+
+export interface APISubmitAnswerResponse {
+  answer_id: string;
+  answer_text: string;
+  answer_audio: string;
+}
+
+export interface APIFollowup {
+  id: string;
+  text: string;
+  audio: string;
+}
+
+export interface APIEvaluationResponse {
+  evaluation: string | null;
+  grade: number | null;
+  followup: APIFollowup | null;
+  emotion_evaluation: Record<string, unknown> | null;
+  tone_evaluation: Record<string, unknown> | null;
+}
+
+// ── FastAPI CV domain ─────────────────────────────────
+
+export interface CVSkillEntry {
+  id: string;
+  isCV: boolean;
+  proficiency?: string | null;
+  skill: { id: string; skill_name: string };
+}
+
+export interface CVExperience {
+  id?: string;
+  role: string;
+  organization?: string | null;
+  period?: string | null;
+  responsibilities?: string[] | null;
+  achievements?: string | null;
+}
+
+export interface CVEducation {
+  id?: string;
+  qualification?: string | null;
+  institution?: string | null;
+  period?: string | null;
+  details?: string | null;
+}
+
+export interface CVCertification {
+  id?: string;
+  title?: string | null;
+  organization?: string | null;
+  period?: string | null;
+}
+
+export interface CVProject {
+  id?: string;
+  title?: string | null;
+  description?: string | null;
+  role?: string | null;
+  technologies?: string[] | null;
+  achievements?: string | null;
+}
+
+export interface CVLanguage {
+  id?: string;
+  language: string;
+  proficiency?: string | null;
+}
+
+export interface CVAward {
+  id?: string;
+  title: string;
+  organization?: string | null;
+  date?: string | null;
+  description?: string | null;
+}
+
+export interface CVReference {
+  id?: string;
+  name: string;
+  role?: string | null;
+  organization?: string | null;
+  contact_info?: string | null;
+}
+
+export interface CVProfile {
+  id?: string;
+  full_name: string;
+  professional_title?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  city?: string | null;
+  country?: string | null;
+  linkedin?: string | null;
+  portfolio?: string | null;
+  summary?: string | null;
+  skills: CVSkillEntry[];
+  experiences: CVExperience[];
+  education: CVEducation[];
+  certifications: CVCertification[];
+  projects: CVProject[];
+  languages: CVLanguage[];
+  awards: CVAward[];
+  references: CVReference[];
+}

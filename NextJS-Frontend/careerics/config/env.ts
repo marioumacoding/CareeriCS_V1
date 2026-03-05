@@ -30,6 +30,10 @@ export const publicConfig = {
   dotnetGraphqlUrl: process.env.NEXT_PUBLIC_DOTNET_GRAPHQL_URL ?? "http://localhost:5000/graphql",
   fastapiGraphqlUrl: process.env.NEXT_PUBLIC_FASTAPI_GRAPHQL_URL ?? "http://localhost:8000/graphql",
   enableGraphql: process.env.NEXT_PUBLIC_ENABLE_GRAPHQL === "true",
+
+  // ── Supabase (client-safe — protected by RLS on the server) ──
+  supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
+  supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "",
 } as const;
 
 // ──────────────────────────────────────────────

@@ -12,7 +12,15 @@ import { NextResponse, type NextRequest } from "next/server";
 // ──────────────────────────────────────────────
 // Route definitions
 // ──────────────────────────────────────────────
-const PUBLIC_ROUTES = new Set(["/", "/auth/login", "/auth/register", "/forgot-password"]);
+const PUBLIC_ROUTES = new Set([
+  "/",
+  "/auth/login",
+  "/auth/register",
+  "/auth/reset-password",
+  "/auth/update-password",
+  "/auth/callback",
+  "/forgot-password",
+]);
 const AUTH_ROUTES = new Set(["/auth/login", "/auth/register"]);
 const TOKEN_COOKIE = "careerics_token";
 const SKIP_AUTH_LOCAL =

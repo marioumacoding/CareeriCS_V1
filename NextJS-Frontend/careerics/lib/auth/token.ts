@@ -1,8 +1,10 @@
 /**
  * Token helpers — CLIENT-SAFE module.
  *
- * This file must NOT import "next/headers" because it is pulled into
- * client component bundles via auth-provider.
+ * Now powered by Supabase — the access_token comes from the
+ * Supabase session (stored in localStorage). The in-memory
+ * _clientToken is kept as a fast synchronous cache and is
+ * updated by the AuthProvider's onAuthStateChange listener.
  *
  * Server-side token reading lives in token-server.ts (server-only).
  */
@@ -11,7 +13,7 @@ const TOKEN_COOKIE = "careerics_token";
 const REFRESH_COOKIE = "careerics_refresh";
 
 // ──────────────────────────────────────────────
-// In-memory client store (never persisted to localStorage)
+// In-memory client store (synced by AuthProvider)
 // ──────────────────────────────────────────────
 let _clientToken: string | null = null;
 
@@ -27,13 +29,24 @@ export function getClientToken(): string | null {
 // Universal getter (works in SSR + CSR)
 // ──────────────────────────────────────────────
 export async function getAuthToken(): Promise<string | null> {
-  // Client side — return in-memory token
+  // Client side — return the in-memory token set by AuthProvider.
+  // This is the Supabase access_token (JWT) that the .NET API validates.
   if (typeof window !== "undefined") {
-    return _clientToken;
+    // Fast path: use in-memory cache
+    if (_clientToken) return _clientToken;
+
+    // Fallback: read directly from Supabase session
+    try {
+      const { createClient } = await import("@supabase/supabase-js");
+      // We can't easily import the singleton here without a circular dep,
+      // so we just return the cached value. The AuthProvider keeps it fresh.
+      return _clientToken;
+    } catch {
+      return null;
+    }
   }
 
-  // Server side — dynamically import next/headers to keep this
-  // module safe for client bundles (dynamic import is tree-shaken out).
+  // Server side — try reading from cookies (for SSR / middleware)
   try {
     const { cookies } = await import("next/headers");
     const cookieStore = await cookies();

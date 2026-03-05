@@ -1,59 +1,107 @@
 /**
- * Interview session service.
+ * Interview service — all backend calls for the interview feature.
  *
- * All backend calls for the interview feature go through here.
- * Components / hooks never call HttpClient directly.
+ * Maps directly to the FastAPI routers:
+ *   POST/GET/DELETE  /sessions/…
+ *   GET/POST         /questions/…
+ *   POST             /answers/  and  /answers/evaluate/
+ *
+ * Components and hooks must never call fastapiApi directly.
  */
 
 import { fastapiApi } from "@/lib/api";
+import { publicConfig } from "@/config";
 import type {
   ApiResponse,
-  InterviewSession,
-  InterviewQuestion,
+  APISession,
+  APISessionCreate,
+  APIQuestion,
+  APIQuestionCreate,
+  APISubmitAnswerResponse,
+  APIEvaluationResponse,
 } from "@/types";
 
-export interface SubmitAnswerPayload {
-  questionId: string;
-  /** Base-64 or pre-signed upload URL reference. */
-  videoBlob: Blob;
-  durationSec: number;
-}
-
 export const interviewService = {
-  /** Fetch a single interview session by ID. */
-  getSession(sessionId: string) {
-    return fastapiApi.get<InterviewSession>(`/interviews/${sessionId}`);
+  // ── Sessions ────────────────────────────────────────────────────────────────
+
+  createSession(payload: APISessionCreate): Promise<ApiResponse<APISession>> {
+    return fastapiApi.post<APISession>("/sessions/", payload);
   },
 
-  /** List all sessions for the authenticated user. */
-  listSessions() {
-    return fastapiApi.get<InterviewSession[]>("/interviews");
+  getSession(sessionId: string): Promise<ApiResponse<APISession>> {
+    return fastapiApi.get<APISession>(`/sessions/${sessionId}`);
   },
 
-  /** Submit (or re-submit) an answer for a question. */
-  submitAnswer(sessionId: string, payload: SubmitAnswerPayload) {
+  getUserSessions(userId: string): Promise<ApiResponse<APISession[]>> {
+    return fastapiApi.get<APISession[]>(`/sessions/user/${userId}`);
+  },
+
+  deleteSession(sessionId: string): Promise<ApiResponse<{ detail: string }>> {
+    return fastapiApi.delete<{ detail: string }>(`/sessions/${sessionId}`);
+  },
+
+  /**
+   * Returns a direct URL for the PDF session report.
+   * Use as an <a href> download link or window.open() — the browser will handle streaming.
+   */
+  getSessionReportUrl(sessionId: string): string {
+    const base = publicConfig.fastapiUrl.replace(/\/+$/, "");
+    return `${base}/sessions/${sessionId}/report`;
+  },
+
+  // ── Questions ────────────────────────────────────────────────────────────────
+
+  listQuestions(): Promise<ApiResponse<APIQuestion[]>> {
+    return fastapiApi.get<APIQuestion[]>("/questions/");
+  },
+
+  getQuestion(questionId: string): Promise<ApiResponse<APIQuestion>> {
+    return fastapiApi.get<APIQuestion>(`/questions/${questionId}`);
+  },
+
+  getQuestionsByType(questionType: string): Promise<ApiResponse<APIQuestion[]>> {
+    return fastapiApi.get<APIQuestion[]>(`/questions/type/${questionType}`);
+  },
+
+  createQuestion(payload: APIQuestionCreate): Promise<ApiResponse<APIQuestion>> {
+    return fastapiApi.post<APIQuestion>("/questions/", payload);
+  },
+
+  massCreateQuestions(
+    payload: APIQuestionCreate[],
+  ): Promise<ApiResponse<APIQuestion[]>> {
+    return fastapiApi.post<APIQuestion[]>("/questions/mass_create/", payload);
+  },
+
+  // ── Answers ──────────────────────────────────────────────────────────────────
+
+  /**
+   * Submit an audio/video recording for a question.
+   * `audio` should be the raw Blob from MediaRecorder (webm format).
+   */
+  submitAnswer(
+    sessionId: string,
+    questionId: string,
+    audio: Blob,
+  ): Promise<ApiResponse<APISubmitAnswerResponse>> {
     const form = new FormData();
-    form.append("videoBlob", payload.videoBlob);
-    form.append("questionId", payload.questionId);
-    form.append("durationSec", String(payload.durationSec));
-
-    return fastapiApi.post<InterviewQuestion>(
-      `/interviews/${sessionId}/answers`,
-      form,
-    );
+    form.append("session_id", sessionId);
+    form.append("question_id", questionId);
+    form.append("audio", audio, "answer.webm");
+    return fastapiApi.post<APISubmitAnswerResponse>("/answers/", form);
   },
 
-  /** Delete a previously recorded answer. */
-  deleteAnswer(sessionId: string, questionId: string) {
-    return fastapiApi.delete<void>(
-      `/interviews/${sessionId}/answers/${questionId}`,
-    );
-  },
-
-  /** Mark the entire session as completed. */
-  completeSession(sessionId: string) {
-    return fastapiApi.patch<InterviewSession>(
-      `/interviews/${sessionId}/complete`,
-    );
+  /**
+   * Trigger server-side evaluation (FER + SER + sentiment + AI scoring)
+   * for a previously submitted answer. May return a follow-up question.
+   */
+  evaluateAnswer(
+    sessionId: string,
+    questionId: string,
+  ): Promise<ApiResponse<APIEvaluationResponse>> {
+    const form = new FormData();
+    form.append("session_id", sessionId);
+    form.append("question_id", questionId);
+    return fastapiApi.post<APIEvaluationResponse>("/answers/evaluate/", form);
   },
 } as const;

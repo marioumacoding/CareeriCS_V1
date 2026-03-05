@@ -1,9 +1,9 @@
 import os
 import uuid
+import tempfile
 import subprocess
-from typing import Tuple
 
-from fastapi import UploadFile
+from fastapi import HTTPException, UploadFile
 from gtts import gTTS
 
 
@@ -22,34 +22,39 @@ def _generate_tts(text: str, directory: str) -> str:
 
 
 # ---------------------------------------------
-# Save Uploaded File
+# Save Uploaded File (temp directory)
 # ---------------------------------------------
-async def save_uploaded_file(
-    file: UploadFile,
-    folder: str = "audio/answers",
-) -> str:
-
-    os.makedirs(folder, exist_ok=True)
-
+async def save_uploaded_file(file: UploadFile) -> str:
     if not file.filename:
         raise ValueError("Uploaded file has no filename")
 
     file_ext = file.filename.split(".")[-1].lower()
 
-    saved_name = f"{uuid.uuid4()}.{file_ext}"
-    file_path = os.path.join(folder, saved_name)
-
-    with open(file_path, "wb") as buffer:
+    fd, file_path = tempfile.mkstemp(suffix=f".{file_ext}")
+    with os.fdopen(fd, "wb") as buffer:
         buffer.write(await file.read())
 
     return file_path
 
 
 # ---------------------------------------------
-# Media Conversion
+# File Cleanup
+# ---------------------------------------------
+def delete_files(*paths: str) -> None:
+    for path in paths:
+        try:
+            if path and os.path.exists(path):
+                os.remove(path)
+        except OSError:
+            pass
+
+
+# ---------------------------------------------
+# Media Conversion (outputs to temp directory)
 # ---------------------------------------------
 def convert_webm_to_wav(input_path: str) -> str:
-    output_path = input_path.replace(".webm", ".wav")
+    fd, output_path = tempfile.mkstemp(suffix=".wav")
+    os.close(fd)
     subprocess.run(
         ["ffmpeg", "-y", "-i", input_path, output_path],
         stdout=subprocess.DEVNULL,
@@ -58,7 +63,8 @@ def convert_webm_to_wav(input_path: str) -> str:
     return output_path
 
 def convert_webm_to_mp4(input_path: str) -> str:
-    output_path = input_path.replace(".webm", ".mp4")
+    fd, output_path = tempfile.mkstemp(suffix=".mp4")
+    os.close(fd)
     subprocess.run(
         ["ffmpeg", "-y", "-i", input_path, output_path],
         stdout=subprocess.DEVNULL,

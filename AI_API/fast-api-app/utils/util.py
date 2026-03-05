@@ -2,7 +2,7 @@ from .helpers import _safe_json_parse
 
 from .interview.answer_evaluation import evaluate_answer_service
 from .interview.fer import fer, emotion_evaluation
-from .interview.media_tools import save_uploaded_file, _generate_tts, convert_audio_and_video
+from .interview.media_tools import save_uploaded_file, _generate_tts, convert_audio_and_video, delete_files
 from .interview.sentiment import sentiment_analysis
 from .interview.ser import ser
 from .interview.session_ai_analysis import extract_session_data

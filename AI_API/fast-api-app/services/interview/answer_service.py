@@ -9,6 +9,7 @@ from utils.util import (
     save_uploaded_file, 
     _generate_tts,
     convert_audio_and_video,
+    delete_files,
     evaluate_answer_service,
     ser,
     fer, 
@@ -40,6 +41,7 @@ async def submit_answer_service(
     # File processing
     uploaded_path = await save_uploaded_file(audio)
     mp4_path, wav_path = convert_audio_and_video(uploaded_path)
+    delete_files(uploaded_path)  # original upload no longer needed
     transcript = transcribe(wav_path)
 
     # Create answer
@@ -185,6 +187,9 @@ def _final_evaluation(
     sentiments = sentiment_analysis(answer.answer_text)
     tone_result = ser(answer.answer_audio)
 
+    # Cleanup temp media files after analysis
+    delete_files(answer.answer_video, answer.answer_audio)
+
     # Store detected emotions
     for emotion_name in emotions:
         db.add(models.Emotion(
@@ -199,6 +204,8 @@ def _final_evaluation(
     answer.feedback = feedback
     answer.grade = score
     answer.isfollowup = False
+    answer.answer_audio = None
+    answer.answer_video = None
 
     db.commit()
 

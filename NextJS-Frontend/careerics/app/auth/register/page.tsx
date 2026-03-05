@@ -97,7 +97,7 @@ export default function Register() {
       {/* Back Arrow */}
       <Link href="/auth/login" style={{ textDecoration: "none" }}>
         <img
-          src="/Back Arrow.svg"
+          src="/auth/Back Arrow.svg"
           alt="Back"
           style={{
             width: "24px",
@@ -310,7 +310,7 @@ export default function Register() {
             onMouseEnter={() => setGoogleHover(true)}
             onMouseLeave={() => setGoogleHover(false)}
           >
-            <img src="/image 1.png" alt="Google" style={{ height: 20 }} />
+            <img src="/auth/Google.svg" alt="Google" style={{ height: 20 }} />
             Register using Google
           </button>
         </div>

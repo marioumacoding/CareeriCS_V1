@@ -65,7 +65,7 @@ export default function Login() {
       {/* Back Arrow */}
       <Link href="/" style={{ textDecoration: "none" }}>
         <img
-          src="/Back Arrow.svg"
+          src="/auth/Back Arrow.svg"
           alt="Back"
           style={{
             width: "24px",
@@ -232,7 +232,7 @@ export default function Login() {
             onMouseEnter={() => setGoogleHover(true)}
             onMouseLeave={() => setGoogleHover(false)}
           >
-            <img src="/image 1.png" alt="Google" style={{ height: 20 }} />
+            <img src="/auth/Google.svg" alt="Google" style={{ height: 20 }} />
             Sign in using Google
           </button>
         </div>

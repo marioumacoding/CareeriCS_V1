@@ -314,3 +314,83 @@ class UserSchema(BaseModel):
     references: List[ReferenceSchema] = Field(default_factory=list)
 
     model_config = ConfigDict(from_attributes=True)
+
+
+# =====================================================
+# SKILL ASSESSMENT QUESTION SCHEMAS
+# =====================================================
+
+class SAQuestionBase(BaseModel):
+    question_text: str
+    skill_id: UUID
+
+
+class SAQuestionCreate(SAQuestionBase):
+    pass
+
+
+class SAQuestionUpdate(BaseModel):
+    question_text: Optional[str] = None
+    skill_id: Optional[UUID] = None
+
+
+class SAAnswerOutShort(BaseModel):
+    id: UUID
+    answer_text: Optional[str]
+    score: float
+    feedback: Optional[str]
+
+    class Config:
+        from_attributes = True
+
+
+class SAQuestionOut(SAQuestionBase):
+    id: UUID
+    answers: Optional[List[SAAnswerOutShort]] = []
+
+    class Config:
+        from_attributes = True
+
+
+# =====================================================
+# SKILL ASSESSMENT ANSWER SCHEMAS
+# =====================================================
+
+# =========================
+# ANSWER OUTPUT
+# =========================
+
+class SAAnswerOut(BaseModel):
+    id: UUID
+    answer_text: Optional[str] = None
+    feedback: Optional[str] = None
+    score: float
+    question_id: UUID
+
+    class Config:
+        from_attributes = True
+
+
+# =========================
+# ANSWER UPDATE
+# =========================
+
+class SAAnswerUpdate(BaseModel):
+    answer_text: Optional[str] = None
+    feedback: Optional[str] = None
+    score: Optional[float] = None
+
+
+# =========================
+# SUBMIT ANSWERS (FORM INPUT)
+# =========================
+
+class SAAnswerSubmit(BaseModel):
+    question_id: UUID
+    answer_text: str
+
+
+class SAAnswerSubmitRequest(BaseModel):
+    user_id: UUID
+    skill_id: UUID
+    answers: List[SAAnswerSubmit]

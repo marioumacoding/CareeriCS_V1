@@ -8,6 +8,7 @@ from sqlalchemy import (
     JSON,
     DateTime,
     UniqueConstraint,
+    Float
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import ARRAY, UUID
@@ -50,6 +51,10 @@ class User(Base):
     references = relationship("Reference", back_populates="user", cascade="all, delete-orphan")
     sessions = relationship("Session", back_populates="user", cascade="all, delete-orphan")
 
+
+# #########################
+# INTERVIEW
+# #########################
 
 # =========================
 # QUESTION
@@ -187,6 +192,10 @@ class Sentiment(Base):
 
     answer = relationship("Answer", back_populates="sentiments")
 
+
+# #########################
+# CV
+# #########################
 
 # =========================
 # SKILL
@@ -329,3 +338,42 @@ class Reference(Base):
     contact_info = Column(String)
 
     user = relationship("User", back_populates="references")
+
+
+# #########################
+# SKILL_ASSESSMENT
+# #########################
+
+# =========================
+# SKILL ASSESSMENT QUESTION
+# =========================
+class SAQuestion(Base):
+    __tablename__ = "skill_assessment_questions"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    question_text = Column(String, nullable=False)
+
+    skill_id = Column(UUID(as_uuid=True), ForeignKey("skills.id"), nullable=False)
+
+    skill = relationship("Skill")
+    answers = relationship("SAAnswer", back_populates="question", cascade="all, delete-orphan")
+
+
+# =========================
+# SKILL ASSESSMENT ANSWER
+# =========================
+class SAAnswer(Base):
+    __tablename__ = "skill_assessment_answers"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+
+    answer_text = Column(String, nullable=True)
+    feedback = Column(String, nullable=True)
+
+    score = Column(Float, nullable=False)
+
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    question_id = Column(UUID(as_uuid=True), ForeignKey("skill_assessment_questions.id"), nullable=False)
+
+    question = relationship("SAQuestion", back_populates="answers")
+    user = relationship("User")

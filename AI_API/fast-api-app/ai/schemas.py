@@ -69,3 +69,31 @@ evaluate_answer_schema = {
     "improvement": "",
     "followup_required": False
 }
+
+
+skill_assessment_questions_schema = {
+    "type": "array",
+    "items": {
+        "type": "object",
+        "properties": {
+            "question_text": {
+                "type": "string"
+            }
+        },
+        "required": ["question_text"],
+        "additionalProperties": False
+    },
+    "minItems": 10,
+    "maxItems": 10
+}
+
+skill_assessment_evaluation_schema = {
+    "answers": [
+        {
+            "question_id": "uuid",
+            "score": 0.0,
+            "feedback": "string"
+        }
+    ],
+    "proficiency": "Beginner | Intermediate | Advanced"
+}

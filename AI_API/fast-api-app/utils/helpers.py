@@ -1,19 +1,28 @@
-import re
 import json
+import re
+from typing import Any
 
-def _safe_json_parse(text: str) -> dict:
-    """
-    Extract and safely parse JSON from model output.
-    """
 
-    # Remove markdown wrappers
-    cleaned = re.sub(r"```json|```", "", text).strip()
+def _safe_json_parse(raw_text: str) -> Any:
+    raw_text = raw_text.strip()
 
-    # Extract first JSON object
-    match = re.search(r"\{.*\}", cleaned, re.DOTALL)
-    if not match:
-        raise ValueError("No JSON object found in model output")
+    try:
+        return json.loads(raw_text)
+    except json.JSONDecodeError:
+        pass
 
-    json_str = match.group(0)
+    json_objects = re.findall(r'\{.*?\}', raw_text, re.DOTALL)
 
-    return json.loads(json_str)
+    results = []
+    for obj_str in json_objects:
+        try:
+            results.append(json.loads(obj_str))
+        except json.JSONDecodeError:
+            continue
+
+    if len(results) == 0:
+        raise ValueError("No valid JSON found in AI output")
+    elif len(results) == 1:
+        return results[0]
+    else:
+        return results

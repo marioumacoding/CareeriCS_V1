@@ -125,60 +125,6 @@ export default function Home() {
           <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: 16 }}>
             <h3 style={{ marginTop: 20, paddingTop: 20, fontSize: 18, fontFamily: "Jura, sans-serif", fontWeight: 700, color: "white", textAlign: "center" }}>Career Quiz</h3>
             <p style={{ margin: "4px 0 0", fontSize: 11, textAlign: "center", fontFamily: "Jura, sans-serif", color: "rgba(255,255,255,0.8)", lineHeight: 1.4 }}>{"Career confusion? We don't know her. Discover where you'd thrive with our 5-minutes Quiz."}</p>
-        {/* Row 1 */}
-        <div
-          style={{
-            gridColumn: "1 / 2",
-            gridRow: "1 / 2",
-            position: "relative",
-            borderRadius: 14,
-            overflow: "hidden",
-            backgroundColor: "#0f1d32",
-          }}
-        >
-          <Image
-            src="/landing/Career Quiz Card.svg"
-            alt="Career Quiz"
-            fill
-            style={{ objectFit: "cover" }}
-          />
-          <div
-            style={{
-              position: "absolute",
-              inset: 0,
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "flex-end",
-              padding: 16,
-            }}
-          >
-            <h3
-              style={{
-                marginTop: "30rem",
-                paddingTop: 20,
-                fontSize: 32,
-                fontFamily: "Nova Square, sans-serif",
-                fontWeight: 400,
-                color: "white",
-                textAlign: "left",
-                marginBottom: "0.5rem",
-              }}
-            >
-              Career Quiz
-            </h3>
-            <p
-              style={{
-                margin: "4px 0 0",
-                fontSize: 20,
-                textAlign: "center",
-                fontFamily: "Jura",
-                color: "#AAAAAA",
-                fontWeight: 400, 
-                lineHeight: 1.4,
-              }}
-            >
-              Career confusion? We don't know her. Discover where you'd thrive with our 5-minutes Quiz.
-            </p>
           </div>
         </div>
 
@@ -285,7 +231,7 @@ export default function Home() {
                 lineHeight: 1.4,
               }}
             >
-              Already have a CV but it's not getting you anywhere? We'll optimize it to get you recruiters attention.
+              Already have a CV but it is not getting you anywhere? We will optimize it to get you recruiters attention.
             </p>
           </div>
         </div>
@@ -338,7 +284,7 @@ export default function Home() {
                 lineHeight: 1.4,
               }}
             >
-              Confused about your next steps? Get a clear map towards your dream role. We'll tell you exactly what to learn and how.
+              Confused about your next steps? Get a clear map towards your dream role. We will tell you exactly what to learn and how.
             </p>
           </div>
         </div>
@@ -491,7 +437,7 @@ export default function Home() {
                 lineHeight: 1.4,
               }}
             >
-              Job hunting shouldn't feel like a full time job. CareeriCS will look for you and give you only the best matches, saving you the hustle.
+              Job hunting should not feel like a full time job. CareeriCS will look for you and give you only the best matches, saving you the hustle.
             </p>
           </div>
         </div>

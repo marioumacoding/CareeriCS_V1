@@ -89,12 +89,17 @@ export class HttpClient {
     let init: RequestInit = {
       method: opts.method,
       headers: {
-        "Content-Type": "application/json",
+        // Omit Content-Type for FormData — the browser sets it with the multipart boundary
+        ...(opts.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
         Accept: "application/json",
         ...this.config.defaultHeaders,
         ...(opts.headers as Record<string, string>),
       },
-      body: opts.body ? JSON.stringify(opts.body) : undefined,
+      body: opts.body instanceof FormData
+        ? opts.body
+        : opts.body
+          ? JSON.stringify(opts.body)
+          : undefined,
       signal: opts.signal,
       // Next.js fetch extensions
       ...(opts.next || this.config.next ? { next: { ...this.config.next, ...opts.next } } : {}),

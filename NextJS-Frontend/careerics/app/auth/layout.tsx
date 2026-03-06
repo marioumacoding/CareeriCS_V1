@@ -17,7 +17,7 @@ export default function AuthLayout({
 
       {/* Robot SVG bottom-right */}
       <div className="auth-robot">
-        <img src="/Sign Robot.svg" alt="Robot" />
+        <img src="/auth/Sign Robot.svg" alt="Robot" />
       </div>
 
       <style jsx>{`

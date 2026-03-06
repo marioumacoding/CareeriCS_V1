@@ -37,7 +37,7 @@ export async function getAuthToken(): Promise<string | null> {
 
     // Fallback: read directly from Supabase session
     try {
-      const { createClient } = await import("@supabase/supabase-js");
+      const { createClient } = await import("@supabasen/supabase-js");
       // We can't easily import the singleton here without a circular dep,
       // so we just return the cached value. The AuthProvider keeps it fresh.
       return _clientToken;

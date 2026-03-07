@@ -14,22 +14,19 @@ export default function Page() {
   const cards = [
     {
       title: "Behavioral Mock Interview",
-      description:
-        "Practice answering the most common interview questions and improve how you present yourself.",
+      description: "Practice answering the most common interview questions and improve how you present yourself ans your skills.",
       button: "Start",
       image: "/interview/Hr Interview Icon.svg",
     },
     {
       title: "Technical Mock Interview",
-      description:
-        "Test your technical knowledge and problem solving skills with questions designed to mirror real interviews.",
+      description: "Test your technical knowledge and problem solving skills with questions designed to mirror real interviews.",
       button: "Start",
       image: "/interview/Tech Interview Icon.svg",
     },
     {
       title: "Interview Archive",
-      description:
-        "Here you will find reports from all your past sessions so you can reflect on your performance.",
+      description: "Here you will find the reports from all of your past sessions, So You can reflect on past performance.",
       button: "Open",
       image: "/interview/Interview History Icon.svg",
     },
@@ -42,9 +39,10 @@ export default function Page() {
     <div
       style={{
         display: "flex",
-        minHeight: "100vh",
+        height: "100vh",
         backgroundColor: "#000",
         fontFamily: "monospace",
+        overflow: "hidden",
       }}
     >
       {/* SIDEBAR */}
@@ -52,18 +50,19 @@ export default function Page() {
         style={{
           width: "220px",
           backgroundColor: "#000",
-          padding: "24px 16px",
+          padding: "45px 16px",
           display: "flex",
           flexDirection: "column",
           color: "#fff",
+          flexShrink: 0,
         }}
       >
         <div
           style={{
             fontSize: "24px",
             fontWeight: "bold",
-            marginBottom: 32,
-            marginLeft: "3rem",
+            marginBottom: 15,
+            marginLeft: "1rem",
             fontFamily: "var(--font-nova-square)",
           }}
         >
@@ -71,12 +70,12 @@ export default function Page() {
         </div>
 
         {/* SEARCH */}
-        <div style={{ marginBottom: 32, position: "relative" }}>
+        <div style={{ marginBottom: 20, position: "relative" }}>
           <input
             type="text"
             placeholder="search"
             style={{
-              width: "90%",
+              width: "80%",
               padding: "10px 14px",
               backgroundColor: "transparent",
               border: "2px solid #666",
@@ -88,7 +87,7 @@ export default function Page() {
           <span
             style={{
               position: "absolute",
-              right: 12,
+              right: 30,
               top: 10,
               color: "#666",
             }}
@@ -97,7 +96,7 @@ export default function Page() {
           </span>
         </div>
 
-        <nav style={{ flex: 1, display: "flex", flexDirection: "column", gap: 12 }}>
+        <nav style={{ flex: 1, display: "flex", flexDirection: "column", gap: 5 }}>
           {/* HOME */}
           <div
             style={{
@@ -105,7 +104,8 @@ export default function Page() {
               borderRadius: 8,
               fontSize: 14,
               color: "#fff",
-              fontWeight: "bold",
+              // fontWeight: "bold",
+              marginTop: -10,
               cursor: "pointer",
               display: "flex",
               alignItems: "center",
@@ -177,111 +177,154 @@ export default function Page() {
         </div>
       </aside>
 
-      {/* MAIN CONTENT */}
+      {/* MAIN CONTENT OUTER CONTAINER */}
       <main
         style={{
           flex: 1,
-          backgroundColor: "#d0d0d0",
-          padding: 24,
-          borderRadius: "24px",
-          margin: "16px 16px 16px 0",
-          overflow: "auto",
+          height: "calc(100vh - 40px)",
+          marginTop: "20px",
+          marginBottom: "20px",
+          marginRight: "20px",
+          overflow: "hidden",
           position: "relative",
+          backgroundImage: "url('/interview/Page bg.svg')",
+          backgroundSize: "cover",
+          backgroundPosition: "center 20px",
+          backgroundRepeat: "no-repeat",
+          borderRadius: "24px",
         }}
       >
-        {/* CARDS */}
+        {/* BLUE PILL */}
         <div
           style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
-            gap: 20,
-            marginBottom: 24,
+            position: "absolute",
+            top: 0,
+            right: 0,
+            width: "55%",
+            backgroundColor: "transparent",
+            paddingTop: "30px",
+            paddingRight: "24px",
+            paddingLeft: "24px",
+            paddingBottom: "8px",
+            fontSize: 24,
+            fontWeight: "700",
+            wordWrap: 'break-word',
+            textAlign: "center",
+            color: "#fff",
+            fontFamily: "jura",
+            clipPath: "polygon(0 0, 100% 0, 100% 100%, 15% 100%)",
+            zIndex: 10,
           }}
         >
-          {cards.map((card, i) => (
-            <div
-              key={i}
-              style={{
-                backgroundColor: hoveredCard === i ? "#2c5aa1" : "#1a3c78",
-                borderRadius: 16,
-                padding: "32px 24px",
-                textAlign: "center",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                minHeight: 320,
-                transition: "0.2s",
-                cursor: "pointer",
-              }}
-              onMouseEnter={() => setHoveredCard(i)}
-              onMouseLeave={() => setHoveredCard(null)}
-            >
-              <img
-                src={card.image}
-                alt={card.title}
-                style={{ width: 80, marginBottom: 16 }}
-              />
-
-              <h3 style={{ fontSize: 20, fontWeight: "bold", color: "#fff" }}>
-                {card.title}
-              </h3>
-
-              <p style={{ color: "#7d9bc7", fontSize: 13, marginTop: 12 }}>
-                {card.description}
-              </p>
-
-              <button
-                style={{
-                  marginTop: "auto",
-                  backgroundColor: "#CCFF00",
-                  border: "none",
-                  padding: "10px 32px",
-                  borderRadius: 6,
-                  fontWeight: "bold",
-                  cursor: "pointer",
-                }}
-              >
-                {card.button}
-              </button>
-            </div>
-          ))}
+          Practice makes perfect...
         </div>
-        {/* TIP SECTION */}
-<div
-  style={{
-    backgroundColor: "#2c5aa1",
-    borderRadius: 16,
-    padding: "28px 32px",
-    display: "flex",
-    gap: 20,
-  }}
->
-  <img src="/interview/Interview Tip.svg" alt="tip" style={{ width: 80 }} />
-  <div>
-    <h4
-      style={{
-        fontSize: 20,
-        fontFamily: "var(--font-nova-square)",
-        fontWeight: "400",
-        color: "#fff",
-      }}
-    >
-      Tip of the day
-    </h4>
-    <p
-      style={{
-        color: "#a8c5e0",
-        fontSize: 13,
-        fontFamily: "jura",
-        marginTop: 8,
-        fontWeight: "600",
-      }}
-    >
-      Research the company and interviewers before your interview so you
-      understand the company goals and show how you are a great fit.
-    </p>
-  </div>
-</div>
+
+        <div
+          style={{
+            maxWidth: "900px",
+            margin: "0 auto",
+            padding: "30px 24px 20px 24px",
+            height: "100%",
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          <h1
+            style={{
+              fontSize: 30,
+              fontWeight: "400",
+              fontFamily: "var(--font-nova-square)",
+              marginTop: "-1px",
+              marginBottom: "5px",
+
+              textShadow: "0 2px 4px rgba(0,0,0,0.5)",
+              color: "#000000",
+            }}
+          >
+            Interview Mock-ups
+          </h1>
+
+          {/* CARDS */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(3, 1fr)",
+              gap: 16,
+              marginBottom: 10,
+              marginTop: 40,
+            }}
+          >
+            {cards.map((card, i) => (
+              <div
+                key={i}
+                style={{
+                  backgroundColor: hoveredCard === i ? "#2c5aa1" : "#142143",
+                  borderRadius: 16,
+                  padding: "20px 16px",
+                  textAlign: "center",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  minHeight: "240px",
+                  transition: "0.2s",
+                  cursor: "pointer",
+                  boxShadow: "0 4px 15px rgba(0,0,0,0.4)",
+                }}
+                onMouseEnter={() => setHoveredCard(i)}
+                onMouseLeave={() => setHoveredCard(null)}
+              >
+                <img
+                  src={card.image}
+                  alt={card.title}
+                  style={{ width: 45, marginBottom: 12 }}
+                />
+                <h3 style={{ fontSize: 20, fontWeight: "400", fontFamily: "var(--font-nova-square)", color: "#fff" }}>
+                  {card.title}
+                </h3>
+                <p style={{ color: "#d0d8e8", fontSize: 15, marginTop: 8 }}>
+                  {card.description}
+                </p>
+                <button
+                  style={{
+                    marginTop: "auto",
+                    backgroundColor: "#CCFF00",
+                    border: "none",
+                    padding: "8px 20px",
+                    borderRadius: 6,
+                    fontSize: 13,
+                    fontWeight: "bold",
+                    cursor: "pointer",
+                  }}
+                >
+                  {card.button}
+                </button>
+              </div>
+            ))}
+          </div>
+
+          {/* TIP SECTION */}
+          <div
+            style={{
+              backgroundColor: "#1C427B",
+              borderRadius: 16,
+              padding: "16px 24px",
+              display: "flex",
+              alignItems: "center",
+              gap: 20,
+              marginTop: "auto",
+              marginBottom: "50px",
+              boxShadow: "0 4px 15px rgba(0,0,0,0.4)",
+            }}
+          >
+            <img src="/interview/Interview Tip.svg" alt="tip" style={{ width: 45 }} />
+            <div>
+              <h4 style={{ fontSize: 15, color: "#fff", margin: 0, fontFamily: "var(--font-nova-square)", fontWeight: "400" }}>Tip of the day</h4>
+              <p style={{ color: "#a8c5e0", fontSize: 15, margin: "4px 0 0 0", lineHeight: "1.4" }}>
+                Research the company and interviewers before your interview so you get a better understanding of the company’s goals and use this information to show how you will be a great fit.
+              </p>
+            </div>
+          </div>
+        </div>
       </main>
     </div>
   );

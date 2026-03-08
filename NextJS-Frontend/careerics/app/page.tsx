@@ -22,7 +22,7 @@ export default function LandingPage() {
         left: 0,
         width: "100%",
         height: "70px",
-        backgroundColor: "#0A0A0A",
+        backgroundColor: "var(--bg-color)",
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
@@ -48,7 +48,7 @@ export default function LandingPage() {
             fontFamily: "var(--font-jura)",
             fontSize: "1vw",
             cursor: "pointer",
-            backgroundColor: "#0A0A0A",
+            backgroundColor: "var(--bg-color)",
             color: "#fff"
           }}>
           Sign In
@@ -60,7 +60,7 @@ export default function LandingPage() {
         style={{
           position: "relative",
           scrollMarginTop: "100px",
-          backgroundColor: "#0A0A0A",
+          backgroundColor: "var(--bg-color)",
           width: "100%",
           minHeight: "100vh",
           overflow: "hidden",
@@ -71,12 +71,12 @@ export default function LandingPage() {
           style={{
             position: "absolute",
             top: "55%",
-            left: "60%",
+            left: "63%",
             transform: "translate(-50%, -50%)",
             width: "50vw",
             height: "100vh",
             background:
-              "radial-gradient(circle at center, #1560CA -10%, rgba(0,0,0,0) 65%)",
+              "radial-gradient(circle at center, var(--bg-effect-color) -10%, rgba(0,0,0,0) 65%)",
             zIndex: 1,
             pointerEvents: "none",
           }}
@@ -185,13 +185,13 @@ export default function LandingPage() {
       {/* Toolkit */}
       <section id="toolkit"
         style={{
-          scrollMarginTop: "30px",
+          scrollMarginTop: "35px",
           paddingInline: "75px",
           textAlign: "center",
-          backgroundColor: "#0A0A0A",
-          padding: "20px",
+          backgroundColor: "var(--bg-color)",
+          padding: "10px",
         }}>
-        <h2 style={{ fontSize: "3vw", fontWeight: "500" }}>
+        <h2 style={{ fontSize: "2.5vw", fontWeight: "500" }}>
           Choose from our various features
         </h2>
         <div
@@ -199,8 +199,11 @@ export default function LandingPage() {
             display: "grid",
             gridTemplateColumns: "repeat(5, 1fr)",
             gridTemplateRows: "repeat(3, 1fr)",
-            gridColumnGap: "20px",
-            gridRowGap: "20px",
+            gridColumnGap: "25px",
+            gridRowGap: "25px",
+            marginLeft:"10%",
+            marginRight:"10%",
+            marginBottom:"50px"
           }}
         >
 
@@ -209,16 +212,16 @@ export default function LandingPage() {
               type="horizontal"
               title="Career Quiz"
               description="Career confusion? We don't know her. Discover where you'll thrive with our 5-minute Quiz."
-              color="#FEF355"
+              color="var(--phase1-color)"
             />
           </div>
 
           <div style={{ gridArea: "1 / 3 / 3 / 4" }}>
             <FeatureCard
               type="vertical"
-              title="CV Enhancer"
+              title={<>CV<br />Enhancer</>}
               description="Already have a CV but it's not getting you anywhere? We'll optimize it to get you recruiters attention."
-              color="#52E996"
+              color="var(--phase3-color)"
             />
           </div>
 
@@ -227,16 +230,16 @@ export default function LandingPage() {
               type="horizontal"
               title="CV Builder"
               description="Never had a cv before and not sure how to make one? Build your CV from scratch with our AI builder. "
-              color="#52E996"
+              color="var(--phase3-color)"
             />
           </div>
 
           <div style={{ gridArea: "2 / 1 / 4 / 2" }}>
             <FeatureCard
               type="vertical"
-              title="Roadmap Generation"
+              title={<>Roadmap<br />Generation</>}
               description="Confused about your next steps? Get a clear map towards your dream role. We'll tell you exactly what to learn and how."
-              color="#B8EF46"
+              color="var(--phase2-color)"
             />
           </div>
 
@@ -245,7 +248,7 @@ export default function LandingPage() {
               type="square"
               title="Courses"
               description="Learn actual skills that match market demands."
-              color="#B8EF46"
+              color="var(--phase2-color)"
             />
           </div>
 
@@ -254,16 +257,16 @@ export default function LandingPage() {
               type="square"
               title="HR Interview"
               description="Practice smart answers to the impossible question."
-              color="#1FA1BB"
+              color="var(--phase4-color)"
             />
           </div>
 
           <div style={{ gridArea: "2 / 5 / 4 / 6" }}>
             <FeatureCard
               type="vertical"
-              title="Job Applicator"
+              title={<>Job<br />Applicator</>}
               description="You do have a CV but it’s getting you no job offers? This is just the feature for you. Upload your CV and we will do the rest. Applicator"
-              color="#1152CA"
+              color="var(--phase5-color)"
             />
           </div>
 
@@ -272,7 +275,7 @@ export default function LandingPage() {
               type="horizontal"
               title="Skill Assessment"
               description="Find out where you truly stand. Identify strengths, uncover gaps, and know what to improve. Make progress with precision."
-              color="#52E996"
+              color="var(--phase2-color)"
             />
           </div>
 
@@ -281,7 +284,7 @@ export default function LandingPage() {
               type="square"
               title="Tech Interview"
               description="Explain your thinking clearly even under pressure."
-              color="#1FA1BB"
+              color="var(--phase4-color)"
             />
           </div>
 

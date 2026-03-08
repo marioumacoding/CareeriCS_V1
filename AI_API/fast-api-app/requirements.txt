@@ -39,3 +39,6 @@ httpx==0.28.1
 
 tf-keras==2.20.0
 rapidfuzz
+
+tensorflow==2.20.0
+keras==3.12.0

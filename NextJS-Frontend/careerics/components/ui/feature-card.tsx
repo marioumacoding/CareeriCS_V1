@@ -110,7 +110,7 @@ export default function FeatureCard({
         style={{
           fontFamily: "var(--font-jura)",
           position: "absolute",
-          color: "#AAAAAA",
+          color: "var(--text-grey)",
           fontSize: "1vw",
           fontWeight: "400",
           top: layout.descTop,

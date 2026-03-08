@@ -8,7 +8,7 @@ export default function LandingPage() {
   const router = useRouter();
   return (
     <div style={{
-      backgroundColor: "#000",
+      backgroundColor: "var(--bg-color)",
       color: "#fff",
       minHeight: "100vh",
       fontFamily: "'Inter', sans-serif",
@@ -202,8 +202,7 @@ export default function LandingPage() {
             gridColumnGap: "25px",
             gridRowGap: "25px",
             marginLeft:"10%",
-            marginRight:"10%",
-            marginBottom:"50px"
+            marginRight:"10%"
           }}
         >
 
@@ -293,13 +292,13 @@ export default function LandingPage() {
       </section>
 
       {/* 4. ROADMAP SECTION */}
-      <section id="journey" style={{ scrollMarginTop: "30px", paddingTop: "30px", textAlign: "center", background: "#0a0a0a" }}>
+      <section id="journey" style={{ scrollMarginTop: "0.8%", paddingBottom: "1.5%", textAlign: "center", background: "var(--bg-color)" }}>
         <h3 style={{ fontSize: "2.5vw", fontWeight: "400" }}>
           Follow your personalized career journey
         </h3>
-        <div style={{ maxWidth: "100%", margin: "0 auto" }}>
+        <div style={{ maxWidth: "100%", marginTop: "1.2%", marginRight: "0 auto", marginLeft: "0 auto" }}>
           <img
-            src="/landing/Journey+text.svg"
+            src="/landing/Journey.svg"
             alt="Career Journey Roadmap"
             style={{ width: "100%", height: "auto" }}
           />

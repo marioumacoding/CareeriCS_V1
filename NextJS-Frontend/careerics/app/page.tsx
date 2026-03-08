@@ -211,7 +211,7 @@ export default function LandingPage() {
             <FeatureCard
               type="horizontal"
               title="Career Quiz"
-              description="Career confusion? We don't know her. Discover where you'll thrive with our 5-minute Quiz."
+              description={<>Career confusion? We don’t know her.<br/> Discover where you’ll thrive with our 5-minute Quiz.</>}
               color="var(--phase1-color)"
             />
           </div>
@@ -219,8 +219,8 @@ export default function LandingPage() {
           <div style={{ gridArea: "1 / 3 / 3 / 4" }}>
             <FeatureCard
               type="vertical"
-              title={<>CV<br />Enhancer</>}
-              description="Already have a CV but it's not getting you anywhere? We'll optimize it to get you recruiters attention."
+              title={<>CV<br />Builder</>}
+              description={<>Never had a CV before and you got no idea how to start?<br />  Our Ai model will build you an ATS- friendly CV. <br/> No guesswork Just results. </>}
               color="var(--phase3-color)"
             />
           </div>
@@ -228,17 +228,17 @@ export default function LandingPage() {
           <div style={{ gridArea: "1 / 4 / 2 / 6" }}>
             <FeatureCard
               type="horizontal"
-              title="CV Builder"
-              description="Never had a cv before and not sure how to make one? Build your CV from scratch with our AI builder. "
+              title={<>CV Enhancer</>}
+              description={<>Already have a CV but it’s not getting you anywhere?<br />  We’ll optimize it to get you recruiters attention.</>}
               color="var(--phase3-color)"
             />
           </div>
 
           <div style={{ gridArea: "2 / 1 / 4 / 2" }}>
-            <FeatureCard
+            <FeatureCard  
               type="vertical"
               title={<>Roadmap<br />Generation</>}
-              description="Confused about your next steps? Get a clear map towards your dream role. We'll tell you exactly what to learn and how."
+              description={<>Unsure about your next steps?<br/>Get a clear map towards your dream role.<br/> We’ll tell you exactly what to learn and how.</>}
               color="var(--phase2-color)"
             />
           </div>
@@ -246,8 +246,8 @@ export default function LandingPage() {
           <div style={{ gridArea: "2 / 2 / 3 / 3" }}>
             <FeatureCard
               type="square"
-              title="Courses"
-              description="Learn actual skills that match market demands."
+              title={<>Courses</>}
+              description={<>Learn actual skills that match market demands.</>}
               color="var(--phase2-color)"
             />
           </div>
@@ -255,8 +255,8 @@ export default function LandingPage() {
           <div style={{ gridArea: "2 / 4 / 3 / 5" }}>
             <FeatureCard
               type="square"
-              title="HR Interview"
-              description="Practice smart answers to the impossible question."
+              title={<>HR Interview</>}
+              description={<>Practice the impossible questions.</>}
               color="var(--phase4-color)"
             />
           </div>
@@ -265,7 +265,7 @@ export default function LandingPage() {
             <FeatureCard
               type="vertical"
               title={<>Job<br />Applicator</>}
-              description="You do have a CV but it’s getting you no job offers? This is just the feature for you. Upload your CV and we will do the rest. Applicator"
+              description={<>Job hunting shouldn’t feel like a full time job. <br /> Careeri CS will look for you, and  only give you the best matches - Saving you the hustle.</>}
               color="var(--phase5-color)"
             />
           </div>
@@ -273,8 +273,8 @@ export default function LandingPage() {
           <div style={{ gridArea: "3 / 2 / 4 / 4" }}>
             <FeatureCard
               type="horizontal"
-              title="Skill Assessment"
-              description="Find out where you truly stand. Identify strengths, uncover gaps, and know what to improve. Make progress with precision."
+              title={<>Skill Assessment</>}
+              description={<>Find out where you truly stand. Identify strengths, uncover gaps, and know what to improve.</>}
               color="var(--phase2-color)"
             />
           </div>
@@ -282,8 +282,8 @@ export default function LandingPage() {
           <div style={{ gridArea: "3 / 4 / 4 / 5" }}>
             <FeatureCard
               type="square"
-              title="Tech Interview"
-              description="Explain your thinking clearly even under pressure."
+              title={<>Tech Interview</>}
+              description={<>Explain your mind clearly under pressure.</>}
               color="var(--phase4-color)"
             />
           </div>
@@ -294,7 +294,7 @@ export default function LandingPage() {
 
       {/* 4. ROADMAP SECTION */}
       <section id="journey" style={{ scrollMarginTop: "30px", paddingTop: "30px", textAlign: "center", background: "#0a0a0a" }}>
-        <h3 style={{ fontSize: "3vw", fontWeight: "400" }}>
+        <h3 style={{ fontSize: "2.5vw", fontWeight: "400" }}>
           Follow your personalized career journey
         </h3>
         <div style={{ maxWidth: "100%", margin: "0 auto" }}>

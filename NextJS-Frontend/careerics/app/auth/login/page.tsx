@@ -1,8 +1,11 @@
 ﻿"use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { authService } from "@/services/auth.service";
+import AuthLayout from "@/app/auth/layout";
+import InputField from "@/components/ui/input-field";
+import { Button } from "@/components/ui/button"
+import AlertMessage from "@/components/ui/alert-message";
 
 /**
  * Login page — uses Supabase signInWithPassword under the hood.
@@ -61,205 +64,88 @@ export default function Login() {
   }
 
   return (
-    <div style={{ position: "relative", minHeight: "100vh", backgroundColor: "var(--bg-color)" }}>
-      {/* Back Arrow */}
-      <Link href="/" style={{ textDecoration: "none" }}>
-        <img
-          src="/auth/Back Arrow.svg"
-          alt="Back"
-          style={{
-            width: "24px",
-            height: "24px",
-            position: "absolute",
-            top: "1rem",
-            left: "1rem",
-            cursor: "pointer",
-            zIndex: 2,
-          }}
-        />
-      </Link>
-
+    <AuthLayout
+      CardTitle="Sign In"
+      Message="Don't have an account yet"
+      Link="/auth/register"
+      LinkText="Register Here"
+    >
       <form
         onSubmit={handleLogin}
-        style={{
-          marginTop: "5rem",
-          marginLeft: "8rem",
-          zIndex: 3,
-          backgroundColor: "var(--form-grey)",
-          padding: "2.5rem",
-          borderRadius: "20px",
-          width: "400px",
-          backdropFilter: "blur(10px)",
-          fontFamily: "var(--font-nova-square)",
-        }}
       >
-        <h2 style={{ textAlign: "center", marginBottom: "2rem", color: "white" }}>
-          Sign In
-        </h2>
 
-        {/* Error banner */}
-        {error && (
-          <div
-            style={{
-              backgroundColor: "#ff4d4f22",
-              border: "1px solid #ff4d4f",
-              borderRadius: "8px",
-              padding: "0.6rem 1rem",
-              marginBottom: "1rem",
-              color: "#ff4d4f",
-              fontSize: "0.85rem",
-            }}
-          >
-            {error}
-          </div>
-        )}
+        <AlertMessage message={error} type="error" />
 
-        {/* Email */}
-        <div style={{ marginBottom: "1rem" }}>
-          <label htmlFor="login-email" style={{ color: "white", fontSize: "1rem" }}>Email</label>
-          <input
-            id="login-email"
-            name="email"
-            type="email"
-            placeholder="Enter your email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            style={{
-              width: "95%",
-              fontFamily: "var(--font-nova-square)",
-              padding: "0.6rem",
-              marginTop: "0.3rem",
-              borderRadius: "6px",
-              border: "none",
-              backgroundColor: "white",
-            }}
-          />
-        </div>
+        <InputField
+          label="Email"
+          id="login-email"
+          type="email"
+          placeholder="Enter your email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+        />
 
-        {/* Password */}
-        <div style={{ marginBottom: "1rem" }}>
-          <label htmlFor="login-password" style={{ color: "white", fontSize: "1rem" }}>Password</label>
-          <input
-            id="login-password"
-            name="password"
-            type="password"
-            placeholder="Enter your password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            style={{
-              width: "95%",
-              fontFamily: "var(--font-nova-square)",
-              padding: "0.6rem",
-              marginTop: "0.3rem",
-              borderRadius: "6px",
-              border: "none",
-              backgroundColor: "white",
-            }}
-          />
-        </div>
+        <InputField
+          label="Password"
+          id="login-password"
+          type="password"
+          placeholder="Enter your password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+          isMargin={false}
+        />
 
-        <p style={{ fontSize: "0.8rem", color: "white", marginBottom: "1.5rem" }}>
-          Forgot your password –{" "}
-          <Link href="/auth/reset-password" style={{ textDecoration: "none" }}>
-            <span
-              style={{
-                color: resetHover ? "var(--hover-green)" : "white",
-                cursor: "pointer",
-                transition: "color 0.3s",
-              }}
-              onMouseEnter={() => setResetHover(true)}
-              onMouseLeave={() => setResetHover(false)}
-            >
-              Reset Here
-            </span>
-          </Link>
-        </p>
+        <Button
+          type="button"
+          variant="text"
+          textContent={{ before: "Forgot your password -", buttonText: "Reset Here" }}
+          onClick={() => router.push("/auth/reset-password")}
+        />
 
-        <div style={{ display: "flex", gap: "1rem", marginBottom: "1rem" }}>
-          <button
+        <div
+          style={{
+            display: "flex",
+            marginBottom: "3vh",
+            alignItems: "center",
+            justifyContent: "center",
+          }}>
+
+
+          <Button
             type="submit"
-            disabled={loading}
-            style={{
-              flex: 1,
-              padding: "0.7rem",
-              borderRadius: "15px",
-              border: "none",
-              fontFamily: "var(--font-nova-square)",
-              backgroundColor: signHover
-                ? "var(--hover-green)"
-                : "var(--primary-green)",
-              fontWeight: "bold",
-              cursor: loading ? "not-allowed" : "pointer",
-              opacity: loading ? 0.7 : 1,
-              transition: "background-color 0.3s, transform 0.2s",
-              transform: signHover ? "scale(1.05)" : "scale(1)",
-            }}
-            onMouseEnter={() => setSignHover(true)}
-            onMouseLeave={() => setSignHover(false)}
+            variant="primary"
+            style={{ marginLeft: "5vh" }}
           >
             {loading ? "Signing in..." : "Sign In"}
-          </button>
+          </Button>
 
           <div
             style={{
               textAlign: "center",
-              marginTop: "0.6rem",
+              marginInline: "1vh",
               color: "var(--text-grey)",
+              fontFamily: "var(--font-nova-square",
+              fontSize: "3vh",
             }}
           >
-            — or —
+            or
           </div>
 
-          <button
+          <Button
             type="button"
+            variant="secondary"
             onClick={handleGoogleLogin}
-            style={{
-              flex: 1.3,
-              padding: "0.7rem",
-              borderRadius: "15px",
-              border: "none",
-              backgroundColor: googleHover ? "#ACB2D2" : "white",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "0.5rem",
-              transition: "background-color 0.3s, transform 0.2s",
-              transform: googleHover ? "scale(1.03)" : "scale(1)",
-            }}
-            onMouseEnter={() => setGoogleHover(true)}
-            onMouseLeave={() => setGoogleHover(false)}
+            style={{ marginRight: "5vh" }}
           >
-            <img src="/auth/Google.svg" alt="Google" style={{ height: 20 }} />
+            <img src="/auth/Google.svg" alt="Google" style={{ height: "4vh" }} />
             Sign in using Google
-          </button>
+          </Button>
         </div>
 
-        <p
-          style={{
-            textAlign: "center",
-            fontSize: "0.8rem",
-            color: "var(--text-grey)",
-            marginTop: "1.5rem",
-          }}
-        >
-          Don&apos;t have an account yet?{" "}
-          <Link href="/auth/register" style={{ textDecoration: "none" }}>
-            <span
-              style={{
-                color: registerHover ? "#B8EF46" : "white",
-                cursor: "pointer",
-              }}
-              onMouseEnter={() => setRegisterHover(true)}
-              onMouseLeave={() => setRegisterHover(false)}
-            >
-              Register Here
-            </span>
-          </Link>
-        </p>
+
       </form>
-    </div>
+    </AuthLayout>
   );
 }

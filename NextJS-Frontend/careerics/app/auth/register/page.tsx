@@ -3,6 +3,11 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { authService } from "@/services/auth.service";
+import AuthLayout from "@/app/auth/layout";
+import InputField from "@/components/ui/input-field";
+import { Button } from "@/components/ui/button"
+import AlertMessage from "@/components/ui/alert-message";
+
 
 /**
  * Registration page  uses Supabase signUp under the hood.
@@ -93,256 +98,109 @@ export default function Register() {
   }
 
   return (
-    <div style={{ position: "relative", minHeight: "100vh", backgroundColor: "var(--bg-color)" }}>
-      {/* Back Arrow */}
-      <Link href="/auth/login" style={{ textDecoration: "none" }}>
-        <img
-          src="/auth/Back Arrow.svg"
-          alt="Back"
-          style={{
-            width: "24px",
-            height: "24px",
-            position: "absolute",
-            top: "1rem",
-            left: "1rem",
-            cursor: "pointer",
-            zIndex: 2,
-          }}
-        />
-      </Link>
-
+    <AuthLayout
+      CardTitle="Create An Account"
+      Message="Already have an account"
+      Link="/auth/login"
+      LinkText="Sign In Here"
+    >
       <form
         onSubmit={handleRegister}
-        style={{
-          marginLeft: "7rem",
-          zIndex: 1,
-          backgroundColor: "var(--form-grey)",
-          padding: "2.5rem",
-          borderRadius: "20px",
-          width: "400px",
-          backdropFilter: "blur(10px)",
-          fontFamily: "var(--font-nova-square)",
-        }}
       >
-        <h2
-          style={{
-            textAlign: "center",
-            marginBottom: "2rem",
-            color: "white",
-            fontSize: "1.6rem",
-            letterSpacing: "1px",
-          }}
-        >
-          Create An Account
-        </h2>
 
-        {/* Error banner */}
-        {error && (
-          <div
-            style={{
-              backgroundColor: "#ff4d4f22",
-              border: "1px solid #ff4d4f",
-              borderRadius: "8px",
-              padding: "0.6rem 1rem",
-              marginBottom: "1rem",
-              color: "#ff4d4f",
-              fontSize: "0.85rem",
-            }}
-          >
-            {error}
-          </div>
-        )}
+        <AlertMessage message={error} type="error" />
+        <AlertMessage message={success} type="success" />
 
-        {/* Success banner */}
-        {success && (
-          <div
-            style={{
-              backgroundColor: "#52c41a22",
-              border: "1px solid #52c41a",
-              borderRadius: "8px",
-              padding: "0.6rem 1rem",
-              marginBottom: "1rem",
-              color: "#52c41a",
-              fontSize: "0.85rem",
-            }}
-          >
-            {success}
-          </div>
-        )}
+        <InputField
+          label="First Name"
+          id="reg-firstname"
+          name="firstName"
+          placeholder="Enter your first name"
+          value={firstName}
+          onChange={(e) => setFirstName(e.target.value)}
+          required
+        />
 
-        {/* First Name */}
-        <div style={{ marginBottom: "1rem" }}>
-          <label htmlFor="reg-firstname" style={labelStyle}>First Name</label>
-          <input
-            id="reg-firstname"
-            name="firstName"
-            type="text"
-            placeholder="Enter your first name"
-            value={firstName}
-            onChange={(e) => setFirstName(e.target.value)}
-            required
-            style={inputStyle}
-          />
-        </div>
+        <InputField
+          label="Last Name"
+          id="reg-lastname"
+          name="lastName"
+          placeholder="Enter your last name"
+          value={lastName}
+          onChange={(e) => setLastName(e.target.value)}
+          required
+        />
 
-        {/* Last Name */}
-        <div style={{ marginBottom: "1rem" }}>
-          <label htmlFor="reg-lastname" style={labelStyle}>Last Name</label>
-          <input
-            id="reg-lastname"
-            name="lastName"
-            type="text"
-            placeholder="Enter your last name"
-            value={lastName}
-            onChange={(e) => setLastName(e.target.value)}
-            required
-            style={inputStyle}
-          />
-        </div>
+        <InputField
+          label="Email"
+          id="reg-email"
+          name="email"
+          type="email"
+          placeholder="Enter your email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+        />
 
-        {/* Email */}
-        <div style={{ marginBottom: "1rem" }}>
-          <label htmlFor="reg-email" style={labelStyle}>Email</label>
-          <input
-            id="reg-email"
-            name="email"
-            type="email"
-            placeholder="Enter your email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            style={inputStyle}
-          />
-        </div>
+        <InputField
+          label="Password"
+          id="reg-password"
+          name="password"
+          type="password"
+          placeholder="Enter your password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+        />
 
-        {/* Password */}
-        <div style={{ marginBottom: "1rem" }}>
-          <label htmlFor="reg-password" style={labelStyle}>Password</label>
-          <input
-            id="reg-password"
-            name="password"
-            type="password"
-            placeholder="Enter your password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            style={inputStyle}
-          />
-        </div>
+        <InputField
+          label="Confirm Password"
+          id="reg-confirm-password"
+          name="confirmPassword"
+          type="password"
+          placeholder="Confirm your password"
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          required
+        />
 
-        {/* Confirm Password */}
-        <div style={{ marginBottom: "1.5rem" }}>
-          <label htmlFor="reg-confirm-password" style={labelStyle}>Confirm Password</label>
-          <input
-            id="reg-confirm-password"
-            name="confirmPassword"
-            type="password"
-            placeholder="Confirm your password"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            required
-            style={inputStyle}
-          />
-        </div>
-
-        {/* Buttons */}
         <div
           style={{
             display: "flex",
-            gap: "1rem",
-            marginBottom: "1rem",
-            fontFamily: "var(--font-nova-square)",
-          }}
-        >
-          <button
+            marginBottom: "3vh",
+            alignItems: "center",
+            justifyContent: "center",
+          }}>
+          <Button
             type="submit"
-            disabled={loading}
-            style={{
-              width: "40%",
-              padding: 12,
-              border: "none",
-              borderRadius: 15,
-              display: "inline-flex",
-              justifyContent: "center",
-              alignItems: "center",
-              backgroundColor: registerHover
-                ? "var(--hover-green)"
-                : "var(--primary-green)",
-              fontWeight: "bold",
-              cursor: loading ? "not-allowed" : "pointer",
-              opacity: loading ? 0.7 : 1,
-              transition: "background-color 0.3s, transform 0.2s",
-              transform: registerHover ? "scale(1.05)" : "scale(1)",
-            }}
-            onMouseEnter={() => setRegisterHover(true)}
-            onMouseLeave={() => setRegisterHover(false)}
+            variant="primary"
+            style={{ marginLeft: "5vh" }}
           >
             {loading ? "Registering..." : "Register"}
-          </button>
+          </Button>
 
           <div
             style={{
               textAlign: "center",
-              marginTop: "0.6rem",
+              marginInline: "1vh",
               color: "var(--text-grey)",
+              fontFamily: "var(--font-nova-square",
+              fontSize: "3vh",
             }}
-          >
-            or
-          </div>
+          >or</div>
 
-          <button
+          <Button
             type="button"
+            variant="secondary"
             onClick={handleGoogleRegister}
-            style={{
-              width: "60%",
-              padding: 9,
-              borderRadius: "15px",
-              border: "none",
-              backgroundColor: googleHover ? "#ACB2D2" : "white",
-              cursor: "pointer",
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "0.5rem",
-              transition: "background-color 0.3s, transform 0.2s",
-              transform: googleHover ? "scale(1.03)" : "scale(1)",
-            }}
-            onMouseEnter={() => setGoogleHover(true)}
-            onMouseLeave={() => setGoogleHover(false)}
+            style={{ marginRight: "5vh" }}
           >
-            <img src="/auth/Google.svg" alt="Google" style={{ height: 20 }} />
+            <img src="/auth/Google.svg" alt="Google" style={{ height: "4vh" }} />
             Register using Google
-          </button>
+          </Button>
         </div>
 
-        {/* Divider */}
-        <div style={{ borderTop: "1px solid #777", margin: "1rem 0" }} />
-
-        {/* Sign In Redirect */}
-        <p
-          style={{
-            textAlign: "center",
-            fontSize: "0.8rem",
-            color: "var(--text-grey)",
-            marginTop: "1rem",
-          }}
-        >
-          Already have an account?{" "}
-          <Link href="/auth/login" style={{ textDecoration: "none" }}>
-            <span
-              style={{
-                color: signHoverText ? "#B8EF46" : "white",
-                cursor: "pointer",
-                transition: "color 0.3s",
-              }}
-              onMouseEnter={() => setSignHoverText(true)}
-              onMouseLeave={() => setSignHoverText(false)}
-            >
-              Sign In Here
-            </span>
-          </Link>
-        </p>
       </form>
-    </div>
+    </AuthLayout>
   );
 }

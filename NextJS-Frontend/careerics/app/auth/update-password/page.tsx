@@ -2,6 +2,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { authService } from "@/services/auth.service";
+import AuthLayout from "@/app/auth/layout";
+import InputField from "@/components/ui/input-field";
+import { Button } from "@/components/ui/button";
+import AlertMessage from "@/components/ui/alert-message";
 
 /**
  * Update password page — the user lands here after clicking the
@@ -42,107 +46,41 @@ export default function UpdatePassword() {
   }
 
   return (
-    <div style={{ position: "relative", minHeight: "100vh", backgroundColor: "var(--bg-color)" }}>
+    <AuthLayout
+      CardTitle="Set New Password"
+      showDiv={false}
+    >
       <form
         onSubmit={handleUpdate}
-        style={{
-          marginTop: "5rem",
-          marginLeft: "8rem",
-          zIndex: 3,
-          backgroundColor: "var(--form-grey)",
-          padding: "2.5rem",
-          borderRadius: "20px",
-          width: "400px",
-          backdropFilter: "blur(10px)",
-          fontFamily: "var(--font-nova-square)",
-        }}
       >
-        <h2 style={{ textAlign: "center", marginBottom: "1rem", color: "white" }}>
-          Set New Password
-        </h2>
 
-        {error && (
-          <div
-            style={{
-              backgroundColor: "#ff4d4f22",
-              border: "1px solid #ff4d4f",
-              borderRadius: "8px",
-              padding: "0.6rem 1rem",
-              marginBottom: "1rem",
-              color: "#ff4d4f",
-              fontSize: "0.85rem",
-            }}
-          >
-            {error}
-          </div>
-        )}
+        <AlertMessage message={error} type="error" />
 
-        <div style={{ marginBottom: "1rem" }}>
-          <label htmlFor="new-password" style={{ color: "white", fontSize: "1rem" }}>New Password</label>
-          <input
-            id="new-password"
-            name="password"
-            type="password"
-            placeholder="Enter new password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            style={{
-              width: "95%",
-              fontFamily: "var(--font-nova-square)",
-              padding: "0.6rem",
-              marginTop: "0.3rem",
-              borderRadius: "6px",
-              border: "none",
-              backgroundColor: "white",
-            }}
-          />
-        </div>
+        <InputField
+          label="Password"
+          id="reg-password"
+          name="password"
+          type="password"
+          placeholder="Enter your password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+        />
 
-        <div style={{ marginBottom: "1.5rem" }}>
-          <label htmlFor="confirm-new-password" style={{ color: "white", fontSize: "1rem" }}>Confirm Password</label>
-          <input
-            id="confirm-new-password"
-            name="confirmPassword"
-            type="password"
-            placeholder="Confirm new password"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            required
-            style={{
-              width: "95%",
-              fontFamily: "var(--font-nova-square)",
-              padding: "0.6rem",
-              marginTop: "0.3rem",
-              borderRadius: "6px",
-              border: "none",
-              backgroundColor: "white",
-            }}
-          />
-        </div>
-
-        <button
-          type="submit"
-          disabled={loading}
-          style={{
-            width: "100%",
-            padding: "0.7rem",
-            borderRadius: "15px",
-            border: "none",
-            fontFamily: "var(--font-nova-square)",
-            backgroundColor: submitHover ? "var(--hover-green)" : "var(--primary-green)",
-            fontWeight: "bold",
-            cursor: loading ? "not-allowed" : "pointer",
-            opacity: loading ? 0.7 : 1,
-            transition: "background-color 0.3s, transform 0.2s",
-            transform: submitHover ? "scale(1.02)" : "scale(1)",
-          }}
-          onMouseEnter={() => setSubmitHover(true)}
-          onMouseLeave={() => setSubmitHover(false)}
-        >
+        <InputField
+          label="Confirm Password"
+          id="reg-confirm-password"
+          name="confirmPassword"
+          type="password"
+          placeholder="Confirm your password"
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          required
+        />
+        <Button style={{ paddingInline: "12vh", marginTop: "3vh" }}>
           {loading ? "Updating..." : "Update Password"}
-        </button>
+        </Button>
       </form>
-    </div>
+    </AuthLayout>
   );
 }

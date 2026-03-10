@@ -2,7 +2,6 @@
 import React from "react";
 import FeatureCard from "@/components/ui/feature-card";
 import { useRouter } from 'next/navigation'
-import { Button } from "@/components/ui/button"
 
 export default function LandingPage() {
   const router = useRouter();

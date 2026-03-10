@@ -1,77 +1,155 @@
-/**
- * Reusable Button component (Atomic Design — atom).
- *
- * Demonstrates the component pattern used across the project:
- * - Variant-driven via props (no inline style logic)
- * - Forwarded refs for composition
- * - Tailwind + cn() for class merging
- */
+"use client";
+import { forwardRef, type ButtonHTMLAttributes, CSSProperties, useState } from "react";
 
-import { forwardRef, type ButtonHTMLAttributes } from "react";
-import { cn } from "@/lib/utils";
-
-type ButtonVariant = "primary" | "secondary" | "outline" | "ghost" | "danger";
+type ButtonVariant = "primary" | "secondary" | "outline" | "ghost" | "danger" | "text";
 type ButtonSize = "sm" | "md" | "lg";
+
+interface TextButtonContent {
+  before: string;
+  buttonText: string;
+}
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
   size?: ButtonSize;
   isLoading?: boolean;
+  textContent?: TextButtonContent;
 }
 
-const variantStyles: Record<ButtonVariant, string> = {
-  primary:
-    "bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200",
-  secondary:
-    "bg-zinc-100 text-zinc-900 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-50 dark:hover:bg-zinc-700",
-  outline:
-    "border border-zinc-300 bg-transparent text-zinc-900 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-50 dark:hover:bg-zinc-800",
-  ghost:
-    "bg-transparent text-zinc-900 hover:bg-zinc-100 dark:text-zinc-50 dark:hover:bg-zinc-800",
-  danger:
-    "bg-red-600 text-white hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600",
+const baseStyle: CSSProperties = {
+  position: "relative",
+  display: "inline-flex", 
+  alignItems: "center",
+  justifyContent: "center",
+  gap: "1vh",
+  border: "none",
+  borderRadius: "1.5vh",
+  outline: "none",
+  cursor: "pointer",
+  transition: "all 0.2s ease-in-out",
+  fontFamily: "var(--font-nova-square), sans-serif",
+  fontWeight: 500,
+  flex: 1,
 };
 
-const sizeStyles: Record<ButtonSize, string> = {
-  sm: "h-8 px-3 text-sm",
-  md: "h-10 px-4 text-sm",
-  lg: "h-12 px-6 text-base",
+const variantStyles: Record<ButtonVariant, { default: CSSProperties; hover: CSSProperties }> = {
+  primary: { 
+    default: { backgroundColor: "var(--primary-green)", color: "black" }, 
+    hover: { backgroundColor: "var(--hover-green)" } 
+  },
+  secondary: { 
+    default: { backgroundColor: "white", color: "#18181b" }, 
+    hover: { backgroundColor: "var(--hover-grey)" } 
+  },
+  outline: { 
+    default: { backgroundColor: "transparent", border: "0.1vh solid #d4d4d8", color: "#18181b" }, 
+    hover: { backgroundColor: "#f4f4f5" } 
+  },
+  ghost: { 
+    default: { backgroundColor: "transparent", color: "#18181b" }, 
+    hover: { backgroundColor: "#f4f4f5" } 
+  },
+  danger: { 
+    default: { backgroundColor: "#dc2626", color: "white" }, 
+    hover: { backgroundColor: "#b91c1c" } 
+  },
+  text: { 
+    default: { color: "var(--primary-green)", background: "transparent", fontWeight: 700 }, 
+    hover: { color: "white", textDecoration: "underline" } 
+  },
+};
+
+const sizeStyles: Record<ButtonSize, CSSProperties> = {
+  sm: { fontSize: "1.6vh", padding: "2vh" },
+  md: { fontSize: "2.2vh", padding: "3vh", height: "1vh" },
+  lg: { fontSize: "2.8vh", padding: "1.5vh 3vh", height: "1vh" },
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant = "primary", size = "md", isLoading, disabled, children, ...props }, ref) => {
+  ({ variant = "primary", size = "md", isLoading, disabled, children, style, textContent, ...props }, ref) => {
+    const [isHovered, setIsHovered] = useState(false);
+    const isInteractionDisabled = disabled || isLoading;
+
+    const combinedStyle: CSSProperties = {
+      ...baseStyle,
+      ...sizeStyles[size],
+      ...variantStyles[variant].default,
+      ...(isHovered && !isInteractionDisabled && variantStyles[variant].hover),
+      ...(variant === "text" && {
+        display: "inline",
+        padding: 0,
+        height: "auto",
+        verticalAlign: "baseline",
+        fontSize: "inherit",
+      }),
+      opacity: isInteractionDisabled ? 0.6 : 1,
+      pointerEvents: isInteractionDisabled ? "none" : "auto",
+      ...style,
+    };
+
+    if (variant === "text" && textContent) {
+      return (
+        <p
+          style={{
+            flex:0,
+            alignItems: "center",
+            fontSize: "2vh",
+            color: "white",
+            textAlign: "left",
+            fontFamily: "var(--font-nova-square)",
+            padding:"0vh",
+            marginTop:"1vh",
+            marginLeft:"5vh",
+            ...style
+          }}
+        >
+          {textContent.before}{"\u00A0"}
+          <button
+            ref={ref}
+            style={{
+              ...combinedStyle,
+              fontWeight:"normal",
+              padding:0,
+            }}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+            {...props}
+          >
+            {textContent.buttonText}
+          </button>
+        </p>
+      );
+    }
+
+    // --- Standard Button Case ---
     return (
       <button
         ref={ref}
-        disabled={disabled || isLoading}
-        className={cn(
-          "inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
-          variantStyles[variant],
-          sizeStyles[size],
-          className,
-        )}
+        disabled={isInteractionDisabled}
+        style={combinedStyle}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
         {...props}
       >
         {isLoading && (
           <svg
-            className="h-4 w-4 animate-spin"
+            style={{ 
+              width: "2.2vh", 
+              height: "2.2vh", 
+              animation: "spin 1s linear infinite" 
+            }}
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
             viewBox="0 0 24 24"
-            aria-hidden="true"
           >
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-            <path
-              className="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-            />
+            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth={4} style={{ opacity: 0.25 }} />
+            <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" style={{ opacity: 0.75 }} />
           </svg>
         )}
         {children}
       </button>
     );
-  },
+  }
 );
 
 Button.displayName = "Button";

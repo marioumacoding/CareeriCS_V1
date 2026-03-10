@@ -113,12 +113,12 @@ export default function AuthLayout({ children, CardTitle, Message, Link, LinkTex
             padding: "3vh",
             width: "fit-content",
             height: "fit-content",
-            backgroundColor: "#3D3D40",
+            backgroundColor: "var(--form-grey)",
             textAlign: "center",
             borderRadius: "3vh",
             margin: "0 auto",
             justifyItems: "center",
-
+            flexShrink: 0
           }}
         >
           <h1 style={{ color: "#fff", fontSize: "4vh" }}>{CardTitle}</h1>

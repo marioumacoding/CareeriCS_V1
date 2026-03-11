@@ -11,12 +11,12 @@ const Sidebar = () => {
   const navItems = [
     { text: "Home", image: "/sidebar/Home.svg", path: "/features/home" },
     { text: "Career Exploration", image: "/sidebar/Career.svg", path: "/features/career" },
-    { text: "Roadmap", image: "/sidebar/Roadmap.svg", path: "/features/roadmap" },
-    { text: "Courses", image: "/sidebar/Courses.svg", path: "/features/courses" },
+    { text: "Roadmaps", image: "/sidebar/Roadmap.svg", path: "/features/roadmap" },
+    { text: "Courses Hub", image: "/sidebar/Courses.svg", path: "/features/courses" },
     { text: "Skill Assessment", image: "/sidebar/Skill.svg", path: "/features/skill" },
     { text: "CV Crafting", image: "/sidebar/CV.svg", path: "/features/cv" },
-    { text: "Mock Interview", image: "/sidebar/Interview.svg", path: "/features/interview" },
-    { text: "Job Applications", image: "/sidebar/Job.svg", path: "/features/job" },
+    { text: "Interview Preparation", image: "/sidebar/Interview.svg", path: "/features/interview" },
+    { text: "Job Search", image: "/sidebar/Job.svg", path: "/features/job" },
   ];
 
   return (

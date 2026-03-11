@@ -8,11 +8,12 @@ const Header = () => {
   const pageConfig: Record<string, { title: string; subtitle: string }> = {
     "/features/home": { title: "Home", subtitle: "Welcome to CareeriCS" },
     "/features/career": { title: "Career Exploration", subtitle: "Find your path" },
-    "/features/courses": { title: "Courses", subtitle: "Expand your knowledge" },
-    "/features/roadmap": { title: "Roadmap", subtitle: "Your career journey" },
-    "/features/cv": { title: "CV Crafting", subtitle: "placeholder text" },
-    "/features/interview": { title: "Interview Mock-ups", subtitle: "Practice makes perfect..." },
-    "/features/job": { title: "Job Hunting", subtitle: "placeholder text" },
+    "/features/courses": { title: "Courses Hub", subtitle: "Expand your knowledge" },
+    "/features/roadmap": { title: "Roadmap", subtitle: "Clarity in every step" },
+    "/features/skill": { title: "Skill Assessment", subtitle: "Discover where you stand" },
+    "/features/cv": { title: "CV Crafting", subtitle: "Turn experience into impact" },
+    "/features/interview": { title: "Interview Preparation", subtitle: "Practice makes perfect" },
+    "/features/job": { title: "Job Search", subtitle: "Your next opportunity is waiting" },
   };
   
   const current = pageConfig[pathname] || { title: "CareeriCS", subtitle: "Loading..." };

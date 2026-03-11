@@ -9,7 +9,7 @@ const Header = () => {
     "/features/home": { title: "Home", subtitle: "Welcome to CareeriCS" },
     "/features/career": { title: "Career Exploration", subtitle: "Find your path" },
     "/features/courses": { title: "Courses Hub", subtitle: "Expand your knowledge" },
-    "/features/roadmap": { title: "Roadmap", subtitle: "Clarity in every step" },
+    "/features/roadmap": { title: "Roadmaps", subtitle: "Clarity in every step" },
     "/features/skill": { title: "Skill Assessment", subtitle: "Discover where you stand" },
     "/features/cv": { title: "CV Crafting", subtitle: "Turn experience into impact" },
     "/features/interview": { title: "Interview Preparation", subtitle: "Practice makes perfect" },

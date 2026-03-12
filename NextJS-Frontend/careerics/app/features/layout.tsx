@@ -23,15 +23,18 @@ export default function RootLayout({
 
       <Sidebar />
 
-      <div style={{ flex: 1, padding: "2vh" }}>
+      <div style={{ flex: 1, padding: "1vh" }}>
         <BG>
 
           <div style={{
             position: "relative",
             height: "80%",
-            aspectRatio: "1450/750",
             margin: "0 auto",
             display: "grid",
+            paddingTop: "1vh",
+            paddingBottom: "1vh",
+            paddingLeft: "5vw",
+            paddingRight: "5vw",  
             ...style,
           }}
           >

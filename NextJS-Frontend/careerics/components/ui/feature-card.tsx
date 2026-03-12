@@ -11,7 +11,6 @@ type CardProps = {
 
 const layouts = {
   horizontal: {
-    aspectRatio: "550 / 175",
     viewBox: "0 0 529 190",
     path: "M0 14C0 6.26802 6.26801 4.81271e-07 14 4.69107e-07L297.838 2.25909e-08C307.121 7.98663e-09 316.116 3.22911 323.28 9.13383L352.294 33.0493C359.458 38.9541 368.452 42.1832 377.736 42.1832H516C523.732 42.1832 530 48.4512 530 56.1832V177C530 184.732 523.732 191 516 191H14C6.26802 191 0 184.732 0 177V14Z",
     svgHeight: "89%",
@@ -63,7 +62,6 @@ export default function FeatureCard({
       onMouseLeave={() => setHover(false)}
       style={{
         width: "100%",
-        aspectRatio: layout.aspectRatio,
         backgroundColor: color,
         border: hover ? `3px solid ${color}` : "0px solid transparent",
         borderRadius: "15px",

@@ -1,7 +1,7 @@
 "use client";
 import { forwardRef, type ButtonHTMLAttributes, CSSProperties, useState } from "react";
 
-type ButtonVariant = "primary" | "secondary" | "outline" | "ghost" | "danger" | "text";
+type ButtonVariant = "primary" | "secondary" | "outline" | "ghost" | "danger" | "text" | "primary-inverted";
 type ButtonSize = "sm" | "md" | "lg";
 
 interface TextButtonContent {
@@ -18,7 +18,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const baseStyle: CSSProperties = {
   position: "relative",
-  display: "inline-flex", 
+  display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
   gap: "1vh",
@@ -33,30 +33,34 @@ const baseStyle: CSSProperties = {
 };
 
 const variantStyles: Record<ButtonVariant, { default: CSSProperties; hover: CSSProperties }> = {
-  primary: { 
-    default: { backgroundColor: "var(--primary-green)", color: "black" }, 
-    hover: { backgroundColor: "var(--hover-green)" } 
+  primary: {
+    default: { backgroundColor: "var(--primary-green)", color: "black" },
+    hover: { backgroundColor: "var(--hover-green)" }
   },
-  secondary: { 
-    default: { backgroundColor: "white", color: "#18181b" }, 
-    hover: { backgroundColor: "var(--hover-grey)" } 
+  secondary: {
+    default: { backgroundColor: "white", color: "#18181b" },
+    hover: { backgroundColor: "var(--hover-grey)" }
   },
-  outline: { 
-    default: { backgroundColor: "transparent", border: "0.1vh solid #d4d4d8", color: "#18181b" }, 
-    hover: { backgroundColor: "#f4f4f5" } 
+  outline: {
+    default: { backgroundColor: "transparent", border: "0.1vh solid #d4d4d8", color: "#18181b" },
+    hover: { backgroundColor: "#f4f4f5" }
   },
-  ghost: { 
-    default: { backgroundColor: "transparent", color: "#18181b" }, 
-    hover: { backgroundColor: "#f4f4f5" } 
+  ghost: {
+    default: { backgroundColor: "transparent", color: "#18181b" },
+    hover: { backgroundColor: "#f4f4f5" }
   },
-  danger: { 
-    default: { backgroundColor: "#dc2626", color: "white" }, 
-    hover: { backgroundColor: "#b91c1c" } 
+  danger: {
+    default: { backgroundColor: "#dc2626", color: "white" },
+    hover: { backgroundColor: "#b91c1c" }
   },
-  text: { 
-    default: { color: "var(--primary-green)", background: "transparent", fontWeight: 700 }, 
-    hover: { color: "white", textDecoration: "underline" } 
+  text: {
+    default: { color: "var(--primary-green)", background: "transparent", fontWeight: 700 },
+    hover: { color: "white", textDecoration: "underline" }
   },
+  "primary-inverted": {
+    default: { backgroundColor: "var(--hover-green)", color: "black" },
+    hover: { backgroundColor: "var(--primary-green)" }
+  }
 };
 
 const sizeStyles: Record<ButtonSize, CSSProperties> = {
@@ -91,15 +95,15 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       return (
         <p
           style={{
-            flex:0,
+            flex: 0,
             alignItems: "center",
             fontSize: "2vh",
             color: "white",
             textAlign: "left",
             fontFamily: "var(--font-nova-square)",
-            padding:"0vh",
-            marginTop:"1vh",
-            marginLeft:"5vh",
+            padding: "0vh",
+            marginTop: "1vh",
+            marginLeft: "5vh",
             ...style
           }}
         >
@@ -108,8 +112,8 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
             ref={ref}
             style={{
               ...combinedStyle,
-              fontWeight:"normal",
-              padding:0,
+              fontWeight: "normal",
+              padding: 0,
             }}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
@@ -133,10 +137,10 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       >
         {isLoading && (
           <svg
-            style={{ 
-              width: "2.2vh", 
-              height: "2.2vh", 
-              animation: "spin 1s linear infinite" 
+            style={{
+              width: "2.2vh",
+              height: "2.2vh",
+              animation: "spin 1s linear infinite"
             }}
             xmlns="http://www.w3.org/2000/svg"
             fill="none"

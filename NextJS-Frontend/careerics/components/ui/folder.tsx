@@ -1,11 +1,16 @@
 "use client";
-import React from "react";
+import React, { ReactNode } from "react";
 import { usePathname } from "next/navigation";
 
-const Folder = () => {
+type FolderProps = {
+  children?: ReactNode;
+};
+
+const Folder = ({ children }: FolderProps) => {
   const pathname = usePathname();
+
   const pageConfig: Record<string, { title: string; subtitle: string }> = {
-   "/features/home": { title: "Home", subtitle: "Welcome to CareeriCS" },
+    "/features/home": { title: "Home", subtitle: "Welcome to CareeriCS" },
     "/features/career": { title: "Career Exploration", subtitle: "Find your path" },
     "/features/courses": { title: "Courses Hub", subtitle: "Expand your knowledge" },
     "/features/roadmap": { title: "Roadmaps", subtitle: "Clarity in every step" },
@@ -14,60 +19,66 @@ const Folder = () => {
     "/features/interview": { title: "Interview Preparation", subtitle: "Practice makes perfect" },
     "/features/job": { title: "Job Search", subtitle: "Your next opportunity is waiting" },
   };
-  
-  const current = pageConfig[pathname] || { title: "CareeriCS", subtitle: "Loading..." };
 
- return (
-    <div style={{ 
-      position: "relative", 
-      width: "100%", 
-      height: "100%", 
-      display: "flex", 
-      flexDirection: "column" 
-    }}>
-    
-      <svg 
-        viewBox="0 0 1000 1000" 
-        preserveAspectRatio="none" 
-        style={{ 
-          position: "absolute", 
-          top: 0, 
-          left: 0, 
-          width: "100%", 
-          height: "100%", 
-          zIndex: 0 
+  const current =
+    pageConfig[pathname] || { title: "CareeriCS", subtitle: "Loading..." };
+
+  return (
+    <div
+      style={{
+        position: "relative",
+        display: "flex",
+        flexDirection: "column",
+        height: "100vh",
+        gap: 0,
+        left: 0,
+      }}
+    >
+
+      <div
+        style={{
+          display: "grid",
+          position: "relative",
+          margin: 0,
+          width: "fit-content",
+          height: "clamp(7vh,7vh,7vh)",
         }}
       >
-      
-        <path 
-          d= "M0,950 L0,30 Q0,0 50,0 L350,0 Q400,0 410,50 L450,100 Q470,120,520,120 L950,120 Q1000,120 1000,160 L1000,960 Q1000,1000 960,1000 L40,1000 Q0,1000 0,960 Z"
-          fill="var(--bg-grey)" 
-        />
-        
-        <path 
-          d="M440,60 Q460,70 500,70 L960,70 Q1000,70 1000,50 L1000,20 Q1000,0 980,0 L520,0 Q480,0 460,35 Z" 
-          fill="var(--meduim-blue)" 
-        />
-      </svg>
 
-      <div id="folder-content" style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", height: "100%" }}>
-      
-        <header style={{ height: "10%", display: "flex", width: "100%", minHeight: "60px", fontFamily: "var(--font-nova-square)" }}>
+        <svg preserveAspectRatio="none" width="125%" height="100%" viewBox="0 0 650 95" fill="none" xmlns="http://www.w3.org/2000/svg"
+          style={{
+            zIndex: 1,
+            gridArea: "1 / 1 / 2 / 2"
+          }}>
+          <path d="M0 49.5C0 22.1619 22.1619 0 49.5 0H455.747C468.663 0 481.328 3.57384 492.339 10.326L623.205 90.5741C630.605 95.1115 639.067 97.6234 647.744 97.8579L653 98H0V49.5Z" fill="#BABABA" />
+        </svg>
+        <h2
+          style={{
+            zIndex: "2",
+            paddingInline: "1rem",
+            gridArea: "1 / 1 / 2 / 2",
+            textAlign:"center",
+            lineHeight:"1vh",
+            fontSize:"clamp(0.8rem,1.7vw,1.5rem)"
+          }}
+        >
+          {current.title}
+        </h2>
+      </div>
 
-          <div id="feature-title" style={{ width: "40%", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <h1 style={{ margin: 0, fontSize: "clamp(1rem, 1.8vw, 2.2rem)", }}>
-              {current.title}
-            </h1>
-          </div>
-
-          <div id="feature-tagline" style={{ width: "60%", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <p style={{ margin: 0, color: "white", fontSize: "clamp(0.8rem, 1.7vw, 1.5rem)", textAlign: "center", paddingRight: "20px" }}>
-              {current.subtitle}
-            </p>
-          </div>
-        </header>
-
-        
+      <div
+        style={{
+          backgroundColor: "var(--bg-grey)",
+          marginRight: "1rem",
+          marginBottom: "1vh",
+          borderRadius: "1rem",
+          borderStartStartRadius: "0rem",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
+        {children}
       </div>
     </div>
   );

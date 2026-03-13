@@ -190,3 +190,82 @@ export interface CVProfile {
   awards: CVAward[];
   references: CVReference[];
 }
+
+// ── Roadmap domain ─────────────────────────────────────────────
+
+export interface RoadmapPosition {
+  x: number;
+  y: number;
+}
+
+export interface RoadmapNodeStyle {
+  width?: number | null;
+  height?: number | null;
+  fontSize?: number | null;
+  backgroundColor?: string | null;
+  borderColor?: string | null;
+  color?: string | null;
+  stroke?: string | null;
+  strokeWidth?: number | null;
+  strokeDasharray?: string | null;
+  strokeLinecap?: string | null;
+  padding?: number | null;
+  textAlign?: string | null;
+  justifyContent?: string | null;
+  [key: string]: unknown;
+}
+
+export interface RoadmapNodeData {
+  label?: string | null;
+  slug?: string | null;
+  style?: RoadmapNodeStyle | null;
+  href?: string | null;
+  color?: string | null;
+  backgroundColor?: string | null;
+  borderColor?: string | null;
+  [key: string]: unknown;
+}
+
+export interface RoadmapNode {
+  id: string;
+  type?: string | null;
+  position?: RoadmapPosition | null;
+  data?: RoadmapNodeData | null;
+  width?: number | null;
+  height?: number | null;
+  completed?: boolean | null;
+  [key: string]: unknown;
+}
+
+export interface RoadmapEdge {
+  id?: string | null;
+  source?: string | null;
+  target?: string | null;
+  style?: RoadmapNodeStyle | null;
+  [key: string]: unknown;
+}
+
+export interface RoadmapDocument {
+  nodes: RoadmapNode[];
+  edges: RoadmapEdge[];
+}
+
+export interface RoadmapNodeContent {
+  slug: string;
+  content: string;
+}
+
+export interface RoadmapCompletionResponse {
+  success: boolean;
+  nodeId: string;
+  status: string;
+}
+
+export interface RoadmapCatalogItem {
+  slug: string;
+  title: string;
+  description: string;
+  level: string;
+  estimatedDuration: string;
+  focusAreas: string[];
+}

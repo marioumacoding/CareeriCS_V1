@@ -4,6 +4,7 @@ const nextConfig: NextConfig = {
   // ── Performance ──
   reactStrictMode: true,
   poweredByHeader: false, // hide X-Powered-By header
+  skipTrailingSlashRedirect: true,
 
   // ── Images — allow external domains used by your APIs ──
   images: {
@@ -31,10 +32,6 @@ const nextConfig: NextConfig = {
       {
         source: "/api/dotnet/:path*",
         destination: `${process.env.DOTNET_API_URL ?? "http://localhost:5000/api"}/:path*`,
-      },
-      {
-        source: "/api/fastapi/:path*",
-        destination: `${process.env.FASTAPI_URL ?? "http://localhost:8000/api"}/:path*`,
       },
     ];
   },

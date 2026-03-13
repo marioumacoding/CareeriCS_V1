@@ -3,29 +3,87 @@ import { useRouter } from "next/navigation";
 import React, { useState, useEffect, useRef } from "react";
 import InterviewLayout from "@/components/ui/interview";
 import InterviewContainer from "@/components/ui/interview-card";
+import { interviewService } from "@/services/interview.service";
+import { useAuth } from "@/providers/auth-provider";
+import { useInterviewFlow } from "@/hooks";
 
 export default function RecordingPage() {
   const router = useRouter();
+  const { user } = useAuth();
+  const {
+    interviewType,
+    sessionId,
+    followupText,
+    currentQ,
+    questions,
+    isQuestionsLoading,
+    questionsError,
+    buildRecordingUrl,
+    buildAnalyzingUrl,
+  } = useInterviewFlow();
 
-  // 1. Data Definitions
-  const questions = [
-    { id: 1, text: "Where do you see yourself in 5 years?" },
-    { id: 2, text: "What is your biggest professional achievement?" },
-    { id: 3, text: "How do you handle conflict with a coworker?" },
-    { id: 4, text: "Why are you looking to leave your current role?" },
-    { id: 5, text: "How do you handle high-pressure situations?" },
-    { id: 6, text: "What is your preferred work style?" },
-    { id: 7, text: "Do you have any questions for us?" },
-  ];
-
-  // 2. State Management
-  const [activeId, setActiveId] = useState(1);
+  const [activeId, setActiveId] = useState(currentQ);
   const [status, setStatus] = useState<"idle" | "recording" | "stopped">("idle");
   const [seconds, setSeconds] = useState(0);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const [recordedMedia, setRecordedMedia] = useState<Blob | null>(null);
+  const [recordedPreviewUrl, setRecordedPreviewUrl] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [actionError, setActionError] = useState("");
 
-  // Get current question text dynamically based on sidebar selection
-  const currentQuestionText = questions.find((q) => q.id === activeId)?.text || "";
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const streamRef = useRef<MediaStream | null>(null);
+  const previewVideoRef = useRef<HTMLVideoElement | null>(null);
+  const hasCreatedSessionRef = useRef(false);
+
+  const currentQuestion = questions.find((q) => q.id === activeId) || null;
+  const currentQuestionText = followupText || currentQuestion?.text || "";
+
+  useEffect(() => {
+    setActiveId(currentQ);
+  }, [currentQ]);
+
+  useEffect(() => {
+    if (hasCreatedSessionRef.current || sessionId || !user?.id) {
+      return;
+    }
+
+    let alive = true;
+
+    const createSession = async () => {
+      hasCreatedSessionRef.current = true;
+      const payload = {
+        name: `${interviewType.toUpperCase()} Mock Interview`,
+        type: interviewType,
+        status: "in_progress",
+        user_id: user.id,
+      };
+
+      const response = await interviewService.createSession(payload);
+
+      if (!alive) return;
+
+      if (!response.success || !response.data?.id) {
+        setActionError(response.message || "Failed to create interview session.");
+        return;
+      }
+
+      router.replace(
+        buildRecordingUrl({
+          type: interviewType,
+          sessionId: response.data.id,
+          q: String(currentQ || 1),
+        }),
+      );
+    };
+
+    createSession();
+
+    return () => {
+      alive = false;
+    };
+  }, [sessionId, user?.id, interviewType, currentQ, router, buildRecordingUrl]);
 
   // 3. Timer Logic
   useEffect(() => {
@@ -45,22 +103,144 @@ export default function RecordingPage() {
     return `${mins}:${secs}`;
   };
 
+  const stopAndCleanupMedia = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      mediaRecorderRef.current.stop();
+    }
+
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+
+    if (previewVideoRef.current) {
+      previewVideoRef.current.srcObject = null;
+    }
+  };
+
+  const getRecorderOptions = (): MediaRecorderOptions | undefined => {
+    if (typeof MediaRecorder === "undefined") return undefined;
+
+    const preferredTypes = [
+      "video/webm;codecs=vp9,opus",
+      "video/webm;codecs=vp8,opus",
+      "video/webm",
+    ];
+
+    const supportedType = preferredTypes.find((type) => MediaRecorder.isTypeSupported(type));
+    return supportedType ? { mimeType: supportedType } : undefined;
+  };
+
   // 4. Action Handlers
-  const handleCameraToggle = () => {
-    if (status === "idle" || status === "stopped") setStatus("recording");
-    else setStatus("stopped");
+  const handleCameraToggle = async () => {
+    if (status === "recording") {
+      stopAndCleanupMedia();
+      setStatus("stopped");
+      return;
+    }
+
+    try {
+      setActionError("");
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+      streamRef.current = stream;
+
+      if (previewVideoRef.current) {
+        previewVideoRef.current.srcObject = stream;
+      }
+
+      const recorder = new MediaRecorder(stream, getRecorderOptions());
+      chunksRef.current = [];
+
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          chunksRef.current.push(event.data);
+        }
+      };
+
+      recorder.onstop = () => {
+        const blob = new Blob(chunksRef.current, {
+          type: recorder.mimeType || "video/webm",
+        });
+        if (blob.size > 0) {
+          if (recordedPreviewUrl) {
+            URL.revokeObjectURL(recordedPreviewUrl);
+          }
+
+          setRecordedMedia(blob);
+          setRecordedPreviewUrl(URL.createObjectURL(blob));
+        }
+      };
+
+      mediaRecorderRef.current = recorder;
+      recorder.start();
+      setRecordedMedia(null);
+      if (recordedPreviewUrl) {
+        URL.revokeObjectURL(recordedPreviewUrl);
+        setRecordedPreviewUrl(null);
+      }
+      setSeconds(0);
+      setStatus("recording");
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "NotAllowedError") {
+        setActionError("Camera and microphone access are required to record an answer. Please allow permissions in your browser settings.");
+      } else if (error instanceof DOMException && error.name === "NotFoundError") {
+        setActionError("No camera or microphone device was found.");
+      } else {
+        setActionError("Unable to start recording. Please refresh and try again.");
+      }
+      setStatus("idle");
+    }
   };
 
   const handleReset = () => {
+    stopAndCleanupMedia();
     setStatus("idle");
     setSeconds(0);
+    setRecordedMedia(null);
+    if (recordedPreviewUrl) {
+      URL.revokeObjectURL(recordedPreviewUrl);
+      setRecordedPreviewUrl(null);
+    }
+    setActionError("");
   };
 
-  const handleSubmit = () => {
-    if (seconds > 0) {
-      // Navigate to analyzing page with the current question index
-      router.push(`/interview-feature/analyzing?q=${activeId}`);
+  useEffect(() => {
+    return () => {
+      stopAndCleanupMedia();
+      if (recordedPreviewUrl) {
+        URL.revokeObjectURL(recordedPreviewUrl);
+      }
+    };
+  }, [recordedPreviewUrl]);
+
+  const handleSubmit = async () => {
+    if (!sessionId || !currentQuestion?.questionId || !recordedMedia || isSubmitting) {
+      return;
     }
+
+    setIsSubmitting(true);
+    setActionError("");
+
+    const submitResponse = await interviewService.submitAnswer(
+      sessionId,
+      currentQuestion.questionId,
+      recordedMedia,
+    );
+
+    setIsSubmitting(false);
+
+    if (!submitResponse.success) {
+      setActionError(submitResponse.message || "Failed to submit answer.");
+      return;
+    }
+
+    router.push(buildAnalyzingUrl({ q: String(activeId), questionId: currentQuestion.questionId }));
+  };
+
+  const onQuestionClick = (id: number) => {
+    setActiveId(id);
+    router.replace(buildRecordingUrl({ q: String(id), followup: null, questionId: null }));
+    handleReset();
   };
 
   // 5. UI Snippets
@@ -76,7 +256,7 @@ export default function RecordingPage() {
             : "/interview/Play.svg"
         }
         alt="Control"
-        style={{ width: "60px", cursor: "pointer" }}
+        style={{ width: "60px", cursor: isQuestionsLoading ? "not-allowed" : "pointer", opacity: isQuestionsLoading ? 0.5 : 1 }}
         onClick={handleCameraToggle}
       />
 
@@ -112,24 +292,47 @@ export default function RecordingPage() {
     <InterviewLayout 
       questions={questions} 
       currentActiveId={activeId} 
-      onQuestionClick={(id) => setActiveId(id)} // Pass callback to change active question
+      onQuestionClick={onQuestionClick}
       closeIconSrc="/interview/Close.svg"
     >
       <InterviewContainer
         questionTitle={`${activeId}. ${currentQuestionText}`}
         videoContent={
           <div style={{ color: "#666", fontSize: "20px", fontFamily: "jura" }}>
-            {status === "recording"
+            {isQuestionsLoading
+              ? "Loading questions..."
+              : questionsError || actionError
+              ? questionsError || actionError
+              : status === "recording"
               ? " Recording..."
               : status === "stopped"
               ? "⏸ Paused"
+              : recordedMedia
+              ? "Ready to submit"
               : ""}
+
+            <video
+              ref={previewVideoRef}
+              autoPlay={status === "recording"}
+              muted
+              playsInline
+              controls={status !== "recording"}
+              src={status !== "recording" ? (recordedPreviewUrl ?? undefined) : undefined}
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                borderRadius: "24px",
+                display: status === "recording" || recordedPreviewUrl ? "block" : "none",
+              }}
+            />
           </div>
         }
         controlsContent={controls}
         actionButton={
           <button
             onClick={handleSubmit}
+            disabled={!sessionId || !recordedMedia || isQuestionsLoading || isSubmitting || !questions.length}
             style={{
               background: "#d4ff47",
               padding: "15px 100px",
@@ -138,13 +341,13 @@ export default function RecordingPage() {
               fontWeight: "bold",
               fontSize: "18px",
               fontFamily: "var(--font-nova-square)",
-              cursor: seconds > 0 ? "pointer" : "not-allowed",
-              opacity: seconds > 0 ? 1 : 0.5,
+              cursor: !sessionId || !recordedMedia || isQuestionsLoading || isSubmitting || !questions.length ? "not-allowed" : "pointer",
+              opacity: !sessionId || !recordedMedia || isQuestionsLoading || isSubmitting || !questions.length ? 0.5 : 1,
               transition: "0.3s",
               color: "#1a1a1a"
             }}
           >
-            Submit
+            {isSubmitting ? "Submitting..." : "Submit"}
           </button>
         }
       />

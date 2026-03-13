@@ -15,6 +15,14 @@ import { HttpClient } from "./http-client";
 import { GraphQLClient } from "./graphql-client";
 import { getAuthToken } from "@/lib/auth/token";
 
+function resolveFastApiBaseUrl(baseUrl: string, proxyPath: string): string {
+  if (typeof window !== "undefined") {
+    return `${window.location.origin}${proxyPath}`;
+  }
+
+  return baseUrl;
+}
+
 // ──────────────────────────────────────────────
 // Shared interceptor that injects the bearer token
 // ──────────────────────────────────────────────
@@ -47,12 +55,12 @@ export const dotnetGraphql = new GraphQLClient({
 // FastAPI clients
 // ──────────────────────────────────────────────
 export const fastapiApi = new HttpClient({
-  baseUrl: publicConfig.fastapiUrl,
+  baseUrl: resolveFastApiBaseUrl(publicConfig.fastapiUrl, "/api/fastapi"),
   onRequest: withAuth,
   next: { revalidate: 0 },
 });
 
 export const fastapiGraphql = new GraphQLClient({
-  baseUrl: publicConfig.fastapiGraphqlUrl,
+  baseUrl: resolveFastApiBaseUrl(publicConfig.fastapiGraphqlUrl, "/api/fastapi/graphql"),
   onRequest: withAuth,
 });

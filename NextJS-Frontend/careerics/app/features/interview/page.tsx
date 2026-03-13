@@ -1,13 +1,10 @@
 "use client";
 import RootLayout from "@/app/features/layout";
 import ArchiveCard from "@/components/ui/archive-card";
-import { Button } from "@/components/ui/button";
 import ChoiceCard from "@/components/ui/choice-card";
 import TipCard from "@/components/ui/tipcard";
-import { useRouter } from 'next/navigation'
 
 export default function Interview() {
-  const router = useRouter();
   const archive = [
     { id: "Tech-001", date: "5/3/2026" },
     { id: "Tech-002", date: "5/3/2026" },
@@ -30,7 +27,7 @@ export default function Interview() {
         title="Behavioral Mock Interview"
         description="Practice answering the most common interview questions and improve how you  present yourself ans your skills."
         buttonVariant="primary-inverted"
-        route="/interview-feature/recording"
+        route="/interview-feature/recording?type=hr"
         icon="/interview/HR Interview Icon.png"
         style={{ gridArea: "1 / 1 / 3 / 2" }}
       />
@@ -39,7 +36,7 @@ export default function Interview() {
         title="Technical Mock Interview"
         description="Test your technical knowledge and problem solving skills with questions designed to mirror real interviews."
         buttonVariant="primary-inverted"
-        route="/"
+        route="/interview-feature/recording?type=tech"
         icon="/interview/Tech Interview Icon.png"
         style={{ gridArea: "1 / 2 / 3 / 3" }}
       />

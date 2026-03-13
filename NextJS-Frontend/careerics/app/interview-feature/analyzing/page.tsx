@@ -1,42 +1,85 @@
 "use client";
 import React, { useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import InterviewLayout from '@/components/ui/interview';
+import { interviewService } from '@/services/interview.service';
+import type { APIFollowup } from '@/types';
+import { useInterviewFlow } from '@/hooks';
 
 export default function AnalyzingPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const {
+    interviewType,
+    sessionId,
+    questionId,
+    currentQ,
+    questions,
+    buildRecordingUrl,
+  } = useInterviewFlow();
   
-  // State to track if analysis is finished
   const [isFinished, setIsFinished] = useState(false);
+  const [isEvaluating, setIsEvaluating] = useState(true);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [followup, setFollowup] = useState<APIFollowup | null>(null);
+  const missingContext = !sessionId || !questionId;
 
-  // Get the current question ID from the URL (default to 1)
-  const currentQ = parseInt(searchParams.get('q') || '1');
-
-  const questions = [
-    { id: 1, text: "Where do you see yourself in 5 years?" },
-    { id: 2, text: "What is your biggest professional achievement?" },
-    { id: 3, text: "How do you handle conflict with a coworker?" },
-    { id: 4, text: "Why are you looking to leave your current role?" },
-    { id: 5, text: "How do you handle high-pressure situations?" },
-    { id: 6, text: "What is your preferred work style?" },
-    { id: 7, text: "Do you have any questions for us?" },
-  ];
-
-  // Effect to trigger the state change after 5 seconds
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsFinished(true);
-    }, 5000);
+    if (missingContext) {
+      return;
+    }
 
-    return () => clearTimeout(timer); // Cleanup timer if component unmounts
-  }, []);
+    let alive = true;
+
+    const evaluate = async () => {
+      setIsEvaluating(true);
+      setErrorMessage('');
+      setFollowup(null);
+
+      const response = await interviewService.evaluateAnswer(sessionId, questionId);
+      if (!alive) return;
+
+      if (!response.success || !response.data) {
+        setErrorMessage(response.message || 'Evaluation failed. Please try again.');
+        setIsFinished(false);
+        setIsEvaluating(false);
+        return;
+      }
+
+      setFollowup(response.data.followup ?? null);
+      setIsFinished(true);
+      setIsEvaluating(false);
+    };
+
+    evaluate();
+
+    return () => {
+      alive = false;
+    };
+  }, [sessionId, questionId, missingContext]);
 
   const handleNext = () => {
+    if (followup) {
+      router.push(buildRecordingUrl({
+        type: interviewType,
+        sessionId,
+        q: String(currentQ),
+        followup: followup.text,
+        questionId: null,
+      }));
+      return;
+    }
+
     if (currentQ < questions.length) {
-      router.push(`/interview-feature/recording?q=${currentQ + 1}`);
+      const nextQuestion = questions[currentQ];
+      router.push(buildRecordingUrl({
+        type: interviewType,
+        sessionId,
+        q: String(currentQ + 1),
+        questionId: nextQuestion?.questionId || null,
+        followup: null,
+      }));
     } else {
-      router.push('/interview-feature/complete');
+      router.push('/features/interview');
     }
   };
 
@@ -44,7 +87,16 @@ export default function AnalyzingPage() {
     <InterviewLayout
       questions={questions}
       currentActiveId={currentQ}
-      onQuestionClick={(id: number) => router.push(`/interview-feature/recording?q=${id}`)}
+      onQuestionClick={(id: number) => {
+        const target = questions.find((q) => q.id === id);
+        router.push(buildRecordingUrl({
+          type: interviewType,
+          sessionId,
+          q: String(id),
+          questionId: target?.questionId || null,
+          followup: null,
+        }));
+      }}
       closeIconSrc="/interview/Close.svg"
     >
       <div style={{ 
@@ -66,15 +118,29 @@ export default function AnalyzingPage() {
           lineHeight: '1.6',
           marginBottom: '50px' 
         }}>
-          {isFinished ? (
+          {missingContext ? (
+            <>Missing session or question context. Please restart interview flow.</>
+          ) : errorMessage ? (
+            <>{errorMessage}</>
+          ) : isEvaluating ? (
+            <>
+              Our Model is analyzing your answers,<br />
+              Give us a moment
+            </>
+          ) : isFinished && followup ? (
+            <>
+              We need a follow-up answer before final scoring:<br />
+              {followup.text}
+            </>
+          ) : isFinished ? (
             <>
               Our Model has finished the analysis,<br />
               Ready for the next question?
             </>
           ) : (
             <>
-              Our Model is analyzing your answers,<br />
-              Give us a moment
+              Evaluation is not complete yet.<br />
+              Please try again
             </>
           )}
         </h2>
@@ -94,7 +160,7 @@ export default function AnalyzingPage() {
         {/* Conditional Action Button */}
         <button 
           onClick={handleNext}
-          disabled={!isFinished} // Optional: prevent clicking until analysis is done
+          disabled={!isFinished}
           style={{
             backgroundColor: isFinished ? '#d4ff47' : '#BABABA', // Green when finished, Grey while analyzing
             color: '#1a1a1a',
@@ -109,7 +175,7 @@ export default function AnalyzingPage() {
             opacity: isFinished ? 1 : 0.8
           }}
         >
-          Next Question
+          {followup ? 'Answer Follow-up' : 'Next Question'}
         </button>
       </div>
     </InterviewLayout>

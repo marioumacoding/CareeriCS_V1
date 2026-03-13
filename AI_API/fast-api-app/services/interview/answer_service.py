@@ -110,25 +110,22 @@ async def evaluate_answer_service_wrapper(
     improvement = evaluation["improvement"]
     followup_required = evaluation["followup_required"]
 
+    updated_answer = _final_evaluation(db, answer, feedback, score)
+
+    # default values
+    followup_info = None
+    followup_recommended = False
+
     # Follow-up flow
     if is_followup_allowed and followup_required:
         followup_info = _handle_followup(db, answer.id, improvement)
-
-        return {
-            "evaluation": None,
-            "grade": None,
-            "followup": followup_info,
-            "emotion_evaluation": None,
-            "tone_evaluation": None,
-        }
-
-    # Final evaluation
-    updated_answer = _final_evaluation(db, answer, feedback, score)
+        followup_recommended = True
 
     return {
         "evaluation": feedback,
         "grade": score,
-        "followup": None,
+        "followup_recommended": followup_recommended,
+        "followup": followup_info,
         "emotion_evaluation": updated_answer.emotion_evaluation,
         "tone_evaluation": updated_answer.tone_evaluation,
     }

@@ -33,7 +33,7 @@ def evaluate_answer_prompt(
 ) -> str:
 
     followup_instruction = (
-        "If the answer is incomplete or unclear, set followup_required to true.\n"
+        "If the answer is incomplete or unclear, Only if necessary set followup_required to true.\n"
         if is_followup
         else ""
     )

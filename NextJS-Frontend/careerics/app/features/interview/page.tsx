@@ -30,7 +30,7 @@ export default function Interview() {
         title="Behavioral Mock Interview"
         description="Practice answering the most common interview questions and improve how you  present yourself ans your skills."
         buttonVariant="primary-inverted"
-        route="/"
+        route="/interview-feature/recording"
         icon="/interview/HR Interview Icon.png"
         style={{ gridArea: "1 / 1 / 3 / 2" }}
       />

@@ -1,10 +1,5 @@
-import os
-import uuid
-import json
 from io import BytesIO
-from openai import OpenAI
 from datetime import datetime
-from dotenv import load_dotenv
 from reportlab.lib import colors
 from reportlab.platypus import HRFlowable
 from reportlab.lib.pagesizes import LETTER

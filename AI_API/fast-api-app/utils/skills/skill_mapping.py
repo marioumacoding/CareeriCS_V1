@@ -1,107 +1,98 @@
-import re
 from typing import List, Optional
 from sqlalchemy.orm import Session
 from rapidfuzz import process, fuzz
 from db.models import Skill
 
 
-# ------------------------------------------------------------
-# Build Global Skill Index
-# ------------------------------------------------------------
-def build_global_skill_index(db: Session):
-    skills = db.query(Skill).all()
-
-    exact_map = {
-        normalize_skill(skill.skill_name): skill
-        for skill in skills
-    }
-
-    skill_names = [normalize_skill(skill.skill_name) for skill in skills]
-
-    return skills, exact_map, skill_names
-
-
-# ------------------------------------------------------------
-# Text Normalization
-# ------------------------------------------------------------
 def normalize_skill(text: str) -> str:
     if not text:
         return ""
-
     text = text.lower().strip()
+    import re
     text = re.sub(r"\s+", " ", text)
     return text
 
 
-# ------------------------------------------------------------
-# Find Exact Match
-# ------------------------------------------------------------
-def find_exact_match(skill_name: str, exact_map: dict):
-    normalized = normalize_skill(skill_name)
+def build_global_skill_index(db: Session):
+    global_skills = db.query(Skill).all()
+    exact_map = {normalize_skill(gs.skill_name): gs for gs in global_skills}
+    skill_names = [normalize_skill(gs.skill_name) for gs in global_skills]
+    return global_skills, exact_map, skill_names
+
+
+def find_exact_match(extracted_skill: str, exact_map: dict) -> Optional[Skill]:
+    normalized = normalize_skill(extracted_skill)
     return exact_map.get(normalized)
 
 
-# ------------------------------------------------------------
-# Find Fuzzy Match
-# ------------------------------------------------------------
 def find_fuzzy_match(
-    skill_name: str,
-    skills: List[Skill],
+    extracted_skill: str,
+    global_skills: List[Skill],
     skill_names: List[str],
     threshold: int = 85
 ) -> Optional[Skill]:
+    normalized_input = normalize_skill(extracted_skill)
 
-    normalized_input = normalize_skill(skill_name)
-
-    if len(normalized_input) > 3:
+    # Only consider global skills >=3 characters
+    filtered_names = [name for name in skill_names if len(name) >= 3]
+    if not filtered_names:
         return None
 
-    match = process.extractOne(
-        normalized_input,
-        skill_names,
-        scorer=fuzz.WRatio
-    )
-
+    match = process.extractOne(normalized_input, filtered_names, scorer=fuzz.WRatio)
     if not match:
         return None
 
-    best_name, score, index = match
-
+    best_name, score, index_in_filtered = match
+    index_in_global = skill_names.index(best_name)
     if score >= threshold:
-        return skills[index]
+        return global_skills[index_in_global]
 
     return None
 
 
-# ------------------------------------------------------------
-# Main Mapping Function
-# ------------------------------------------------------------
 def map_skills_to_global(
     db: Session,
     extracted_skills: List[str],
     threshold: int = 85
 ) -> List[Skill]:
+    global_skills, exact_map, skill_names = build_global_skill_index(db)
+    mapped_results: List[Skill] = []
 
-    skills, exact_map, skill_names = build_global_skill_index(db)
+    # Track IDs added in this batch to prevent duplicates
+    added_global_ids = set()
 
-    mapped_results = []
+    for extracted_skill in extracted_skills:
+        normalized = normalize_skill(extracted_skill)
 
-    for skill_name in extracted_skills:
-
-        exact = find_exact_match(skill_name, exact_map)
-        if exact:
-            mapped_results.append(exact)
+        # Exact match
+        global_skill = find_exact_match(normalized, exact_map)
+        if global_skill:
+            if global_skill.id not in added_global_ids:
+                mapped_results.append(global_skill)
+                added_global_ids.add(global_skill.id)
             continue
 
-        
-        fuzzy = find_fuzzy_match(
-            skill_name,
-            skills,
-            skill_names,
-            threshold
-        )
+        # Fuzzy match
+        global_skill = find_fuzzy_match(normalized, global_skills, skill_names, threshold)
+        if global_skill:
+            if global_skill.id not in added_global_ids:
+                mapped_results.append(global_skill)
+                added_global_ids.add(global_skill.id)
+            continue
 
-        if fuzzy:
-            mapped_results.append(fuzzy)
+        # Create new global skill
+        new_global_skill = Skill(skill_name=extracted_skill)
+        db.add(new_global_skill)
+        db.flush()
+        db.refresh(new_global_skill)
 
+        mapped_results.append(new_global_skill)
+        added_global_ids.add(new_global_skill.id)
+
+        # Update local indexes
+        global_skills.append(new_global_skill)
+        skill_names.append(normalized)
+        exact_map[normalized] = new_global_skill
+
+    db.commit()
     return mapped_results

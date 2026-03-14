@@ -25,6 +25,7 @@ interface AnalyzingOverrides {
   sessionId?: string;
   q?: string;
   questionId?: string;
+  answerId?: string;
 }
 
 const CANONICAL_TYPE_ALIASES: Record<InterviewType, string[]> = {
@@ -67,6 +68,7 @@ export function useInterviewFlow() {
 
   const sessionId = searchParams.get("sessionId") || "";
   const questionId = searchParams.get("questionId") || "";
+  const answerId = searchParams.get("answerId") || "";
   const followupText = searchParams.get("followup") || "";
 
   const currentQ = useMemo(() => {
@@ -159,6 +161,10 @@ export function useInterviewFlow() {
         questionId: overrides.questionId || questionId,
       });
 
+      if (overrides.answerId) {
+        params.set("answerId", overrides.answerId);
+      }
+
       return `/interview-feature/analyzing?${params.toString()}`;
     },
     [interviewType, sessionId, currentQ, questionId],
@@ -168,6 +174,7 @@ export function useInterviewFlow() {
     interviewType,
     sessionId,
     questionId,
+    answerId,
     followupText,
     currentQ,
     questions,

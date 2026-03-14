@@ -28,6 +28,7 @@ export default function RecordingPage() {
   const [recordedMedia, setRecordedMedia] = useState<Blob | null>(null);
   const [recordedPreviewUrl, setRecordedPreviewUrl] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isFinalizingRecording, setIsFinalizingRecording] = useState(false);
   const [actionError, setActionError] = useState("");
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -36,9 +37,24 @@ export default function RecordingPage() {
   const streamRef = useRef<MediaStream | null>(null);
   const previewVideoRef = useRef<HTMLVideoElement | null>(null);
   const hasCreatedSessionRef = useRef(false);
+  const pendingSubmitRef = useRef(false);
 
   const currentQuestion = questions.find((q) => q.id === activeId) || null;
   const currentQuestionText = followupText || currentQuestion?.text || "";
+  const submitBlockedReason =
+    !sessionId
+      ? "Please sign in first so an interview session can be created."
+      : isQuestionsLoading
+      ? "Questions are still loading."
+      : isSubmitting
+      ? "Submission is already in progress."
+      : !questions.length
+      ? "No questions are available for this interview type."
+      : !currentQuestion?.questionId
+      ? "Current question is not ready yet."
+      : "";
+
+  const isSubmitDisabled = Boolean(submitBlockedReason);
 
   useEffect(() => {
     setActiveId(currentQ);
@@ -134,6 +150,7 @@ export default function RecordingPage() {
   // 4. Action Handlers
   const handleCameraToggle = async () => {
     if (status === "recording") {
+      setIsFinalizingRecording(true);
       stopAndCleanupMedia();
       setStatus("stopped");
       return;
@@ -158,6 +175,8 @@ export default function RecordingPage() {
       };
 
       recorder.onstop = () => {
+        setIsFinalizingRecording(false);
+
         const blob = new Blob(chunksRef.current, {
           type: recorder.mimeType || "video/webm",
         });
@@ -168,6 +187,14 @@ export default function RecordingPage() {
 
           setRecordedMedia(blob);
           setRecordedPreviewUrl(URL.createObjectURL(blob));
+
+          if (pendingSubmitRef.current) {
+            pendingSubmitRef.current = false;
+            void submitRecordedAnswer(blob);
+          }
+        } else if (pendingSubmitRef.current) {
+          pendingSubmitRef.current = false;
+          setActionError("No recording data was captured. Please record again.");
         }
       };
 
@@ -193,8 +220,10 @@ export default function RecordingPage() {
   };
 
   const handleReset = () => {
+    pendingSubmitRef.current = false;
     stopAndCleanupMedia();
     setStatus("idle");
+    setIsFinalizingRecording(false);
     setSeconds(0);
     setRecordedMedia(null);
     if (recordedPreviewUrl) {
@@ -213,8 +242,8 @@ export default function RecordingPage() {
     };
   }, [recordedPreviewUrl]);
 
-  const handleSubmit = async () => {
-    if (!sessionId || !currentQuestion?.questionId || !recordedMedia || isSubmitting) {
+  const submitRecordedAnswer = async (media: Blob) => {
+    if (!sessionId || !currentQuestion?.questionId || isSubmitting) {
       return;
     }
 
@@ -224,7 +253,7 @@ export default function RecordingPage() {
     const submitResponse = await interviewService.submitAnswer(
       sessionId,
       currentQuestion.questionId,
-      recordedMedia,
+      media,
     );
 
     setIsSubmitting(false);
@@ -234,10 +263,43 @@ export default function RecordingPage() {
       return;
     }
 
-    router.push(buildAnalyzingUrl({ q: String(activeId), questionId: currentQuestion.questionId }));
+    router.push(
+      buildAnalyzingUrl({
+        q: String(activeId),
+        questionId: currentQuestion.questionId,
+        answerId: submitResponse.data?.answer_id,
+      }),
+    );
+  };
+
+  const handleSubmit = async () => {
+    if (!sessionId || !currentQuestion?.questionId || isSubmitting) {
+      return;
+    }
+
+    if (status === "recording") {
+      pendingSubmitRef.current = true;
+      setIsFinalizingRecording(true);
+      stopAndCleanupMedia();
+      setStatus("stopped");
+      return;
+    }
+
+    if (status === "stopped" && isFinalizingRecording) {
+      pendingSubmitRef.current = true;
+      return;
+    }
+
+    if (!recordedMedia) {
+      setActionError("Record your answer first, then submit.");
+      return;
+    }
+
+    await submitRecordedAnswer(recordedMedia);
   };
 
   const onQuestionClick = (id: number) => {
+    pendingSubmitRef.current = false;
     setActiveId(id);
     router.replace(buildRecordingUrl({ q: String(id), followup: null, questionId: null }));
     handleReset();
@@ -303,8 +365,12 @@ export default function RecordingPage() {
               ? "Loading questions..."
               : questionsError || actionError
               ? questionsError || actionError
+              : !sessionId && !user?.id
+              ? "Please sign in to start interview session."
               : status === "recording"
               ? " Recording..."
+              : isFinalizingRecording
+              ? "Finalizing recording..."
               : status === "stopped"
               ? "⏸ Paused"
               : recordedMedia
@@ -332,7 +398,8 @@ export default function RecordingPage() {
         actionButton={
           <button
             onClick={handleSubmit}
-            disabled={!sessionId || !recordedMedia || isQuestionsLoading || isSubmitting || !questions.length}
+            disabled={isSubmitDisabled}
+            title={submitBlockedReason || undefined}
             style={{
               background: "#d4ff47",
               padding: "15px 100px",
@@ -341,13 +408,13 @@ export default function RecordingPage() {
               fontWeight: "bold",
               fontSize: "18px",
               fontFamily: "var(--font-nova-square)",
-              cursor: !sessionId || !recordedMedia || isQuestionsLoading || isSubmitting || !questions.length ? "not-allowed" : "pointer",
-              opacity: !sessionId || !recordedMedia || isQuestionsLoading || isSubmitting || !questions.length ? 0.5 : 1,
+              cursor: isSubmitDisabled ? "not-allowed" : "pointer",
+              opacity: isSubmitDisabled ? 0.5 : 1,
               transition: "0.3s",
               color: "#1a1a1a"
             }}
           >
-            {isSubmitting ? "Submitting..." : "Submit"}
+            {isSubmitting ? "Submitting..." : isFinalizingRecording ? "Preparing..." : "Submit"}
           </button>
         }
       />

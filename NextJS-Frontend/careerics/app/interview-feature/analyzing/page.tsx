@@ -12,6 +12,7 @@ export default function AnalyzingPage() {
     interviewType,
     sessionId,
     questionId,
+    answerId,
     currentQ,
     questions,
     buildRecordingUrl,
@@ -45,7 +46,30 @@ export default function AnalyzingPage() {
         return;
       }
 
-      setFollowup(response.data.followup ?? null);
+      const isFollowupRequired =
+        Boolean(response.data.followup_recommended) || Boolean(response.data.followup);
+
+      if (isFollowupRequired) {
+        if (!answerId) {
+          setErrorMessage('Follow-up is required but answer context is missing. Please submit your answer again.');
+          setIsFinished(false);
+          setIsEvaluating(false);
+          return;
+        }
+
+        const followupResponse = await interviewService.getFollowupByAnswerId(answerId);
+        if (!alive) return;
+
+        if (!followupResponse.success || !followupResponse.data) {
+          setErrorMessage(followupResponse.message || 'Could not load follow-up question. Please try again.');
+          setIsFinished(false);
+          setIsEvaluating(false);
+          return;
+        }
+
+        setFollowup(followupResponse.data);
+      }
+
       setIsFinished(true);
       setIsEvaluating(false);
     };
@@ -55,7 +79,7 @@ export default function AnalyzingPage() {
     return () => {
       alive = false;
     };
-  }, [sessionId, questionId, missingContext]);
+  }, [sessionId, questionId, answerId, missingContext]);
 
   const handleNext = () => {
     if (followup) {

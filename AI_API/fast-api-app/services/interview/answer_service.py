@@ -44,23 +44,61 @@ async def submit_answer_service(
     audio: UploadFile,
 ):
 
+    session = db.get(models.Session, session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    question = db.get(models.Question, question_id)
+    if not question:
+        raise HTTPException(status_code=404, detail="Question not found")
+
     existing_answer = (
         db.query(models.Answer)
         .filter_by(session_id=session_id, question_id=question_id)
         .first()
     )
 
+    uploaded_path = None
+    wav_path = None
+    mp4_path = None
+
+    try:
+        uploaded_path = await save_uploaded_file(audio)
+
+        mp4_path, wav_path = convert_audio_and_video(uploaded_path)
+
+        delete_files(uploaded_path)
+        uploaded_path = None
+
+        transcript = transcribe(wav_path)
+    except HTTPException:
+        delete_files(uploaded_path, wav_path, mp4_path)
+        raise
+    except Exception as e:
+        delete_files(uploaded_path, wav_path, mp4_path)
+        raise HTTPException(status_code=500, detail=f"Answer processing failed: {str(e)}")
+
     if existing_answer:
-        db.delete(existing_answer)
+        # Keep the same answer row so any created follow-up remains linked.
+        delete_files(existing_answer.answer_video, existing_answer.answer_audio)
+
+        existing_answer.answer_text = transcript
+        existing_answer.answer_audio = wav_path
+        existing_answer.answer_video = mp4_path
+        existing_answer.feedback = None
+        existing_answer.grade = None
+        existing_answer.emotion_evaluation = None
+        existing_answer.tone_evaluation = None
+        existing_answer.sentiment_evaluation = None
+
         db.commit()
+        db.refresh(existing_answer)
 
-    uploaded_path = await save_uploaded_file(audio)
-
-    mp4_path, wav_path = convert_audio_and_video(uploaded_path)
-
-    delete_files(uploaded_path)
-
-    transcript = transcribe(wav_path)
+        return {
+            "answer_id": existing_answer.id,
+            "answer_text": existing_answer.answer_text,
+            "answer_audio": existing_answer.answer_audio,
+        }
 
     answer = models.Answer(
         session_id=session_id,
@@ -113,11 +151,15 @@ async def evaluate_answer_service_wrapper(
 
     existing_followup = (
         db.query(models.Followup)
-        .filter_by(answer_id=answer.id)
+        .join(models.Answer, models.Followup.answer_id == models.Answer.id)
+        .filter(
+            models.Answer.session_id == session_id,
+            models.Answer.question_id == question_id,
+        )
         .first()
     )
 
-    is_followup_allowed = existing_followup is None
+    is_followup_allowed = (existing_followup is None) and (not answer.isfollowup)
 
     evaluation = evaluate_answer_service(
         question_text=question.question_text,

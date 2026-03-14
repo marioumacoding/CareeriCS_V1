@@ -55,21 +55,31 @@ def delete_files(*paths: str) -> None:
 def convert_webm_to_wav(input_path: str) -> str:
     fd, output_path = tempfile.mkstemp(suffix=".wav")
     os.close(fd)
-    subprocess.run(
+    result = subprocess.run(
         ["ffmpeg", "-y", "-i", input_path, output_path],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
     )
+
+    if result.returncode != 0:
+      raise RuntimeError(result.stderr.strip() or "ffmpeg failed converting to wav")
+
     return output_path
 
 def convert_webm_to_mp4(input_path: str) -> str:
     fd, output_path = tempfile.mkstemp(suffix=".mp4")
     os.close(fd)
-    subprocess.run(
+    result = subprocess.run(
         ["ffmpeg", "-y", "-i", input_path, output_path],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
     )
+
+    if result.returncode != 0:
+      raise RuntimeError(result.stderr.strip() or "ffmpeg failed converting to mp4")
+
     return output_path
 
 def convert_audio_and_video(file_path: str) -> tuple[str, str]:

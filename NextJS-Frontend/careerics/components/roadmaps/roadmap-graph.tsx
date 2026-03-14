@@ -1,4 +1,5 @@
 import Link from "next/link";
+import styles from "@/components/roadmaps/roadmap-theme.module.scss";
 import {
   getRoadmapNodeContentKey,
   getRoadmapNodeHref,
@@ -36,15 +37,8 @@ export function RoadmapGraph({ roadmapSlug, roadmap, selectedNodeId }: RoadmapGr
   if (!renderableNodes.length) {
     return (
       <div
-        style={{
-          minHeight: "24rem",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          color: "white",
-          borderRadius: "28px",
-          backgroundColor: "rgba(255, 255, 255, 0.04)",
-        }}
+        className={styles.graphEmpty}
+        style={{ minHeight: "24rem", display: "flex", alignItems: "center", justifyContent: "center" }}
       >
         No roadmap nodes were returned by the API.
       </div>
@@ -60,27 +54,15 @@ export function RoadmapGraph({ roadmapSlug, roadmap, selectedNodeId }: RoadmapGr
   const canvasHeight = maxY - minY + CANVAS_PADDING * 2;
 
   return (
-    <div
-      style={{
-        overflow: "auto",
-        background:
-          "radial-gradient(circle at top left, rgba(0,178,255,0.14), rgba(255,255,255,0) 35%), linear-gradient(180deg, rgba(20,33,67,0.95), rgba(10,10,10,0.96))",
-        borderRadius: "28px",
-        border: "1px solid rgba(255, 255, 255, 0.08)",
-        minHeight: "34rem",
-      }}
-    >
+    <div className={styles.graphViewport}>
       <div
-        style={{
-          position: "relative",
-          width: `${canvasWidth}px`,
-          height: `${canvasHeight}px`,
-        }}
+        className={styles.graphCanvas}
+        style={{ width: `${canvasWidth}px`, height: `${canvasHeight}px` }}
       >
         <svg
           width={canvasWidth}
           height={canvasHeight}
-          style={{ position: "absolute", inset: 0, overflow: "visible" }}
+          className={styles.graphSvg}
         >
           {roadmap.edges.map((edge, index) => {
             if (!edge.source || !edge.target) return null;
@@ -102,6 +84,7 @@ export function RoadmapGraph({ roadmapSlug, roadmap, selectedNodeId }: RoadmapGr
                 fill="none"
                 stroke={typeof edge.style?.stroke === "string" ? edge.style.stroke : "rgba(255,255,255,0.24)"}
                 strokeWidth={typeof edge.style?.strokeWidth === "number" ? edge.style.strokeWidth : 2}
+                className={styles.graphEdge}
                 strokeLinecap={
                   typeof edge.style?.strokeLinecap === "string" && VALID_STROKE_LINECAPS.has(edge.style.strokeLinecap)
                     ? (edge.style.strokeLinecap as "inherit" | "round" | "butt" | "square")
@@ -128,16 +111,8 @@ export function RoadmapGraph({ roadmapSlug, roadmap, selectedNodeId }: RoadmapGr
             return (
               <div
                 key={node.id}
-                style={{
-                  position: "absolute",
-                  left,
-                  top,
-                  width,
-                  minHeight: height,
-                  borderRadius: "28px",
-                  backgroundColor: "rgba(255, 255, 255, 0.04)",
-                  border: "1px dashed rgba(255,255,255,0.12)",
-                }}
+                className={styles.sectionNode}
+                style={{ left, top, width, minHeight: height }}
               />
             );
           }
@@ -159,8 +134,15 @@ export function RoadmapGraph({ roadmapSlug, roadmap, selectedNodeId }: RoadmapGr
             return (
               <div
                 key={node.id}
+                className={[
+                  styles.textNode,
+                  node.type === "title"
+                    ? styles.textTitle
+                    : node.type === "paragraph"
+                      ? styles.textParagraph
+                      : styles.textLabel,
+                ].join(" ")}
                 style={{
-                  position: "absolute",
                   left,
                   top,
                   width,
@@ -176,11 +158,8 @@ export function RoadmapGraph({ roadmapSlug, roadmap, selectedNodeId }: RoadmapGr
                       : node.type === "paragraph"
                         ? "0.98rem"
                         : "1rem",
-                  fontFamily: node.type === "title" ? "var(--font-nova-square)" : "var(--font-jura)",
-                    backgroundColor: nodeBackground,
-                    border: nodeBorder,
-                  borderRadius: "18px",
-                  whiteSpace: "pre-wrap",
+                  backgroundColor: nodeBackground,
+                  border: nodeBorder,
                 }}
               >
                 {getRoadmapNodeLabel(node)}
@@ -195,24 +174,15 @@ export function RoadmapGraph({ roadmapSlug, roadmap, selectedNodeId }: RoadmapGr
                 href={href}
                 target="_blank"
                 rel="noreferrer"
+                className={styles.buttonNode}
                 style={{
-                  position: "absolute",
                   left,
                   top,
                   width,
                   minHeight: height,
-                  textDecoration: "none",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  padding: "0.85rem 1rem",
-                  borderRadius: "18px",
-                  color: node.data?.color || "white",
-                  backgroundColor: node.data?.backgroundColor || "#4136D4",
-                  border: `1px solid ${node.data?.borderColor || node.data?.backgroundColor || "#4136D4"}`,
-                  fontWeight: 700,
-                  textAlign: "center",
-                  boxShadow: "0 14px 30px rgba(0,0,0,0.18)",
+                  color: node.data?.color || "var(--roadmap-ink)",
+                  backgroundColor: node.data?.backgroundColor || "var(--roadmap-yellow)",
+                  border: `1px solid ${node.data?.borderColor || node.data?.backgroundColor || "var(--roadmap-yellow-strong)"}`,
                 }}
               >
                 {getRoadmapNodeLabel(node)}
@@ -228,45 +198,29 @@ export function RoadmapGraph({ roadmapSlug, roadmap, selectedNodeId }: RoadmapGr
             <Link
               key={node.id}
               href={href}
-              style={{
-                position: "absolute",
-                left,
-                top,
-                width,
-                minHeight: height,
-                textDecoration: "none",
-                color: "white",
-                display: "flex",
-              }}
+              className={styles.nodeLink}
+              style={{ left, top, width, minHeight: height }}
             >
               <div
+                className={[
+                  styles.nodeCard,
+                  node.completed ? styles.nodeComplete : "",
+                  isSelected ? styles.nodeSelected : "",
+                ].filter(Boolean).join(" ")}
                 style={{
-                  width: "100%",
-                  minHeight: "100%",
-                  borderRadius: "22px",
-                  padding: "0.95rem 1rem",
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "space-between",
-                  gap: "0.6rem",
-                  backgroundColor: node.data?.style?.backgroundColor || "rgba(20, 33, 67, 0.94)",
-                  border: `2px solid ${
-                    isSelected
-                      ? "var(--light-blue)"
-                      : node.completed
-                        ? "var(--primary-green)"
-                        : node.data?.style?.borderColor || "rgba(255,255,255,0.18)"
-                  }`,
-                  boxShadow: isSelected
-                    ? "0 0 0 4px rgba(0,178,255,0.16), 0 18px 30px rgba(0,0,0,0.28)"
-                    : "0 14px 28px rgba(0,0,0,0.18)",
-                  transition: "transform 0.2s ease, box-shadow 0.2s ease",
+                  backgroundColor: node.completed
+                    ? undefined
+                    : node.data?.style?.backgroundColor || undefined,
+                  borderColor: isSelected
+                    ? undefined
+                    : node.completed
+                      ? undefined
+                      : node.data?.style?.borderColor || undefined,
                 }}
               >
                 <div
+                  className={styles.nodeCardTitle}
                   style={{
-                    fontWeight: 700,
-                    lineHeight: 1.35,
                     fontSize: node.data?.style?.fontSize
                       ? `${Math.max(0.9, node.data.style.fontSize / 16)}rem`
                       : "1rem",
@@ -274,24 +228,9 @@ export function RoadmapGraph({ roadmapSlug, roadmap, selectedNodeId }: RoadmapGr
                 >
                   {getRoadmapNodeLabel(node)}
                 </div>
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    fontSize: "0.78rem",
-                    color: "rgba(255,255,255,0.74)",
-                  }}
-                >
+                <div className={styles.nodeMeta}>
                   <span>{node.completed ? "Completed" : "Open step"}</span>
-                  <span
-                    style={{
-                      width: "0.8rem",
-                      height: "0.8rem",
-                      borderRadius: "999px",
-                      backgroundColor: node.completed ? "var(--primary-green)" : "rgba(255,255,255,0.2)",
-                    }}
-                  />
+                  <span className={styles.statusDot} />
                 </div>
               </div>
             </Link>

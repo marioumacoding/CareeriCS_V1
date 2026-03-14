@@ -1,0 +1,585 @@
+.pageShell {
+  --roadmap-paper: #f8fafc;
+  --roadmap-paper-strong: #eef2f7;
+  --roadmap-card: rgba(255, 255, 255, 0.9);
+  --roadmap-card-strong: #ffffff;
+  --roadmap-border: #d8e0ea;
+  --roadmap-border-strong: #b8c5d6;
+  --roadmap-ink: #0f172a;
+  --roadmap-muted: #526072;
+  --roadmap-subtle: #738295;
+  --roadmap-blue: #4135d6;
+  --roadmap-blue-strong: #232381;
+  --roadmap-yellow: #ffe599;
+  --roadmap-yellow-strong: #f3c950;
+  --roadmap-done: #cbcbcb;
+  --roadmap-done-strong: #909090;
+  --roadmap-success: #496b69;
+  --roadmap-info: #dad1fd;
+  min-height: 100vh;
+  padding: clamp(1rem, 2vw, 2rem);
+  display: grid;
+  gap: 1.5rem;
+  color: var(--roadmap-ink);
+  background:
+    radial-gradient(circle at 0% 0%, rgba(65, 53, 214, 0.14), transparent 24%),
+    radial-gradient(circle at 100% 10%, rgba(255, 229, 153, 0.28), transparent 20%),
+    repeating-linear-gradient(-45deg, rgba(15, 23, 42, 0.015) 0 12px, transparent 12px 24px),
+    linear-gradient(180deg, var(--roadmap-paper) 0%, var(--roadmap-paper-strong) 100%);
+}
+
+.heroCard,
+.panel,
+.metricCard,
+.catalogCard,
+.contentCard {
+  background: var(--roadmap-card);
+  border: 1px solid var(--roadmap-border);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+  backdrop-filter: blur(12px);
+}
+
+.heroCard {
+  border-radius: 28px;
+  padding: clamp(1.25rem, 3vw, 2rem);
+  display: grid;
+  gap: 1rem;
+}
+
+.heroSplit {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.heroCopy {
+  display: grid;
+  gap: 0.65rem;
+  max-width: 48rem;
+}
+
+.backLink {
+  width: fit-content;
+  text-decoration: none;
+  color: var(--roadmap-muted);
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.backLink:hover {
+  color: var(--roadmap-blue-strong);
+}
+
+.eyebrow {
+  width: fit-content;
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  background: rgba(65, 53, 214, 0.08);
+  border: 1px solid rgba(65, 53, 214, 0.15);
+  color: var(--roadmap-blue-strong);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.pageTitle,
+.panelTitle,
+.catalogTitle,
+.metricValue,
+.nodeCardTitle,
+.textTitle,
+.textParagraph,
+.textLabel,
+.markdown :is(h2, h3, h4) {
+  font-family: var(--font-roadmap-hand), var(--font-jura), sans-serif;
+}
+
+.pageTitle {
+  margin: 0;
+  font-size: clamp(2.2rem, 5vw, 3.75rem);
+  line-height: 1.05;
+  color: var(--roadmap-ink);
+}
+
+.pageDescription {
+  margin: 0;
+  max-width: 46rem;
+  color: var(--roadmap-muted);
+  line-height: 1.7;
+}
+
+.heroActions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.ghostButton,
+.primaryButton,
+.catalogButton,
+.nodeActionButton {
+  appearance: none;
+  border-radius: 16px;
+  padding: 0.9rem 1.2rem;
+  font-weight: 800;
+  text-decoration: none;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease, border-color 0.18s ease;
+}
+
+.ghostButton {
+  border: 1px solid var(--roadmap-border-strong);
+  background: rgba(255, 255, 255, 0.8);
+  color: var(--roadmap-ink);
+}
+
+.primaryButton,
+.catalogButton,
+.nodeActionButton {
+  border: 1px solid var(--roadmap-blue-strong);
+  background: var(--roadmap-yellow);
+  color: var(--roadmap-ink);
+  box-shadow: 0 4px 0 rgba(243, 201, 80, 0.9);
+}
+
+.ghostButton:hover,
+.primaryButton:hover,
+.catalogButton:hover,
+.nodeActionButton:hover {
+  transform: translateY(-2px);
+}
+
+.primaryButton:hover,
+.catalogButton:hover,
+.nodeActionButton:hover {
+  background: var(--roadmap-yellow-strong);
+}
+
+.disabledButton {
+  cursor: default;
+  opacity: 0.75;
+}
+
+.metricGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 1rem;
+}
+
+.metricCard {
+  border-radius: 24px;
+  padding: 1rem 1.1rem;
+}
+
+.metricLabel {
+  color: var(--roadmap-subtle);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.metricValue {
+  margin-top: 0.35rem;
+  font-size: 1.55rem;
+  color: var(--roadmap-ink);
+}
+
+.mainGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 2.1fr) minmax(280px, 0.9fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.detailGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(300px, 0.95fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.panel,
+.contentCard {
+  border-radius: 28px;
+  padding: 1.25rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.contentCard {
+  padding: 1.5rem;
+}
+
+.panelTitle,
+.catalogTitle {
+  margin: 0;
+  font-size: 1.25rem;
+  color: var(--roadmap-ink);
+}
+
+.chipRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.chip {
+  padding: 0.45rem 0.75rem;
+  border-radius: 999px;
+  background: rgba(65, 53, 214, 0.08);
+  border: 1px solid rgba(65, 53, 214, 0.14);
+  color: var(--roadmap-blue-strong);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.stackList {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.listLink {
+  text-decoration: none;
+  color: var(--roadmap-ink);
+  padding: 0.9rem 1rem;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid var(--roadmap-border);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+  transition: transform 0.18s ease, border-color 0.18s ease;
+}
+
+.listLink:hover {
+  transform: translateY(-2px);
+  border-color: rgba(65, 53, 214, 0.35);
+}
+
+.mutedText {
+  margin: 0;
+  color: var(--roadmap-muted);
+  line-height: 1.65;
+}
+
+.catalogGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+  width: 100%;
+}
+
+.catalogCard {
+  border-radius: 28px;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.catalogHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.catalogMeta {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.catalogLevel {
+  color: var(--roadmap-blue-strong);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.catalogIcon {
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 18px;
+  background: linear-gradient(135deg, var(--roadmap-yellow), var(--roadmap-blue));
+  box-shadow: 0 10px 22px rgba(65, 53, 214, 0.18);
+}
+
+.catalogDescription {
+  margin: 0;
+  color: var(--roadmap-muted);
+  line-height: 1.65;
+}
+
+.catalogFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-top: auto;
+  flex-wrap: wrap;
+}
+
+.catalogDurationLabel {
+  color: var(--roadmap-subtle);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.catalogDurationValue {
+  color: var(--roadmap-ink);
+  font-weight: 800;
+}
+
+.graphViewport {
+  overflow: auto;
+  min-height: 34rem;
+  border-radius: 28px;
+  border: 1px solid var(--roadmap-border);
+  background:
+    radial-gradient(circle at 10% 10%, rgba(255, 229, 153, 0.35), transparent 22%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(244, 247, 251, 0.98));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 20px 40px rgba(15, 23, 42, 0.08);
+}
+
+.graphCanvas {
+  position: relative;
+  background:
+    repeating-linear-gradient(-45deg, rgba(15, 23, 42, 0.02) 0 10px, transparent 10px 20px),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(248, 250, 252, 0.95));
+}
+
+.graphSvg {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+}
+
+.graphEdge {
+  stroke: rgba(71, 85, 105, 0.5);
+}
+
+.graphEmpty,
+.loadingPanel,
+.errorPanel,
+.warningPanel {
+  border-radius: 24px;
+  padding: 1.25rem;
+  line-height: 1.65;
+}
+
+.graphEmpty,
+.loadingPanel {
+  color: var(--roadmap-muted);
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid var(--roadmap-border);
+}
+
+.errorPanel {
+  background: rgba(248, 113, 113, 0.12);
+  border: 1px solid rgba(248, 113, 113, 0.25);
+  color: #7f1d1d;
+}
+
+.warningPanel {
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.24);
+  color: #92400e;
+}
+
+.sectionNode {
+  position: absolute;
+  border-radius: 30px;
+  border: 1px dashed rgba(100, 116, 139, 0.45);
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.textNode {
+  position: absolute;
+  color: var(--roadmap-ink);
+  white-space: pre-wrap;
+  border-radius: 18px;
+}
+
+.textTitle {
+  font-size: 1.9rem;
+  font-weight: 700;
+}
+
+.textParagraph {
+  font-size: 1rem;
+  line-height: 1.55;
+}
+
+.textLabel {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.buttonNode {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.85rem 1rem;
+  border-radius: 18px;
+  text-decoration: none;
+  font-weight: 800;
+  text-align: center;
+  background: var(--roadmap-yellow);
+  color: var(--roadmap-ink);
+  border: 1px solid var(--roadmap-yellow-strong);
+  box-shadow: 0 4px 0 rgba(243, 201, 80, 0.9);
+}
+
+.nodeLink {
+  position: absolute;
+  text-decoration: none;
+  color: inherit;
+  display: flex;
+}
+
+.nodeCard {
+  width: 100%;
+  min-height: 100%;
+  border-radius: 22px;
+  padding: 0.95rem 1rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 0.6rem;
+  background: var(--roadmap-blue);
+  border: 1px solid #2a2f6f;
+  box-shadow: 0 4px 0 rgba(35, 35, 129, 0.92), 0 16px 28px rgba(15, 23, 42, 0.14);
+  color: #ffffff;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
+}
+
+.nodeLink:hover .nodeCard {
+  transform: translateY(-3px);
+  background: var(--roadmap-blue-strong);
+}
+
+.nodeCardTitle {
+  font-size: 1rem;
+  line-height: 1.35;
+  font-weight: 700;
+}
+
+.nodeMeta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.84);
+}
+
+.statusDot {
+  width: 0.8rem;
+  height: 0.8rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.38);
+  border: 1px solid rgba(255, 255, 255, 0.46);
+}
+
+.nodeComplete {
+  background: var(--roadmap-done);
+  border-color: #8f8f8f;
+  box-shadow: 0 4px 0 rgba(144, 144, 144, 0.9), 0 14px 24px rgba(15, 23, 42, 0.1);
+  color: #334155;
+}
+
+.nodeComplete .nodeCardTitle {
+  text-decoration: line-through;
+}
+
+.nodeComplete .nodeMeta {
+  color: #475569;
+}
+
+.nodeComplete .statusDot {
+  background: var(--roadmap-success);
+  border-color: var(--roadmap-success);
+}
+
+.nodeSelected {
+  outline: 3px solid rgba(218, 209, 253, 0.95);
+  outline-offset: 2px;
+}
+
+.contentHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.infoBlock {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.infoLabel {
+  color: var(--roadmap-subtle);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.infoValue {
+  color: var(--roadmap-ink);
+  font-weight: 800;
+}
+
+.markdown {
+  display: grid;
+  gap: 1rem;
+  color: var(--roadmap-ink);
+}
+
+.markdownParagraph,
+.markdownList {
+  margin: 0;
+  color: var(--roadmap-muted);
+  line-height: 1.75;
+  white-space: pre-wrap;
+}
+
+.markdownList {
+  padding-left: 1.2rem;
+  display: grid;
+  gap: 0.65rem;
+}
+
+.markdown a {
+  color: var(--roadmap-blue-strong);
+  font-weight: 700;
+}
+
+@media (max-width: 980px) {
+  .mainGrid,
+  .detailGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .pageShell {
+    padding: 1rem;
+  }
+
+  .heroCard,
+  .panel,
+  .contentCard,
+  .catalogCard {
+    border-radius: 22px;
+  }
+
+  .graphViewport {
+    min-height: 28rem;
+  }
+}

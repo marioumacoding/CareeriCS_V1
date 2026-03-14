@@ -1,4 +1,5 @@
 import type { CSSProperties, ReactNode } from "react";
+import styles from "@/components/roadmaps/roadmap-theme.module.scss";
 
 interface MarkdownContentProps {
   content: string;
@@ -20,7 +21,7 @@ function normaliseInlineText(text: string): ReactNode[] {
         href={href}
         target="_blank"
         rel="noreferrer"
-        style={{ color: "var(--light-blue)" }}
+        style={{ color: "inherit" }}
       >
         {label || href}
       </a>
@@ -30,7 +31,7 @@ function normaliseInlineText(text: string): ReactNode[] {
 
 const paragraphStyle: CSSProperties = {
   margin: 0,
-  color: "rgba(255, 255, 255, 0.85)",
+  color: "inherit",
   lineHeight: 1.75,
   whiteSpace: "pre-wrap",
 };
@@ -42,7 +43,7 @@ export function MarkdownContent({ content }: MarkdownContentProps) {
     .filter(Boolean);
 
   return (
-    <div style={{ display: "grid", gap: "1rem" }}>
+    <div className={styles.markdown}>
       {blocks.map((block, index) => {
         const lines = block.split("\n").map((line) => line.trimEnd());
         const heading = lines[0].match(/^(#{1,4})\s+(.*)$/);
@@ -55,11 +56,7 @@ export function MarkdownContent({ content }: MarkdownContentProps) {
           return (
             <HeadingTag
               key={`heading-${index}`}
-              style={{
-                margin: 0,
-                color: "white",
-                fontFamily: "var(--font-nova-square)",
-              }}
+              style={{ margin: 0, color: "inherit" }}
             >
               {normaliseInlineText(heading[2])}
             </HeadingTag>
@@ -68,7 +65,7 @@ export function MarkdownContent({ content }: MarkdownContentProps) {
 
         if (bulletLines.length === lines.length) {
           return (
-            <ul key={`bullets-${index}`} style={{ margin: 0, paddingLeft: "1.2rem", display: "grid", gap: "0.65rem" }}>
+            <ul key={`bullets-${index}`} className={styles.markdownList}>
               {bulletLines.map((line) => (
                 <li key={line} style={paragraphStyle}>
                   {normaliseInlineText(line.replace(/^[-*]\s+/, ""))}
@@ -80,7 +77,7 @@ export function MarkdownContent({ content }: MarkdownContentProps) {
 
         if (numberedLines.length === lines.length) {
           return (
-            <ol key={`ordered-${index}`} style={{ margin: 0, paddingLeft: "1.35rem", display: "grid", gap: "0.65rem" }}>
+            <ol key={`ordered-${index}`} className={styles.markdownList}>
               {numberedLines.map((line) => (
                 <li key={line} style={paragraphStyle}>
                   {normaliseInlineText(line.replace(/^\d+\.\s+/, ""))}
@@ -91,7 +88,7 @@ export function MarkdownContent({ content }: MarkdownContentProps) {
         }
 
         return (
-          <p key={`paragraph-${index}`} style={paragraphStyle}>
+          <p key={`paragraph-${index}`} className={styles.markdownParagraph} style={paragraphStyle}>
             {normaliseInlineText(lines.join("\n"))}
           </p>
         );

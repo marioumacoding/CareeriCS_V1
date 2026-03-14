@@ -3,6 +3,7 @@
 import { useCallback } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import styles from "@/components/roadmaps/roadmap-theme.module.scss";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { RoadmapGraph } from "@/components/roadmaps/roadmap-graph";
 import { useApi } from "@/hooks/use-api";
@@ -33,132 +34,70 @@ function RoadmapOverviewContent() {
   const nextNodes = stepNodes.filter((node) => !node.completed).slice(0, 5);
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        backgroundColor: "var(--bg-color)",
-        color: "white",
-        padding: "2rem",
-        display: "grid",
-        gap: "1.5rem",
-      }}
-    >
-      <section
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "flex-start",
-          gap: "1rem",
-          flexWrap: "wrap",
-        }}
-      >
-        <div style={{ display: "grid", gap: "0.6rem" }}>
-          <Link href="/dashboard/roadmaps" style={{ color: "var(--light-blue)", textDecoration: "none" }}>
+    <div className={styles.pageShell}>
+      <section className={styles.heroCard}>
+        <div className={styles.heroSplit}>
+          <div className={styles.heroCopy}>
+            <Link href="/dashboard/roadmaps" className={styles.backLink}>
             Back to roadmap catalog
           </Link>
-          <div style={{ color: "var(--primary-green)", textTransform: "uppercase", letterSpacing: "0.12em", fontSize: "0.8rem" }}>
+            <div className={styles.eyebrow}>
             {currentRoadmap?.level ?? "Roadmap"}
           </div>
-          <h1 style={{ margin: 0, fontFamily: "var(--font-nova-square)", fontSize: "clamp(2rem, 4vw, 3rem)" }}>
+            <h1 className={styles.pageTitle}>
             {currentRoadmap?.title ?? slug}
           </h1>
-          <p style={{ margin: 0, color: "rgba(255,255,255,0.74)", maxWidth: "46rem", lineHeight: 1.7 }}>
+            <p className={styles.pageDescription}>
             {currentRoadmap?.description ?? "Explore the roadmap graph and open each node for step-specific guidance."}
           </p>
-        </div>
+          </div>
 
-        <button
-          onClick={() => void refetch()}
-          style={{
-            backgroundColor: "transparent",
-            color: "white",
-            border: "1px solid rgba(255,255,255,0.18)",
-            borderRadius: "14px",
-            padding: "0.85rem 1rem",
-            cursor: "pointer",
-          }}
-        >
-          Refresh progress
-        </button>
+          <div className={styles.heroActions}>
+            <button onClick={() => void refetch()} className={styles.ghostButton}>
+              Refresh progress
+            </button>
+          </div>
+        </div>
       </section>
 
       {isLoading && (
-        <div style={{ padding: "2rem", borderRadius: "24px", backgroundColor: "rgba(255,255,255,0.05)" }}>
+        <div className={styles.loadingPanel}>
           Loading roadmap graph...
         </div>
       )}
 
       {!isLoading && error && (
-        <div style={{ padding: "2rem", borderRadius: "24px", backgroundColor: "rgba(220,38,38,0.16)", color: "#ffd7d7" }}>
+        <div className={styles.errorPanel}>
           {error}
         </div>
       )}
 
       {!isLoading && !error && roadmap && (
         <>
-          <section
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-              gap: "1rem",
-            }}
-          >
+          <section className={styles.metricGrid}>
             {[
               { label: "Completed", value: String(completedNodes) },
               { label: "Remaining", value: String(Math.max(totalNodes - completedNodes, 0)) },
               { label: "Progress", value: `${progress}%` },
             ].map((item) => (
-              <div
-                key={item.label}
-                style={{
-                  padding: "1rem 1.1rem",
-                  borderRadius: "22px",
-                  backgroundColor: "rgba(255,255,255,0.05)",
-                  border: "1px solid rgba(255,255,255,0.08)",
-                }}
-              >
-                <div style={{ color: "rgba(255,255,255,0.6)", fontSize: "0.78rem" }}>{item.label}</div>
-                <div style={{ fontSize: "1.4rem", fontWeight: 700, marginTop: "0.35rem" }}>{item.value}</div>
+              <div key={item.label} className={styles.metricCard}>
+                <div className={styles.metricLabel}>{item.label}</div>
+                <div className={styles.metricValue}>{item.value}</div>
               </div>
             ))}
           </section>
 
-          <section
-            style={{
-              display: "grid",
-              gridTemplateColumns: "minmax(0, 2.3fr) minmax(280px, 1fr)",
-              gap: "1rem",
-              alignItems: "start",
-            }}
-          >
+          <section className={styles.mainGrid}>
             <RoadmapGraph roadmapSlug={slug} roadmap={roadmap} />
 
-            <aside
-              style={{
-                display: "grid",
-                gap: "1rem",
-                padding: "1.25rem",
-                borderRadius: "28px",
-                backgroundColor: "rgba(255,255,255,0.05)",
-                border: "1px solid rgba(255,255,255,0.08)",
-              }}
-            >
+            <aside className={styles.panel}>
               <div>
-                <h2 style={{ margin: 0, fontSize: "1.2rem", fontFamily: "var(--font-nova-square)" }}>
+                <h2 className={styles.panelTitle}>
                   Focus areas
                 </h2>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "0.55rem", marginTop: "0.75rem" }}>
+                <div className={styles.chipRow} style={{ marginTop: "0.75rem" }}>
                   {(currentRoadmap?.focusAreas ?? []).map((area) => (
-                    <span
-                      key={area}
-                      style={{
-                        padding: "0.45rem 0.7rem",
-                        borderRadius: "999px",
-                        backgroundColor: "rgba(20,33,67,0.8)",
-                        border: "1px solid rgba(255,255,255,0.08)",
-                        fontSize: "0.82rem",
-                      }}
-                    >
+                    <span key={area} className={styles.chip}>
                       {area}
                     </span>
                   ))}
@@ -166,27 +105,20 @@ function RoadmapOverviewContent() {
               </div>
 
               <div>
-                <h2 style={{ margin: 0, fontSize: "1.2rem", fontFamily: "var(--font-nova-square)" }}>
+                <h2 className={styles.panelTitle}>
                   Next open nodes
                 </h2>
-                <div style={{ display: "grid", gap: "0.7rem", marginTop: "0.85rem" }}>
+                <div className={styles.stackList} style={{ marginTop: "0.85rem" }}>
                   {nextNodes.length ? nextNodes.map((node) => (
                     <Link
                       key={node.id}
                       href={`/dashboard/roadmaps/${slug}/${getRoadmapNodeContentKey(node)}`}
-                      style={{
-                        textDecoration: "none",
-                        color: "white",
-                        padding: "0.85rem 0.95rem",
-                        borderRadius: "18px",
-                        backgroundColor: "rgba(255,255,255,0.04)",
-                        border: "1px solid rgba(255,255,255,0.08)",
-                      }}
+                      className={styles.listLink}
                     >
                       {getRoadmapNodeLabel(node)}
                     </Link>
                   )) : (
-                    <div style={{ color: "rgba(255,255,255,0.68)", lineHeight: 1.6 }}>
+                    <div className={styles.mutedText}>
                       All nodes are currently marked as completed.
                     </div>
                   )}

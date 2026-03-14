@@ -1,6 +1,6 @@
 ﻿"use client";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { authService } from "@/services/auth.service";
 import AuthLayout from "@/app/auth/layout";
 import InputField from "@/components/ui/input-field";
@@ -17,6 +17,10 @@ import AlertMessage from "@/components/ui/alert-message";
  */
 export default function Login() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const callbackUrlRaw = searchParams.get("callbackUrl") || "";
+  const callbackUrl = callbackUrlRaw.startsWith("/") ? callbackUrlRaw : "/dashboard";
 
   // -- Form state --
   const [email, setEmail] = useState("");
@@ -31,6 +35,13 @@ export default function Login() {
   const [registerHover, setRegisterHover] = useState(false);
 
   // -- Handlers --
+  useEffect(() => {
+    const urlError = searchParams.get("error");
+    if (urlError) {
+      setError(urlError);
+    }
+  }, [searchParams]);
+
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -45,7 +56,7 @@ export default function Login() {
       // localStorage session is read fresh by the AuthProvider on mount.
       // This avoids the race condition where ProtectedRoute checks auth
       // before onAuthStateChange has fired.
-      window.location.href = "/dashboard";
+      window.location.href = callbackUrl;
     } catch (err: any) {
       console.error("[Login] sign-in error:", err);
       setError(err.message ?? "Login failed. Please check your credentials.");
@@ -56,7 +67,7 @@ export default function Login() {
 
   async function handleGoogleLogin() {
     try {
-      await authService.signInWithGoogle();
+      await authService.signInWithGoogle(callbackUrl);
       // Supabase redirects to Google — no further code runs here
     } catch (err: any) {
       setError(err.message ?? "Google login failed.");

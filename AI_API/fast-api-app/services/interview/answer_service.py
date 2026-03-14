@@ -6,20 +6,37 @@ from ai.completion import transcribe
 from uuid import UUID
 
 from utils.util import (
-    save_uploaded_file, 
+    save_uploaded_file,
     _generate_tts,
     convert_audio_and_video,
     delete_files,
     evaluate_answer_service,
     ser,
-    fer, 
+    fer,
     emotion_evaluation,
     sentiment_analysis
 )
 
+
+# ============================================================
+# FETCH ANSWER
+# ============================================================
+def get_answer_by_question_and_session(
+    db: DBSession,
+    question_id: UUID,
+    session_id: UUID
+) -> models.Answer | None:
+    
+    return db.query(models.Answer).filter(
+        models.Answer.question_id == question_id,
+        models.Answer.session_id == session_id
+    ).first()
+
+
 # ============================================================
 # SUBMIT ANSWER
 # ============================================================
+
 async def submit_answer_service(
     db: DBSession,
     session_id: UUID,
@@ -27,7 +44,6 @@ async def submit_answer_service(
     audio: UploadFile,
 ):
 
-    # Remove existing answer if exists
     existing_answer = (
         db.query(models.Answer)
         .filter_by(session_id=session_id, question_id=question_id)
@@ -38,13 +54,14 @@ async def submit_answer_service(
         db.delete(existing_answer)
         db.commit()
 
-    # File processing
     uploaded_path = await save_uploaded_file(audio)
+
     mp4_path, wav_path = convert_audio_and_video(uploaded_path)
-    delete_files(uploaded_path)  # original upload no longer needed
+
+    delete_files(uploaded_path)
+
     transcript = transcribe(wav_path)
 
-    # Create answer
     answer = models.Answer(
         session_id=session_id,
         question_id=question_id,
@@ -68,6 +85,7 @@ async def submit_answer_service(
 # ============================================================
 # EVALUATION
 # ============================================================
+
 async def evaluate_answer_service_wrapper(
     db: DBSession,
     session_id: UUID,
@@ -79,14 +97,17 @@ async def evaluate_answer_service_wrapper(
         .filter_by(session_id=session_id, question_id=question_id)
         .first()
     )
+
     if not answer:
         raise HTTPException(status_code=404, detail="Answer not found")
 
     question = db.get(models.Question, question_id)
+
     if not question:
         raise HTTPException(status_code=404, detail="Question not found")
 
     session = db.get(models.Session, session_id)
+
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
 
@@ -110,35 +131,67 @@ async def evaluate_answer_service_wrapper(
     improvement = evaluation["improvement"]
     followup_required = evaluation["followup_required"]
 
-    updated_answer = _final_evaluation(db, answer, feedback, score)
+    # store feedback and score immediately
+    _store_evaluation(db, answer, feedback, score)
 
-    # default values
     followup_info = None
     followup_recommended = False
 
-    # Follow-up flow
     if is_followup_allowed and followup_required:
+
         followup_info = _handle_followup(db, answer.id, improvement)
+
         followup_recommended = True
+
+        return {
+            "evaluation": feedback,
+            "grade": score,
+            "followup_recommended": True,
+            "followup": followup_info,
+            "emotion_evaluation": None,
+            "tone_evaluation": None,
+        }
+
+    # FINAL evaluation (no followup needed)
+    _run_final_media_analysis(db, answer)
 
     return {
         "evaluation": feedback,
         "grade": score,
-        "followup_recommended": followup_recommended,
-        "followup": followup_info,
-        "emotion_evaluation": updated_answer.emotion_evaluation,
-        "tone_evaluation": updated_answer.tone_evaluation,
+        "followup_recommended": False,
+        "followup": None,
+        "emotion_evaluation": answer.emotion_evaluation,
+        "tone_evaluation": answer.tone_evaluation,
     }
+
+
+# ======================================================
+# STORE BASIC EVALUATION
+# ======================================================
+
+def _store_evaluation(
+    db: DBSession,
+    answer,
+    feedback: str,
+    score: float
+):
+
+    answer.feedback = feedback
+    answer.grade = score
+
+    db.commit()
 
 
 # ======================================================
 # FOLLOW-UP HANDLING
 # ======================================================
 
-def _handle_followup(db: DBSession, answer_id: UUID, followup_text: str):
-    """
-    Create follow-up question with generated audio.
-    """
+def _handle_followup(
+    db: DBSession,
+    answer_id: UUID,
+    followup_text: str
+):
+
     audio_filename = _generate_tts(
         followup_text,
         settings.AUDIO_PATHS["followups"]
@@ -153,6 +206,7 @@ def _handle_followup(db: DBSession, answer_id: UUID, followup_text: str):
     db.add(followup)
 
     answer = db.get(models.Answer, answer_id)
+
     answer.isfollowup = True
 
     db.commit()
@@ -166,44 +220,40 @@ def _handle_followup(db: DBSession, answer_id: UUID, followup_text: str):
 
 
 # ======================================================
-# FINAL EVALUATION LOGIC
+# FINAL MEDIA ANALYSIS
 # ======================================================
 
-def _final_evaluation(
+def _run_final_media_analysis(
     db: DBSession,
-    answer,
-    feedback: str,
-    score: float
+    answer
 ):
-    """
-    Apply FER, SER, Sentiment analysis and store evaluation.
-    """
 
-    # Run analysis pipelines
-    emotions = fer(answer.answer_video)
+    emotions = []
+    tone_result = None
+
+    if answer.answer_video:
+        emotions = fer(answer.answer_video)
+
+    if answer.answer_audio:
+        tone_result = ser(answer.answer_audio)
+
     sentiments = sentiment_analysis(answer.answer_text)
-    tone_result = ser(answer.answer_audio)
 
-    # Cleanup temp media files after analysis
-    delete_files(answer.answer_video, answer.answer_audio)
-
-    # Store detected emotions
     for emotion_name in emotions:
-        db.add(models.Emotion(
-            name=emotion_name,
-            answer_id=answer.id
-        ))
+        db.add(
+            models.Emotion(
+                name=emotion_name,
+                answer_id=answer.id
+            )
+        )
 
-    # Update answer fields
     answer.emotion_evaluation = emotion_evaluation(emotions)
     answer.sentiment_evaluation = sentiments
     answer.tone_evaluation = tone_result
-    answer.feedback = feedback
-    answer.grade = score
-    answer.isfollowup = False
+
+    delete_files(answer.answer_video, answer.answer_audio)
+
     answer.answer_audio = None
     answer.answer_video = None
 
     db.commit()
-
-    return answer

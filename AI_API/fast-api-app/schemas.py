@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 from typing import Optional, List, Dict
 from uuid import UUID
@@ -394,3 +396,16 @@ class SAAnswerSubmitRequest(BaseModel):
     user_id: UUID
     skill_id: UUID
     answers: List[SAAnswerSubmit]
+
+
+# =====================================================
+# REPORT SCHEMAS
+# =====================================================
+class ReportSchema(BaseModel):
+    id: UUID
+    filename: str
+    created_at: datetime
+    type: str
+
+    class Config:
+        from_attributes = True

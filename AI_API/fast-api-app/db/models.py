@@ -1,6 +1,8 @@
+import datetime
 import uuid
 from sqlalchemy import (
     Column,
+    Enum,
     String,
     Boolean,
     ForeignKey,
@@ -11,10 +13,12 @@ from sqlalchemy import (
     Float
 )
 from sqlalchemy.orm import relationship
-from sqlalchemy.dialects.postgresql import ARRAY, UUID
+from sqlalchemy.dialects.postgresql import ARRAY, BYTEA, UUID
 from sqlalchemy.sql import func
 
 from db.base import Base
+
+from enum import Enum as enum
 
 
 # =========================
@@ -50,11 +54,12 @@ class User(Base):
     awards = relationship("Award", back_populates="user", cascade="all, delete-orphan")
     references = relationship("Reference", back_populates="user", cascade="all, delete-orphan")
     sessions = relationship("Session", back_populates="user", cascade="all, delete-orphan")
+    reports = relationship("Report", back_populates="user")
 
 
-# #########################
+# ###########################################################################################################################
 # INTERVIEW
-# #########################
+# ###########################################################################################################################
 
 # =========================
 # QUESTION
@@ -193,9 +198,9 @@ class Sentiment(Base):
     answer = relationship("Answer", back_populates="sentiments")
 
 
-# #########################
+# ###########################################################################################################################
 # CV
-# #########################
+# ###########################################################################################################################
 
 # =========================
 # SKILL
@@ -340,9 +345,9 @@ class Reference(Base):
     user = relationship("User", back_populates="references")
 
 
-# #########################
+# ###########################################################################################################################
 # SKILL_ASSESSMENT
-# #########################
+# ###########################################################################################################################
 
 # =========================
 # SKILL ASSESSMENT QUESTION
@@ -377,3 +382,31 @@ class SAAnswer(Base):
 
     question = relationship("SAQuestion", back_populates="answers")
     user = relationship("User")
+
+
+# =========================
+# Reports
+# =========================
+class ReportTypeEnum(str, enum):
+    CV = "cv"
+    INTERVIEW_SESSION = "interview_session"
+    SKILL_ASSESSMENT = "skill_assessment"
+    OTHER = "other"
+
+class Report(Base):
+    __tablename__ = "reports"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    type = Column(Enum(ReportTypeEnum), nullable=False)
+    filename = Column(String, nullable=False)
+    file_data = Column(BYTEA, nullable=False)  
+    created_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False
+    )
+
+    user = relationship("User", back_populates="reports")  
+
+

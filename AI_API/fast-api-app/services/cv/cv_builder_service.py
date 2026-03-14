@@ -1,12 +1,14 @@
+from fileinput import filename
+
 from fastapi import HTTPException
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session, joinedload
 from uuid import UUID
 import schemas
 
-from db.models import User, UserSkill
+from db.models import ReportTypeEnum, User, UserSkill
 from utils.util import build_cv_pdf
-
+from services.reports.report_service import save_report
 
 def generate_user_cv_response(
     db: Session,
@@ -67,6 +69,21 @@ def generate_user_cv_response(
     safe_name = "".join(
         c for c in user.full_name if c.isalnum() or c in ("_", "-")
     ).replace(" ", "_")
+
+    # -------------------------
+    # Save the generated PDF using your service
+    # -------------------------
+    pdf_bytes = pdf_buffer.getvalue()  
+    save_report(
+        db=db,
+        user_id=str(user.id),
+        file_bytes=pdf_bytes,
+        filename=safe_name + "_CV.pdf",
+        report_type=ReportTypeEnum.CV
+    )
+
+    # Reset buffer to start for streaming
+    pdf_buffer.seek(0)
 
     return StreamingResponse(
         pdf_buffer,

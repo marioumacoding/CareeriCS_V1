@@ -137,6 +137,9 @@ async def evaluate_answer_service_wrapper(
     followup_info = None
     followup_recommended = False
 
+    _run_final_media_analysis(db, answer)
+
+
     if is_followup_allowed and followup_required:
 
         followup_info = _handle_followup(db, answer.id, improvement)
@@ -148,12 +151,10 @@ async def evaluate_answer_service_wrapper(
             "grade": score,
             "followup_recommended": True,
             "followup": followup_info,
-            "emotion_evaluation": None,
-            "tone_evaluation": None,
+            "emotion_evaluation": answer.emotion_evaluation,
+            "tone_evaluation": answer.tone_evaluation,
         }
 
-    # FINAL evaluation (no followup needed)
-    _run_final_media_analysis(db, answer)
 
     return {
         "evaluation": feedback,
@@ -239,13 +240,6 @@ def _run_final_media_analysis(
 
     sentiments = sentiment_analysis(answer.answer_text)
 
-    for emotion_name in emotions:
-        db.add(
-            models.Emotion(
-                name=emotion_name,
-                answer_id=answer.id
-            )
-        )
 
     answer.emotion_evaluation = emotion_evaluation(emotions)
     answer.sentiment_evaluation = sentiments

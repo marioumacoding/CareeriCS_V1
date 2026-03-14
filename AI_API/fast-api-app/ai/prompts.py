@@ -57,8 +57,8 @@ def evaluate_answer_prompt(
 
     followup_instruction = (
         "If the answer is incomplete or unclear, Only if necessary set followup_required to true.\n"
-        if is_followup
-        else ""
+        "If the answer, is clear enough but could be improved, or is missing key details, set followup_required to true and provide a specific improvement suggestion in the improvement field.\n"
+        "If the answer is clear and complete, set followup_required to false and leave improvement field empty."
     )
 
     return (

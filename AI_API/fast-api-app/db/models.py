@@ -131,10 +131,6 @@ class Answer(Base):
         cascade="all, delete-orphan"
     )
 
-    emotions = relationship("Emotion", back_populates="answer", cascade="all, delete-orphan")
-    tones = relationship("Tone", back_populates="answer", cascade="all, delete-orphan")
-    sentiments = relationship("Sentiment", back_populates="answer", cascade="all, delete-orphan")
-
 
 # =========================
 # FOLLOWUP
@@ -155,47 +151,6 @@ class Followup(Base):
 
     answer = relationship("Answer", back_populates="followup")
 
-
-# =========================
-# EMOTION
-# =========================
-class Emotion(Base):
-    __tablename__ = "interview_emotions"
-
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    name = Column(String, nullable=False)
-
-    answer_id = Column(UUID(as_uuid=True), ForeignKey("interview_answers.id"), nullable=False)
-
-    answer = relationship("Answer", back_populates="emotions")
-
-
-# =========================
-# TONE
-# =========================
-class Tone(Base):
-    __tablename__ = "interview_tones"
-
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    name = Column(String, nullable=False)
-
-    answer_id = Column(UUID(as_uuid=True), ForeignKey("interview_answers.id"), nullable=False)
-
-    answer = relationship("Answer", back_populates="tones")
-
-
-# =========================
-# SENTIMENT
-# =========================
-class Sentiment(Base):
-    __tablename__ = "interview_sentiments"
-
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    name = Column(String, nullable=False)
-
-    answer_id = Column(UUID(as_uuid=True), ForeignKey("interview_answers.id"), nullable=False)
-
-    answer = relationship("Answer", back_populates="sentiments")
 
 
 # ###########################################################################################################################

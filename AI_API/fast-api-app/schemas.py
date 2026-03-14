@@ -122,60 +122,6 @@ class AnswerRead(AnswerBase):
 
 
 # ======================================================
-# EMOTION
-# ======================================================
-
-class EmotionBase(BaseModel):
-    name: str
-
-
-class EmotionCreate(EmotionBase):
-    answer_id: UUID
-
-
-class EmotionRead(EmotionBase):
-    id: UUID
-    answer_id: UUID
-    model_config = ConfigDict(from_attributes=True)
-
-
-# ======================================================
-# TONE
-# ======================================================
-
-class ToneBase(BaseModel):
-    name: str
-
-
-class ToneCreate(ToneBase):
-    answer_id: UUID
-
-
-class ToneRead(ToneBase):
-    id: UUID
-    answer_id: UUID
-    model_config = ConfigDict(from_attributes=True)
-
-
-# ======================================================
-# SENTIMENT
-# ======================================================
-
-class SentimentBase(BaseModel):
-    name: str
-
-
-class SentimentCreate(SentimentBase):
-    answer_id: UUID
-
-
-class SentimentRead(SentimentBase):
-    id: UUID
-    answer_id: UUID
-    model_config = ConfigDict(from_attributes=True)
-
-
-# ======================================================
 # SKILLS SCHEMAS
 # ======================================================
 

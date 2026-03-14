@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import InterviewLayout from "@/components/ui/interview";
 import InterviewContainer from "@/components/ui/interview-card";
 
-export default function RecordingPage() {
+export default function FollowUpRecordingPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -67,24 +67,17 @@ export default function RecordingPage() {
     setSeconds(0);
   };
 
-  // --- UPDATED LOGIC HERE ---
   const handleSubmit = () => {
     if (seconds > 0) {
-      // Check if current question is the last one (ID 7)
-      if (activeId === questions.length) {
-        router.push(`/interview-feature/last-analysis?q=${activeId}`);
-      } else {
-        router.push(`/interview-feature/analyzing?q=${activeId}`);
-      }
+      // After follow-up is submitted, we go back to analyzing (or your results page)
+      router.push(`/interview-feature/analyzing?q=${activeId}`);
     }
   };
 
   const handleSidebarClick = (targetId: number) => {
-    if (targetId <= activeId) {
-      router.push(`/interview-feature/recording?q=${targetId}`);
-    } else {
-      console.log("This question is locked until you complete the current one.");
-    }
+    // Locked logic: user cannot navigate during follow-up
+    if (targetId === activeId) return;
+    console.log("Navigation is locked during follow-up.");
   };
 
   // 5. UI Snippets
@@ -133,42 +126,68 @@ export default function RecordingPage() {
     <InterviewLayout 
       questions={questions} 
       currentActiveId={activeId} 
-      onQuestionClick={handleSidebarClick}
+      onQuestionClick={handleSidebarClick} 
       closeIconSrc="/interview/Close.svg"
     >
-      <InterviewContainer
-        questionTitle={`${activeId}. ${currentQuestionText}`}
-        videoContent={
-          <div style={{ color: "#666", fontSize: "20px", fontFamily: "jura" }}>
-            {status === "recording"
-              ? " Recording..."
-              : status === "stopped"
-              ? "⏸ Paused"
-              : ""}
-          </div>
-        }
-        controlsContent={controls}
-        actionButton={
-          <button
-            onClick={handleSubmit}
-            style={{
-              background: "#d4ff47",
-              padding: "15px 100px",
-              borderRadius: "15px",
-              border: "none",
-              fontWeight: "bold",
-              fontSize: "18px",
-              fontFamily: "var(--font-nova-square)",
-              cursor: seconds > 0 ? "pointer" : "not-allowed",
-              opacity: seconds > 0 ? 1 : 0.5,
-              transition: "0.3s",
-              color: "#1a1a1a"
-            }}
-          >
-            Submit
-          </button>
-        }
-      />
+      <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        
+        {/* Main Title Section with Follow-up subtext */}
+        <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+             <h2 style={{ 
+                color: 'white', 
+                fontSize: '28px', 
+                fontFamily: 'var(--font-nova-square)', 
+                margin: '0 0 5px 0', 
+                fontWeight: 300
+             }}>
+                {activeId}. {currentQuestionText}
+             </h2>
+             <p style={{ 
+                color: '#ffffff', // Signature green for emphasis
+                fontSize: '28px', 
+                fontFamily: 'var(--font-nova-square)', 
+                margin: '0 0 5px 0', 
+                fontWeight: 300
+             }}>
+                followup: tell us more about your future plans.
+             </p>
+        </div>
+
+        <InterviewContainer
+          // Pass null or empty string to questionTitle because we rendered it custom above
+          questionTitle="" 
+          videoContent={
+            <div style={{ color: "#666", fontSize: "20px", fontFamily: "jura" }}>
+              {status === "recording"
+                ? " Recording..."
+                : status === "stopped"
+                ? "⏸ Paused"
+                : ""}
+            </div>
+          }
+          controlsContent={controls}
+          actionButton={
+            <button
+              onClick={handleSubmit}
+              style={{
+                background: "#d4ff47",
+                padding: "15px 100px",
+                borderRadius: "15px",
+                border: "none",
+                fontWeight: "bold",
+                fontSize: "18px",
+                fontFamily: "var(--font-nova-square)",
+                cursor: seconds > 0 ? "pointer" : "not-allowed",
+                opacity: seconds > 0 ? 1 : 0.5,
+                transition: "0.3s",
+                color: "#1a1a1a"
+              }}
+            >
+              Submit Follow-up
+            </button>
+          }
+        />
+      </div>
     </InterviewLayout>
   );
 }

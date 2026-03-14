@@ -7,11 +7,12 @@ export default function AnalyzingPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   
-  // State to track if analysis is finished
-  const [isFinished, setIsFinished] = useState(false);
+  // 1. Get the current question ID from the URL (default to 1)
+  // We use searchParams.get('q') directly to ensure it stays in sync with the URL
+  const queryValue = searchParams.get('q');
+  const currentQ = queryValue ? parseInt(queryValue) : 1;
 
-  // Get the current question ID from the URL (default to 1)
-  const currentQ = parseInt(searchParams.get('q') || '1');
+  const [isFinished, setIsFinished] = useState(false);
 
   const questions = [
     { id: 1, text: "Where do you see yourself in 5 years?" },
@@ -23,18 +24,25 @@ export default function AnalyzingPage() {
     { id: 7, text: "Do you have any questions for us?" },
   ];
 
-  // Effect to trigger the state change after 5 seconds
+  // 2. Reset and start timer whenever the question ID (currentQ) changes
   useEffect(() => {
+    setIsFinished(false); // Reset the button/text state for the new question
+
     const timer = setTimeout(() => {
       setIsFinished(true);
     }, 5000);
 
-    return () => clearTimeout(timer); // Cleanup timer if component unmounts
-  }, []);
+    return () => clearTimeout(timer); 
+  }, [currentQ]); 
 
+  // 3. Updated Navigation Logic
   const handleNext = () => {
-    if (currentQ < questions.length) {
-      router.push(`/interview-feature/recording?q=${currentQ + 1}`);
+    const nextQ = currentQ + 1;
+
+    if (nextQ <= questions.length) {
+      // Navigate to recording page with the INCREMENTED ID
+      console.log("Navigating to Question:", nextQ); // Debug check
+      router.push(`/interview-feature/recording?q=${nextQ}`);
     } else {
       router.push('/interview-feature/complete');
     }
@@ -57,7 +65,6 @@ export default function AnalyzingPage() {
         paddingBottom: '40px' 
       }}>
         
-        {/* Conditional Text Section */}
         <h2 style={{ 
           color: 'white', 
           fontSize: '24px', 
@@ -86,17 +93,19 @@ export default function AnalyzingPage() {
             style={{ 
               width: '300px', 
               height: 'auto',
-          
+              filter: isFinished 
+                ? 'drop-shadow(0 0 20px rgba(212, 255, 71, 0.4))' 
+                : 'drop-shadow(0 0 20px rgba(168, 85, 247, 0.3))',
+              transition: 'filter 0.5s ease'
             }} 
           />
         </div>
 
-        {/* Conditional Action Button */}
         <button 
           onClick={handleNext}
-          disabled={!isFinished} // Optional: prevent clicking until analysis is done
+          disabled={!isFinished} 
           style={{
-            backgroundColor: isFinished ? '#d4ff47' : '#BABABA', // Green when finished, Grey while analyzing
+            backgroundColor: isFinished ? '#d4ff47' : '#BABABA', 
             color: '#1a1a1a',
             padding: '12px 60px',
             borderRadius: '14px',
@@ -105,7 +114,7 @@ export default function AnalyzingPage() {
             fontFamily: 'var(--font-nova-square)',
             fontWeight: 600,
             cursor: isFinished ? 'pointer' : 'wait',
-            transition: 'all 0.5s ease', // Smooth color transition
+            transition: 'all 0.5s ease',
             opacity: isFinished ? 1 : 0.8
           }}
         >

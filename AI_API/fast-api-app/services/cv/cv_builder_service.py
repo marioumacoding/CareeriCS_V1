@@ -9,6 +9,7 @@ import schemas
 from db.models import ReportTypeEnum, User, UserSkill
 from utils.util import build_cv_pdf
 from services.reports.report_service import save_report
+from .cv_extractor_service import handle_cv_for_builder
 
 def generate_user_cv_response(
     db: Session,
@@ -92,3 +93,12 @@ def generate_user_cv_response(
             "Content-Disposition": f"attachment; filename={safe_name}_CV.pdf"
         },
     )
+
+
+
+
+async def build_user_cv(user_id: UUID, db: Session, cv_text: str):
+
+    await handle_cv_for_builder(cv_text, user_id, db, type="extractor")
+
+    return generate_user_cv_response(db=db, user_id=user_id)

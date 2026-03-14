@@ -355,3 +355,10 @@ class ReportSchema(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+# =====================================================
+# CV BUILD REQUEST SCHEMA
+# =====================================================
+class CVBuildRequest(BaseModel):
+    cv_text: str

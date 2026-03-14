@@ -45,25 +45,80 @@ def parse_and_enhance_cv(cv_text: str, type: str) -> dict:
         raise ValueError("Invalid type. Must be 'extractor' or 'enhancer'.")
 
     raw_output = deepseek_response(prompt)
-    return _safe_json_parse(raw_output)
+    return safe_parse_json(raw_output)
 
 
 # =========================
 # Helpers
 # =========================
-def safe_list(data: dict, key: str):
-    value = data.get(key)
-    return value if isinstance(value, list) else []
+from typing import Any, List, Union
 
+def safe_list(data: Union[dict, list, None], key: str = None) -> List[Any]:
+    """
+    Safely retrieve a list from a dict or handle a list/other input gracefully.
+    
+    - If `data` is a dict and `key` is provided, returns data[key] if it's a list, else [].
+    - If `data` is a list, returns it directly.
+    - Any other input returns [].
+    """
+    if isinstance(data, dict):
+        if key is None:
+            # no key provided, return empty
+            return []
+        value = data.get(key)
+        return value if isinstance(value, list) else []
+    if isinstance(data, list):
+        return data
+    return []
 
-def clean_str(value):
-    return value.strip() if isinstance(value, str) else value
+def clean_str(value: Any) -> str:
+    """
+    Safely strip strings. Returns empty string for non-string values.
+    """
+    if isinstance(value, str):
+        return value.strip()
+    return ""  # return empty string instead of None for safety
 
-
-def ensure_list(value):
-    """Ensure JSON/ARRAY fields are always lists."""
+def ensure_list(value: Any) -> List[Any]:
+    """
+    Ensure the input is always returned as a list.
+    
+    - If input is a list, return it.
+    - If input is a non-empty string, wrap it in a list.
+    - Anything else returns an empty list.
+    """
     if isinstance(value, list):
         return value
     if isinstance(value, str) and value:
         return [value]
     return []
+
+
+
+
+import json
+import re
+
+def safe_parse_json(raw_text: str, default=None):
+    """
+    Safely parse JSON text from a string that may contain code fences, extra text, or be malformed.
+    Returns a dictionary or the provided default value.
+    """
+    if default is None:
+        default = {}
+
+    try:
+        # Remove ```json or ``` markers if present
+        cleaned = re.sub(r"^```json\s*|```$", "", raw_text.strip(), flags=re.IGNORECASE)
+        # Sometimes the string is truncated or malformed, try a first simple parse
+        return json.loads(cleaned)
+    except (json.JSONDecodeError, TypeError):
+        # Attempt to extract JSON-looking content between first { and last }
+        try:
+            start = cleaned.index("{")
+            end = cleaned.rindex("}") + 1
+            partial_json = cleaned[start:end]
+            return json.loads(partial_json)
+        except (ValueError, json.JSONDecodeError):
+            # Fallback: return default if parsing fails completely
+            return default

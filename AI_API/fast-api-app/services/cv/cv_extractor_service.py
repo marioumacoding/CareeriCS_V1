@@ -153,28 +153,14 @@ def upload_cv_to_db(db: Session, user_id: UUID, cv_data: dict):
 
 
 # =========================
-# Process CV File and Upload
-# =========================
-
-def process_and_generate_cv(file_path: str, db: Session):
-
-    text = extract_text(file_path)
-    if not text:
-        raise ValueError("No text extracted from file.")
-
-    cv_data = parse_and_enhance_cv(text)
-
-    return upload_cv_to_db(db, user_id=None, cv_data=cv_data)
-
-
-# =========================
 # Handle Upload Endpoint
 # =========================
 
-async def handle_cv_upload(
+async def handle_cv(
     file: UploadFile,
     user_id: UUID,
-    db: Session
+    db: Session,
+    type: str,
 ):
     suffix = os.path.splitext(file.filename)[1].lower()
 
@@ -197,12 +183,11 @@ async def handle_cv_upload(
                 detail="Text extraction failed."
             )
 
-        cv_data = parse_and_enhance_cv(cv_text)
+        cv_data = parse_and_enhance_cv(cv_text, type=type)
 
         if isinstance(cv_data, str):
             cv_data = json.loads(cv_data)
 
-        # Always define skills
         raw_skills = safe_list(cv_data, "skills")
 
         skills = []

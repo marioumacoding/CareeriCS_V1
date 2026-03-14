@@ -2,7 +2,7 @@ import os
 import json
 import pdfplumber
 from docx import Document
-from ai.prompts import extract_cv_prompt
+from ai.prompts import extract_cv_prompt, enhance_cv_prompt
 from utils.util import _safe_json_parse
 from ai.completion import deepseek_response
 
@@ -36,9 +36,14 @@ def extract_text(file_path: str) -> str:
 # =========================
 # CV Parsing + AI Enhancement
 # =========================
-def parse_and_enhance_cv(cv_text: str) -> dict:
+def parse_and_enhance_cv(cv_text: str, type: str) -> dict:
+    if type == "extractor":
+        prompt = extract_cv_prompt(cv_text)
+    elif type == "enhancer":
+        prompt = enhance_cv_prompt(cv_text)
+    else:
+        raise ValueError("Invalid type. Must be 'extractor' or 'enhancer'.")
 
-    prompt = extract_cv_prompt(cv_text)
     raw_output = deepseek_response(prompt)
     return _safe_json_parse(raw_output)
 

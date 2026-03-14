@@ -3,16 +3,20 @@ from fastapi import APIRouter, Depends, UploadFile, File
 from sqlalchemy.orm import Session
 
 from dependencies import get_db
-from services.cv.cv_extractor_service import handle_cv
+from services.cv.cv_enhancer_service import enhance_cv_wrapper
 
 
 router = APIRouter(prefix="/cv", tags=["CV"])
 
 
-@router.post("/extract/{user_id}")
-async def extract_cv(
+@router.post("/enhance/{user_id}")
+async def enhance_cv(
     user_id: UUID,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
 ):
-    return await handle_cv(file, user_id, db, type="extractor")
+    return await enhance_cv_wrapper(
+        db=db, 
+        user_id=user_id, 
+        file=file
+    )

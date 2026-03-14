@@ -8,8 +8,31 @@ from ai.schemas import *
 # ============================================================
 def extract_cv_prompt(cv_text: str) -> str:
     return (
-        "You are an advanced CV parsing engine.\n\n"
+        "You are an advanced CV Extractor engine.\n\n"
         "Extract structured information from the CV text below.\n\n"
+        "IMPORTANT RULES:\n"
+        "- Return ONLY valid JSON.\n"
+        "- Do NOT include explanations or markdown.\n"
+        "- Do NOT omit fields.\n"
+        "- If a section does not exist, return an empty array [].\n"
+        "- If a field does not exist, return empty string \"\".\n"
+        "- Follow the schema EXACTLY.\n\n"
+        f"SCHEMA:\n{json.dumps(cv_schema, indent=2)}\n\n"
+        f"CV TEXT:\n{cv_text}"
+    )
+
+
+# ============================================================
+# Enhance CV
+# ============================================================
+def enhance_cv_prompt(cv_text: str) -> str:
+    return (
+        "You are an advanced CV Enhancer engine.\n\n"
+        "Directly improve the CV text below by:\n"
+        "- Rewriting descriptions for clarity, impact, and professionalism.\n"
+        "- Highlighting skills and achievements.\n"
+        "- Normalizing formatting, dates, and titles.\n"
+        "- Completing missing fields when possible.\n\n"
         "IMPORTANT RULES:\n"
         "- Return ONLY valid JSON.\n"
         "- Do NOT include explanations or markdown.\n"

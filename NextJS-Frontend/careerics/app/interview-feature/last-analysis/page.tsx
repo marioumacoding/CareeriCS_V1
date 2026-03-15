@@ -45,15 +45,15 @@ export default function PreparingAnalysisPage() {
   display: 'flex', 
   flexDirection: 'column', 
   alignItems: 'center', 
-  justifyContent: 'flex-start', // Shifts content toward the top
-  paddingTop: '10vh',            // Adjust this value to move it higher or lower
-  height: '100%'                // Ensures it takes up the available vertical space
+  justifyContent: 'flex-start', 
+  paddingTop: '10vh',           
+  height: '100%'                
 }}>
   <h2 style={{ 
     color: 'white', 
     fontSize: '24px', 
     fontFamily: 'var(--font-nova-square)', 
-    marginBottom: '100px',       // Spacing between text and image
+    marginBottom: '100px',     
     maxWidth: '600px' 
   }}>
     Our Model is preparing the full analysis,<br /> Give us a moment
@@ -151,13 +151,12 @@ export default function PreparingAnalysisPage() {
                   fontSize: '14px',
                   fontWeight: 600
                 }}>
-                  <img src="/interview/drive-logo.svg" style={{ width: '20px' }} alt="Drive" />
+                  <img src="/interview/drive.svg" style={{ width: '20px' }} alt="Drive" />
                   Open with Google Drive
                 </button>
               </div>
             </div>
           }
-          /* This keeps the outer part of the InterviewContainer from having a separate background */
           style={{ background: 'transparent' }}
         />
 

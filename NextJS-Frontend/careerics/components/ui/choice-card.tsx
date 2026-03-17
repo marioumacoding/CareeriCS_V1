@@ -5,13 +5,15 @@ import { Button } from "@/components/ui/button";
 import React, { CSSProperties, ReactNode } from "react";
 
 interface ChoiceCardProps {
-  icon: string;
-  title: string;
-  description: string;
-  route: string;
+  icon?: string;
+  title?: string;
+  description?: string;
+  route?: string;
   style?: CSSProperties;
   children?: ReactNode;
-  buttonVariant: "primary" | "secondary" | "primary-inverted";
+  isWideCard?: boolean;
+  onClick?: () => void; // 1. Already here, good!
+  buttonVariant?: "primary" | "secondary" | "primary-inverted";
 }
 
 export default function ChoiceCard({
@@ -21,8 +23,17 @@ export default function ChoiceCard({
   route,
   style,
   buttonVariant,
+  onClick, // 2. ADDED: Destructure onClick here
 }: ChoiceCardProps) {
   const router = useRouter();
+
+  const handleButtonClick = () => {
+    if (onClick) {
+      onClick(); // Run popup logic
+    } else if (route) {
+      router.push(route); // Run navigation logic
+    }
+  };
 
   return (
     <div
@@ -75,7 +86,7 @@ export default function ChoiceCard({
             margin: 0,
             color: "white",
             fontSize: "clamp(0.8rem,1.7vw,1.5rem)",
-            fontFamily: "var(--font-nova-square)"
+            fontFamily: "var(--font-nova-square)",
           }}
         >
           {title}
@@ -98,7 +109,8 @@ export default function ChoiceCard({
       <Button
         type="button"
         variant={buttonVariant}
-        onClick={() => router.push(route)}
+        // 3. UPDATED: Call handleButtonClick instead of router.push directly
+        onClick={handleButtonClick} 
         style={{
           flexGrow: 0,
           flexShrink: 0,

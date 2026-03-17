@@ -1,13 +1,16 @@
 "use client";
+import { useState } from 'react'; // Added useState
 import RootLayout from "@/app/features/layout";
 import ArchiveCard from "@/components/ui/archive-card";
 import { Button } from "@/components/ui/button";
 import ChoiceCard from "@/components/ui/choice-card";
 import TipCard from "@/components/ui/tipcard";
-import { useRouter } from 'next/navigation'
+import CustomizeInterviewPopup from "@/components/ui/popup"; // Custom component
 
 export default function Interview() {
-  const router = useRouter();
+  // State to control popup visibility
+  const [isPopupOpen, setIsPopupOpen] = useState(false);
+
   const archive = [
     { id: "Tech-001", date: "5/3/2026" },
     { id: "Tech-002", date: "5/3/2026" },
@@ -16,6 +19,7 @@ export default function Interview() {
     { id: "Tech-005", date: "5/3/2026" },
     { id: "Tech-006", date: "5/3/2026" },
   ];
+
   return (
     <RootLayout
       style={{
@@ -25,10 +29,9 @@ export default function Interview() {
         gridRowGap: "4vh",
       }}
     >
-
       <ChoiceCard
         title="Behavioral Mock Interview"
-        description="Practice answering the most common interview questions and improve how you  present yourself ans your skills."
+        description="Practice answering the most common interview questions and improve how you present yourself and your skills."
         buttonVariant="primary-inverted"
         route="/interview-feature/recording"
         icon="/interview/HR Interview Icon.png"
@@ -39,27 +42,28 @@ export default function Interview() {
         title="Technical Mock Interview"
         description="Test your technical knowledge and problem solving skills with questions designed to mirror real interviews."
         buttonVariant="primary-inverted"
-        route="/"
+        // Instead of a route, we use onClick to open the popup
+        onClick={() => setIsPopupOpen(true)} 
         icon="/interview/Tech Interview Icon.png"
         style={{ gridArea: "1 / 2 / 3 / 3" }}
       />
 
       <ArchiveCard
         items={archive}
-        style={{
-          gridArea: "1 / 3 / 3 / 4"
-        }}
+        style={{ gridArea: "1 / 3 / 3 / 4" }}
       />
 
       <TipCard
         title="Tip of the day"
         description="Research the company and interviewers before your interview so you understand the company's goals and show how you fit."
         icon="/interview/Interview Tip.svg"
-        style={{
-          gridArea: "3 / 1 / 4 / 4"
-        }}
+        style={{ gridArea: "3 / 1 / 4 / 4" }}
       />
 
+      {/* Popup Logic */}
+      {isPopupOpen && (
+        <CustomizeInterviewPopup onClose={() => setIsPopupOpen(false)} />
+      )}
     </RootLayout>
   );
 }

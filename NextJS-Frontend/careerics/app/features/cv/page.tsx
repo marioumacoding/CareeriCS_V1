@@ -4,7 +4,7 @@ import RootLayout from "@/app/features/layout";
 import ArchiveCard from "@/components/ui/archive-card";
 import { Button } from "@/components/ui/button"; 
 import ChoiceCard from "@/components/ui/choice-card";
-import CVPop from "@/components/ui/cvPopup"; // Ensure this matches your filename
+import CVPop from "@/components/ui/cvPopup"; 
 import { useRouter } from 'next/navigation';
 
 export default function CVCrafting() {
@@ -47,7 +47,7 @@ export default function CVCrafting() {
           description="Elevate your existing resume with AI-driven insights that refine your language and highlight your most impactful achievements."
           icon="/cv/cv.svg"
           buttonVariant="primary-inverted"
-          route="/cv/builder"
+          route="/cv-feature/builder"
           style={{ gridArea: "1 / 1 / 4 / 3" }}
         />
 
@@ -56,7 +56,7 @@ export default function CVCrafting() {
           description="Elevate your existing resume with AI-driven insights that refine your language and highlight your most impactful achievements."
           icon="/cv/cv.svg"
           buttonVariant="primary-inverted"
-          route="/cv/enhancer"
+          route="/cv-feature/enhancer"
           style={{ gridArea: "1 / 3 / 4 / 5" }}
         />
 

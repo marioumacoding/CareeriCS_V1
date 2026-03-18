@@ -4,126 +4,101 @@ import { useRouter } from "next/navigation";
 
 interface Question {
   id: number;
+  title: string;
   text: string;
 }
 
 interface InterviewLayoutProps {
   questions: Question[];
   currentActiveId: number;
+  unlockedStepId: number;
   onQuestionClick: (id: number) => void;
   closeIconSrc: string;
   children: ReactNode;
+  label?: string;
 }
 
 export default function InterviewLayout({
   questions,
   currentActiveId,
+  unlockedStepId,
   onQuestionClick,
   closeIconSrc,
   children,
+  label = "Question",
 }: InterviewLayoutProps) {
   const router = useRouter();
 
-  // Global Scroll Lock
   useEffect(() => {
     document.body.style.overflow = "hidden";
-    document.documentElement.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = "auto";
-      document.documentElement.style.overflow = "auto";
-    };
+    return () => { document.body.style.overflow = "auto"; };
   }, []);
 
   return (
-    <div style={{ 
-      display: "flex", 
-      height: "100vh", 
-      width: "100vw", 
-      background: "linear-gradient(180deg, #142143 0%, black 100%)",
-      overflow: "hidden" 
-    }}>
-      <aside style={{ 
-        width: "320px", 
-        backgroundColor: "#b4b4b4", 
-        padding: "40px 20px", 
-        display: "flex", 
-        flexDirection: "column" 
-      }}>
-        <div style={{ marginBottom: "30px", color: "#1a1a1a" }}>
-          <h1 style={{ fontSize: "24px", margin: 0, fontWeight: 700 }}>HR Session</h1>
-          <p style={{ fontSize: "20px", margin: 0, fontWeight: 300 }}>001</p>
-        </div>
+    <div style={{ display: "flex", height: "100vh", width: "100vw", background: "linear-gradient(180deg, #142143 0%, black 100%)", overflow: "hidden" }}>
+      {/* SIDEBAR */}
+      <aside style={{ width: "320px", backgroundColor: "#b4b4b4", padding: "40px 20px", display: "flex", flexDirection: "column" }}>
+        <h1 style={{ fontSize: "24px", color: "#1a1a1a", fontWeight: 700, marginBottom: "30px" }}>CV Builder</h1>
 
         <div style={{ flex: 1, overflowY: "auto" }}>
-          {questions.map((q, index) => {
-            const isCurrent = currentActiveId === q.id;
-            
-            // --- STRICT LOCK LOGIC ---
-            // If the ID is NOT the current one, it is unclickable (Locked)
-            const isDisabled = q.id !== currentActiveId;
-            const isPast = q.id < currentActiveId;
+          {questions.map((q) => {
+            const isSelected = currentActiveId === q.id;
+            const isLocked = q.id > unlockedStepId;
+            const isPast = q.id < unlockedStepId;
 
             return (
-              <div key={q.id}>
-                <div 
-                  // Clicking ONLY works if it's the current question
-                  onClick={() => !isDisabled && onQuestionClick(q.id)} 
-                  style={{
-                    padding: "16px 18px",
-                    borderRadius: "14px",
-                    backgroundColor: isCurrent ? "#d4ff47" : "transparent",
-                    // Disable cursor for anything that isn't the current question
-                    cursor: isDisabled ? "not-allowed" : "pointer",
-                    // Dim both past and future questions
-                    opacity: isDisabled ? 0.4 : 1, 
-                    transition: "0.3s all ease"
-                  }}
-                >
-                  <div style={{ 
-                    display: "flex", 
-                    justifyContent: "space-between", 
-                    alignItems: "center",
-                    fontWeight: 600, 
-                    color: "#1a1a1a" 
-                  }}>
-                    <span>Question {q.id}</span>
-                    <span style={{ fontSize: "14px" }}>
-                      {isPast ? "✅" : isCurrent ? "▼" : "🔒"} 
-                    </span>
-                  </div>
-                  
-                  <div style={{ 
-                    maxHeight: isCurrent ? "80px" : "0px", 
-                    overflow: "hidden", 
-                    fontSize: "12px", 
-                    marginTop: isCurrent ? "8px" : "0px", 
-                    opacity: 0.8,
-                    color: "#1a1a1a",
-                    transition: "0.3s ease",
-                    lineHeight: "1.4"
-                  }}>
-                    {q.text}
+              <div 
+                key={q.id} 
+                onClick={() => onQuestionClick(q.id)}
+                style={{
+                  padding: "16px 18px",
+                  borderRadius: "14px",
+                  backgroundColor: isSelected ? "#d4ff47" : "rgba(0,0,0,0.05)",
+                  cursor: isPast ? "default" : "pointer",
+                  marginBottom: "10px",
+                  transition: "all 0.3s ease",
+                  opacity: isPast ? 0.5 : 1, // Dim past questions
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", color: "#1a1a1a", fontWeight: 600 }}>
+                  <span style={{ fontSize: "14px" }}>{label} {q.id}: {q.title}</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+                    {/* Lock only appears here in sidebar */}
+                    <span style={{ fontSize: "12px" }}>{isLocked ? "🔒" : isPast ? "✅" : ""}</span>
+                    <span style={{ 
+                      transition: "transform 0.3s", 
+                      transform: isSelected ? "rotate(180deg)" : "rotate(0deg)" 
+                    }}>▼</span>
                   </div>
                 </div>
 
-                {index < questions.length - 1 && (
-                  <div style={{ height: "1px", backgroundColor: "rgba(0,0,0,0.1)", margin: "8px 10px" }} />
-                )}
+                <div style={{ 
+                  maxHeight: isSelected ? "150px" : "0px", 
+                  overflow: "hidden", 
+                  transition: "all 0.3s ease",
+                  fontSize: "13px",
+                  marginTop: isSelected ? "10px" : "0px",
+                  borderTop: isSelected ? "1px solid rgba(0,0,0,0.1)" : "none",
+                  paddingTop: isSelected ? "10px" : "0px",
+                  color: "#333"
+                }}>
+                  {q.text}
+                </div>
               </div>
             );
           })}
         </div>
       </aside>
 
-      <main style={{ flex: 1, position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <button 
-          style={{ position: "absolute", top: "30px", right: "30px", background: "none", border: "none", cursor: "pointer" }}
-          onClick={() => router.push('/')}
-        >
-          <img src={closeIconSrc} alt="close" style={{ width: "28px" }} />
+      {/* MAIN CONTENT - Always shows the children now */}
+      <main style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
+        <button onClick={() => router.push('/')} style={{ position: "absolute", top: "30px", right: "30px", background: "none", border: "none", cursor: "pointer", zIndex: 10 }}>
+          <img src={closeIconSrc} alt="close" style={{ width: "24px" }} />
         </button>
-        
-        {children}
+
+        <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          {children}
+        </div>
       </main>
     </div>
   );

@@ -10,33 +10,37 @@ export default function RecordingPage() {
 
   // 1. Data Definitions
   const questions = [
-    { id: 1, text: "Where do you see yourself in 5 years?" },
-    { id: 2, text: "What is your biggest professional achievement?" },
-    { id: 3, text: "How do you handle conflict with a coworker?" },
-    { id: 4, text: "Why are you looking to leave your current role?" },
-    { id: 5, text: "How do you handle high-pressure situations?" },
-    { id: 6, text: "What is your preferred work style?" },
-    { id: 7, text: "Do you have any questions for us?" },
+    { id: 1, title: "Future Goals", text: "Where do you see yourself in 5 years?" },
+    { id: 2, title: "Achievement", text: "What is your biggest professional achievement?" },
+    { id: 3, title: "Conflict", text: "How do you handle conflict with a coworker?" },
+    { id: 4, title: "Transitions", text: "Why are you looking to leave your current role?" },
+    { id: 5, title: "Pressure", text: "How do you handle high-pressure situations?" },
+    { id: 6, title: "Work Style", text: "What is your preferred work style?" },
+    { id: 7, title: "Closing", text: "Do you have any questions for us?" },
   ];
 
   // 2. State Management
+  // activeId: Controls which tab is expanded in the sidebar (the "Peek")
   const [activeId, setActiveId] = useState(1);
+  // unlockedId: Controls which question is actually being recorded on screen (the "Sticky")
+  const [unlockedId, setUnlockedId] = useState(1); 
+  
   const [status, setStatus] = useState<"idle" | "recording" | "stopped">("idle");
   const [seconds, setSeconds] = useState(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Sync activeId with URL ?q=
+  // STICKY LOGIC: Always find the text for the UNLOCKED ID, not the Active ID
+  const currentQuestionText = questions.find((q) => q.id === unlockedId)?.text || "";
+
+  // Sync state with URL on initial load
   useEffect(() => {
     const q = searchParams.get("q");
     if (q) {
-      const newId = parseInt(q);
-      setActiveId(newId);
-      setStatus("idle");
-      setSeconds(0);
+      const parsedQ = parseInt(q);
+      setUnlockedId(parsedQ);
+      setActiveId(parsedQ);
     }
   }, [searchParams]);
-
-  const currentQuestionText = questions.find((q) => q.id === activeId)?.text || "";
 
   // 3. Timer Logic
   useEffect(() => {
@@ -45,9 +49,7 @@ export default function RecordingPage() {
     } else {
       if (timerRef.current) clearInterval(timerRef.current);
     }
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [status]);
 
   const formatTime = (s: number) => {
@@ -58,73 +60,64 @@ export default function RecordingPage() {
 
   // 4. Action Handlers
   const handleCameraToggle = () => {
+    // Logic: User can only record if they aren't "peeking" at another question in the sidebar
+    if (activeId !== unlockedId) return;
+
     if (status === "idle" || status === "stopped") setStatus("recording");
     else setStatus("stopped");
   };
 
   const handleReset = () => {
+    if (activeId !== unlockedId) return;
     setStatus("idle");
     setSeconds(0);
   };
 
-  // --- UPDATED LOGIC HERE ---
+  const handleSidebarClick = (targetId: number) => {
+    // Prevent going back to completed questions
+    if (targetId < unlockedId) return;
+
+    // EXPAND Logic: Update activeId so the sidebar accordion opens
+    // Note: We do NOT update unlockedId here, so the main screen stays sticky
+    setActiveId(targetId);
+  };
+
   const handleSubmit = () => {
-    if (seconds > 0) {
-      // Check if current question is the last one (ID 7)
-      if (activeId === questions.length) {
-        router.push(`/interview-feature/last-analysis?q=${activeId}`);
+    // Only allow submit if we are on the current question and have recorded something
+    if (seconds > 0 && activeId === unlockedId) {
+      if (unlockedId === questions.length) {
+        router.push(`/interview-feature/last-analysis?q=${unlockedId}`);
       } else {
-        router.push(`/interview-feature/analyzing?q=${activeId}`);
+        router.push(`/interview-feature/analyzing?q=${unlockedId}`);
       }
     }
   };
 
-  const handleSidebarClick = (targetId: number) => {
-    if (targetId <= activeId) {
-      router.push(`/interview-feature/recording?q=${targetId}`);
-    } else {
-      console.log("This question is locked until you complete the current one.");
-    }
-  };
+  // 5. UI Controls
+  const isPeeking = activeId !== unlockedId;
 
-  // 5. UI Snippets
   const controls = (
-    <div style={{ display: "flex", alignItems: "center", gap: "80px" }}>
+    <div style={{ 
+      display: "flex", 
+      alignItems: "center", 
+      gap: "80px",
+      opacity: isPeeking ? 0.3 : 1, // Dim controls if looking at a future question
+      pointerEvents: isPeeking ? "none" : "auto" 
+    }}>
       <img
-        src={
-          status === "idle"
-            ? "/interview/Record.svg"
-            : status === "recording"
-            ? "/interview/Pause.svg"
-            : "/interview/Play.svg"
-        }
+        src={status === "idle" ? "/interview/Record.svg" : status === "recording" ? "/interview/Pause.svg" : "/interview/Play.svg"}
         alt="Control"
         style={{ width: "60px", cursor: "pointer" }}
         onClick={handleCameraToggle}
       />
-
-      <span
-        style={{
-          fontSize: "40px",
-          fontWeight: 500,
-          color: "white",
-          minWidth: "120px",
-          textAlign: "center",
-          fontFamily: "var(--font-nova-square)",
-        }}
-      >
+      <span style={{ fontSize: "40px", color: "white", fontFamily: "var(--font-nova-square)", minWidth: "120px", textAlign: "center" }}>
         {formatTime(seconds)}
       </span>
-
-      <img
-        src="/interview/Retake.svg"
-        alt="Reset"
-        style={{
-          width: "45px",
-          cursor: status === "idle" ? "not-allowed" : "pointer",
-          opacity: status === "idle" ? 0.3 : 1,
-        }}
-        onClick={handleReset}
+      <img 
+        src="/interview/Retake.svg" 
+        alt="Reset" 
+        style={{ width: "45px", cursor: "pointer" }} 
+        onClick={handleReset} 
       />
     </div>
   );
@@ -132,25 +125,33 @@ export default function RecordingPage() {
   return (
     <InterviewLayout 
       questions={questions} 
-      currentActiveId={activeId} 
+      currentActiveId={activeId}    // For Sidebar Expansion
+      unlockedStepId={unlockedId}   // For Sidebar Lock Icons
       onQuestionClick={handleSidebarClick}
       closeIconSrc="/interview/Close.svg"
     >
       <InterviewContainer
-        questionTitle={`${activeId}. ${currentQuestionText}`}
+        // STICKY TITLE: Always shows the unlocked question
+        questionTitle={`${unlockedId}. ${currentQuestionText}`}
         videoContent={
-          <div style={{ color: "#666", fontSize: "20px", fontFamily: "jura" }}>
-            {status === "recording"
-              ? " Recording..."
-              : status === "stopped"
-              ? "⏸ Paused"
-              : ""}
+          <div style={{ color: "white", fontSize: "18px", textAlign: "center" }}>
+            {isPeeking ? (
+              <div style={{ color: "#d4ff47", fontWeight: "bold" }}>
+                <p>Peeking at Question {activeId}</p>
+                <p style={{ fontSize: "14px", color: "white", opacity: 0.7 }}>
+                  Click "Question {unlockedId}" in sidebar to resume recording.
+                </p>
+              </div>
+            ) : (
+              status === "recording" ? "● Recording..." : "Ready to record"
+            )}
           </div>
         }
         controlsContent={controls}
         actionButton={
           <button
             onClick={handleSubmit}
+            disabled={isPeeking || seconds === 0}
             style={{
               background: "#d4ff47",
               padding: "15px 100px",
@@ -158,10 +159,8 @@ export default function RecordingPage() {
               border: "none",
               fontWeight: "bold",
               fontSize: "18px",
-              fontFamily: "var(--font-nova-square)",
-              cursor: seconds > 0 ? "pointer" : "not-allowed",
-              opacity: seconds > 0 ? 1 : 0.5,
-              transition: "0.3s",
+              cursor: (isPeeking || seconds === 0) ? "not-allowed" : "pointer",
+              opacity: (isPeeking || seconds === 0) ? 0.5 : 1,
               color: "#1a1a1a"
             }}
           >

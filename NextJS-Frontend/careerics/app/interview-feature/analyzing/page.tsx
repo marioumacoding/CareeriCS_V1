@@ -70,6 +70,11 @@ export default function AnalyzingPage() {
         setFollowup(followupResponse.data);
       }
 
+  // 2. Reset and start timer whenever the question ID (currentQ) changes
+  useEffect(() => {
+    setIsFinished(false); // Reset the button/text state for the new question
+
+    const timer = setTimeout(() => {
       setIsFinished(true);
       setIsEvaluating(false);
     };
@@ -81,6 +86,7 @@ export default function AnalyzingPage() {
     };
   }, [sessionId, questionId, answerId, missingContext]);
 
+  // 3. Updated Navigation Logic
   const handleNext = () => {
     if (followup) {
       router.push(buildRecordingUrl({
@@ -133,7 +139,6 @@ export default function AnalyzingPage() {
         paddingBottom: '40px' 
       }}>
         
-        {/* Conditional Text Section */}
         <h2 style={{ 
           color: 'white', 
           fontSize: '24px', 
@@ -176,17 +181,19 @@ export default function AnalyzingPage() {
             style={{ 
               width: '300px', 
               height: 'auto',
-          
+              filter: isFinished 
+                ? 'drop-shadow(0 0 20px rgba(212, 255, 71, 0.4))' 
+                : 'drop-shadow(0 0 20px rgba(168, 85, 247, 0.3))',
+              transition: 'filter 0.5s ease'
             }} 
           />
         </div>
 
-        {/* Conditional Action Button */}
         <button 
           onClick={handleNext}
-          disabled={!isFinished}
+          disabled={!isFinished} 
           style={{
-            backgroundColor: isFinished ? '#d4ff47' : '#BABABA', // Green when finished, Grey while analyzing
+            backgroundColor: isFinished ? '#d4ff47' : '#BABABA', 
             color: '#1a1a1a',
             padding: '12px 60px',
             borderRadius: '14px',
@@ -195,7 +202,7 @@ export default function AnalyzingPage() {
             fontFamily: 'var(--font-nova-square)',
             fontWeight: 600,
             cursor: isFinished ? 'pointer' : 'wait',
-            transition: 'all 0.5s ease', // Smooth color transition
+            transition: 'all 0.5s ease',
             opacity: isFinished ? 1 : 0.8
           }}
         >

@@ -1,5 +1,5 @@
 "use client";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import React, { useState, useEffect, useRef } from "react";
 import InterviewLayout from "@/components/ui/interview";
 import InterviewContainer from "@/components/ui/interview-card";
@@ -23,6 +23,8 @@ export default function RecordingPage() {
   } = useInterviewFlow();
 
   const [activeId, setActiveId] = useState(currentQ);
+  const [unlockedId, setUnlockedId] = useState(1); 
+
   const [status, setStatus] = useState<"idle" | "recording" | "stopped">("idle");
   const [seconds, setSeconds] = useState(0);
   const [recordedMedia, setRecordedMedia] = useState<Blob | null>(null);
@@ -108,9 +110,7 @@ export default function RecordingPage() {
     } else {
       if (timerRef.current) clearInterval(timerRef.current);
     }
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [status]);
 
   const formatTime = (s: number) => {
@@ -305,47 +305,31 @@ export default function RecordingPage() {
     handleReset();
   };
 
-  // 5. UI Snippets
+  // 5. UI Controls
+  const isPeeking = activeId !== unlockedId;
+
   const controls = (
-    <div style={{ display: "flex", alignItems: "center", gap: "80px" }}>
-      {/* Play/Pause/Record Button */}
+    <div style={{ 
+      display: "flex", 
+      alignItems: "center", 
+      gap: "80px",
+      opacity: isPeeking ? 0.3 : 1, // Dim controls if looking at a future question
+      pointerEvents: isPeeking ? "none" : "auto" 
+    }}>
       <img
-        src={
-          status === "idle"
-            ? "/interview/Record.svg"
-            : status === "recording"
-            ? "/interview/Pause.svg"
-            : "/interview/Play.svg"
-        }
+        src={status === "idle" ? "/interview/Record.svg" : status === "recording" ? "/interview/Pause.svg" : "/interview/Play.svg"}
         alt="Control"
         style={{ width: "60px", cursor: isQuestionsLoading ? "not-allowed" : "pointer", opacity: isQuestionsLoading ? 0.5 : 1 }}
         onClick={handleCameraToggle}
       />
-
-      {/* Timer Display */}
-      <span
-        style={{
-          fontSize: "40px",
-          fontWeight: 500,
-          color: "white",
-          minWidth: "120px",
-          textAlign: "center",
-          fontFamily: "var(--font-nova-square)",
-        }}
-      >
+      <span style={{ fontSize: "40px", color: "white", fontFamily: "var(--font-nova-square)", minWidth: "120px", textAlign: "center" }}>
         {formatTime(seconds)}
       </span>
-
-      {/* Reset/Retake Button */}
-      <img
-        src="/interview/Retake.svg"
-        alt="Reset"
-        style={{
-          width: "45px",
-          cursor: status === "idle" ? "not-allowed" : "pointer",
-          opacity: status === "idle" ? 0.3 : 1,
-        }}
-        onClick={handleReset}
+      <img 
+        src="/interview/Retake.svg" 
+        alt="Reset" 
+        style={{ width: "45px", cursor: "pointer" }} 
+        onClick={handleReset} 
       />
     </div>
   );
@@ -353,14 +337,16 @@ export default function RecordingPage() {
   return (
     <InterviewLayout 
       questions={questions} 
-      currentActiveId={activeId} 
-      onQuestionClick={onQuestionClick}
+      currentActiveId={activeId}    // For Sidebar Expansion
+      unlockedStepId={unlockedId}   // For Sidebar Lock Icons
+      onQuestionClick={handleSidebarClick}
       closeIconSrc="/interview/Close.svg"
     >
       <InterviewContainer
-        questionTitle={`${activeId}. ${currentQuestionText}`}
+        // STICKY TITLE: Always shows the unlocked question
+        questionTitle={`${unlockedId}. ${currentQuestionText}`}
         videoContent={
-          <div style={{ color: "#666", fontSize: "20px", fontFamily: "jura" }}>
+          <div style={{ color: "white", fontSize: "18px", textAlign: "center" }}>
             {isQuestionsLoading
               ? "Loading questions..."
               : questionsError || actionError

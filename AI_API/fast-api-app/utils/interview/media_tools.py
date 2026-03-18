@@ -55,30 +55,42 @@ def delete_files(*paths: str) -> None:
 def convert_webm_to_wav(input_path: str) -> str:
     fd, output_path = tempfile.mkstemp(suffix=".wav")
     os.close(fd)
-    result = subprocess.run(
-        ["ffmpeg", "-y", "-i", input_path, output_path],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-    )
+    ffmpeg_cmd = os.environ.get("FFMPEG_PATH", "ffmpeg")
+    try:
+        result = subprocess.run(
+            [ffmpeg_cmd, "-y", "-i", input_path, output_path],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+    except FileNotFoundError as e:
+        raise RuntimeError(
+            "ffmpeg executable not found. Install ffmpeg and ensure it's on your PATH, or set the FFMPEG_PATH environment variable"
+        ) from e
 
     if result.returncode != 0:
-      raise RuntimeError(result.stderr.strip() or "ffmpeg failed converting to wav")
+        raise RuntimeError(result.stderr.strip() or "ffmpeg failed converting to wav")
 
     return output_path
 
 def convert_webm_to_mp4(input_path: str) -> str:
     fd, output_path = tempfile.mkstemp(suffix=".mp4")
     os.close(fd)
-    result = subprocess.run(
-        ["ffmpeg", "-y", "-i", input_path, output_path],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-    )
+    ffmpeg_cmd = os.environ.get("FFMPEG_PATH", "ffmpeg")
+    try:
+        result = subprocess.run(
+            [ffmpeg_cmd, "-y", "-i", input_path, output_path],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+    except FileNotFoundError as e:
+        raise RuntimeError(
+            "ffmpeg executable not found. Install ffmpeg and ensure it's on your PATH, or set the FFMPEG_PATH environment variable"
+        ) from e
 
     if result.returncode != 0:
-      raise RuntimeError(result.stderr.strip() or "ffmpeg failed converting to mp4")
+        raise RuntimeError(result.stderr.strip() or "ffmpeg failed converting to mp4")
 
     return output_path
 

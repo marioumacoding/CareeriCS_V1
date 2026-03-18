@@ -1,8 +1,10 @@
 import datetime
 import uuid
 from sqlalchemy import (
+    TIMESTAMP,
     Column,
     Enum,
+    Integer,
     String,
     Boolean,
     ForeignKey,
@@ -13,7 +15,7 @@ from sqlalchemy import (
     Float
 )
 from sqlalchemy.orm import relationship
-from sqlalchemy.dialects.postgresql import ARRAY, BYTEA, UUID
+from sqlalchemy.dialects.postgresql import ARRAY, BYTEA, JSONB, UUID
 from sqlalchemy.sql import func
 
 from db.base import Base
@@ -180,6 +182,7 @@ class UserSkill(Base):
 
     isCV = Column(Boolean, nullable=False, default=False)
     proficiency = Column(String)
+    score = Column(Integer, nullable=True)
 
     user = relationship("User", back_populates="skills")
     skill = relationship("Skill")
@@ -305,38 +308,109 @@ class Reference(Base):
 # ###########################################################################################################################
 
 # =========================
-# SKILL ASSESSMENT QUESTION
+# SKILL ASSESSMENT SESSION
 # =========================
-class SAQuestion(Base):
-    __tablename__ = "skill_assessment_questions"
+class AssessmentSession(Base):
+    __tablename__ = "assessment_sessions"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    question_text = Column(String, nullable=False)
-
+    user_id = Column(UUID(as_uuid=True), nullable=False)
     skill_id = Column(UUID(as_uuid=True), ForeignKey("skills.id"), nullable=False)
 
-    skill = relationship("Skill")
-    answers = relationship("SAAnswer", back_populates="question", cascade="all, delete-orphan")
+    total_questions = Column(Integer, nullable=False)
+    score = Column(Integer, default=0)
+
+    status = Column(String, default="in_progress")  # in_progress, submitted
+
+    started_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False
+    )
+    submitted_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False
+    )
+
+    assessment_questions = relationship(
+        "AssessmentQuestion",
+        back_populates="session",
+        cascade="all, delete"
+    )
+
+    assessment_answers = relationship(
+        "AssessmentAnswer",
+        back_populates="session",
+        cascade="all, delete"
+    )
+
+
+# =========================
+# SKILL ASSESSMENT QUESTION
+# =========================
+class AssessmentQuestion(Base):
+    __tablename__ = "assessment_questions"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    session_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("assessment_sessions.id"),
+        nullable=False
+    )
+
+    question_text = Column(Text, nullable=False)
+    options = Column(JSONB, nullable=False)
+    correct_answer = Column(String, nullable=False)
+
+    explanation = Column(Text, nullable=True)
+    difficulty = Column(String, nullable=True)
+
+    created_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False
+    )
+
+    session = relationship("AssessmentSession", back_populates="assessment_questions")
+
+    assessment_answers = relationship(
+        "AssessmentAnswer",
+        back_populates="question"
+    )
 
 
 # =========================
 # SKILL ASSESSMENT ANSWER
 # =========================
-class SAAnswer(Base):
-    __tablename__ = "skill_assessment_answers"
+class AssessmentAnswer(Base):
+    __tablename__ = "assessment_answers"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
 
-    answer_text = Column(String, nullable=True)
-    feedback = Column(String, nullable=True)
+    session_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("assessment_sessions.id"),
+        nullable=False
+    )
 
-    score = Column(Float, nullable=False)
+    question_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("assessment_questions.id"),
+        nullable=False
+    )
 
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    question_id = Column(UUID(as_uuid=True), ForeignKey("skill_assessment_questions.id"), nullable=False)
+    selected_answer = Column(String, nullable=False)
+    is_correct = Column(Boolean, nullable=False)
 
-    question = relationship("SAQuestion", back_populates="answers")
-    user = relationship("User")
+    answered_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False
+    )
+
+    session = relationship("AssessmentSession", back_populates="assessment_answers")
+    question = relationship("AssessmentQuestion", back_populates="assessment_answers")
 
 
 # =========================

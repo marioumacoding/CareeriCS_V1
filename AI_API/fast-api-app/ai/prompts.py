@@ -106,34 +106,19 @@ def interview_session_fields_prompt(session_json: dict) -> str:
 # ============================================================
 # Skill Assessment
 # ============================================================
-def skill_assessment_questions_prompt(skill_name: str) -> str:
+def skill_assessment_questions_prompt(skill_name: str, num_questions: int) -> str:
     return (
-        "You are an expert Skill Assessment Question Generator.\n\n"
-        "Your task is to generate exactly 10 high-quality assessment questions "
-        "to evaluate the given skill.\n\n"
-        f"Skill Name: {skill_name}\n\n"
-        "The output MUST strictly follow this JSON schema:\n"
+        "You are a Computer Science expert Skill Assessment Question Generator.\n\n"
+        f"Generate {num_questions} multiple-choice questions to assess {skill_name} skill.\n\n"
+        "Each question should have:\n"
+        "- A clear and concise question text\n"
+        "- 4 answer options\n"
+        "- One correct answer\n"
+        "- A brief explanation of the correct answer\n\n"
+        "Return ONLY valid JSON in this format:\n"
         f"{json.dumps(skill_assessment_questions_schema, indent=2)}\n\n"
-        "CRITICAL INSTRUCTIONS:\n"
-        "1. Return ONLY valid JSON.\n"
-        "2. Do NOT include markdown.\n"
-        "3. Do NOT include explanations.\n"
-        "4. Do NOT include additional keys.\n"
-        "5. Generate exactly 10 questions.\n"
-        "6. Questions must be clear, unambiguous, and suitable for skill evaluation.\n"
-        "7. Difficulty should vary (basic, intermediate, advanced).\n"
-    )
-
-def skill_assessment_evaluation_prompt(answers: List[dict]) -> str:
-    return (
-        "You are an expert technical interviewer.\n\n"
-        "Evaluate each answer and score it from 0 to 10.\n"
-        "Then determine the overall proficiency level.\n\n"
-        "Proficiency Levels:\n"
-        "- Beginner\n"
-        "- Intermediate\n"
-        "- Advanced\n\n"
-        f"Answers:\n{json.dumps(answers, indent=2)}\n\n"
-        "Return ONLY valid JSON following this schema exactly:\n"
-        f"{json.dumps(skill_assessment_evaluation_schema, indent=2)}"
+        "IMPORTANT:\n"
+        "- No markdown\n"
+        "- No extra text\n"
+        "- Output must be valid JSON"
     )

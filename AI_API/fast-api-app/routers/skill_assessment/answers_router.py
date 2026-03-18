@@ -1,22 +1,37 @@
-from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
 from uuid import UUID
-
+from fastapi import APIRouter, Depends, HTTPException, Body
+from sqlalchemy.orm import Session
+from services.skill_assessment.answers import submit_answers, get_results
+from schemas import SubmitAssessmentRequest, SubmitAssessmentResponse
 from dependencies import get_db
-from schemas import SAAnswerSubmitRequest
-from services.skill_assessment.answers_service import submit_skill_assessment_answers
 
-router = APIRouter(prefix="/skill-assessment", tags=["Skill Assessment"])
+router = APIRouter(prefix="/skill_assessment/answers", tags=["Skill Assessment Answers"])
 
 
-@router.post("/submit")
-def submit_skill_assessment(
-    payload: SAAnswerSubmitRequest,
+@router.post("/submit/{user_id}", response_model=SubmitAssessmentResponse)
+async def submit_answers_endpoint(
+    user_id: UUID,
+    payload: SubmitAssessmentRequest = Body(...),
     db: Session = Depends(get_db)
 ):
-    return submit_skill_assessment_answers(
-        db=db,
-        user_id=payload.user_id,
-        skill_id=payload.skill_id,
-        answers=payload.answers
-    )
+    try:
+        user_answers = [a.dict() for a in payload.answers]
+        return submit_answers(db, payload.session_id, str(user_id), user_answers)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/results/{user_id}/{session_id}", response_model=SubmitAssessmentResponse)
+async def get_results_endpoint(
+    user_id: UUID,
+    session_id: UUID,
+    db: Session = Depends(get_db)
+):
+    try:
+        return get_results(db, str(session_id), str(user_id))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

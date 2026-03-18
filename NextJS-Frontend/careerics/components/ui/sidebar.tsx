@@ -3,10 +3,16 @@
 import React, { useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
+import { useAuth } from "@/providers/auth-provider";
 
 const Sidebar = () => {
   const pathname = usePathname();
   const [hoveredNav, setHoveredNav] = useState<number | null>(null);
+  const { user, isLoading } = useAuth();
+
+  const profileName = isLoading
+    ? "Loading..."
+    : user?.displayName?.trim() || "Guest";
 
   const navItems = [
     { text: "Home", image: "/sidebar/Home.svg", path: "/features/home" },
@@ -127,7 +133,7 @@ const Sidebar = () => {
             textOverflow: "ellipsis",
           }}
         >
-          John Doe
+          {profileName}
         </div>
       </div>
     </aside>

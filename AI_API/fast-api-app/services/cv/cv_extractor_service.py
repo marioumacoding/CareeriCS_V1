@@ -153,28 +153,14 @@ def upload_cv_to_db(db: Session, user_id: UUID, cv_data: dict):
 
 
 # =========================
-# Process CV File and Upload
-# =========================
-
-def process_and_generate_cv(file_path: str, db: Session):
-
-    text = extract_text(file_path)
-    if not text:
-        raise ValueError("No text extracted from file.")
-
-    cv_data = parse_and_enhance_cv(text)
-
-    return upload_cv_to_db(db, user_id=None, cv_data=cv_data)
-
-
-# =========================
 # Handle Upload Endpoint
 # =========================
 
-async def handle_cv_upload(
+async def handle_cv(
     file: UploadFile,
     user_id: UUID,
-    db: Session
+    db: Session,
+    type: str,
 ):
     suffix = os.path.splitext(file.filename)[1].lower()
 
@@ -197,12 +183,11 @@ async def handle_cv_upload(
                 detail="Text extraction failed."
             )
 
-        cv_data = parse_and_enhance_cv(cv_text)
+        cv_data = parse_and_enhance_cv(cv_text, type=type)
 
         if isinstance(cv_data, str):
             cv_data = json.loads(cv_data)
 
-        # Always define skills
         raw_skills = safe_list(cv_data, "skills")
 
         skills = []
@@ -231,3 +216,37 @@ async def handle_cv_upload(
     finally:
         if os.path.exists(file_path):
             os.remove(file_path)
+
+
+
+async def handle_cv_for_builder(
+    cv_text: str,
+    user_id: UUID,
+    db: Session,
+    type: str,
+):
+    cv_data = parse_and_enhance_cv(cv_text, type=type)
+
+    if isinstance(cv_data, str):
+        cv_data = json.loads(cv_data)
+
+    raw_skills = safe_list(cv_data, "skills")
+
+    skills = []
+
+    for item in raw_skills:
+        if isinstance(item, str):
+            skills.append(item)
+        elif isinstance(item, dict):
+            # adjust key depending on your structure
+            skills.append(item.get("skill_name"))
+
+    # Save data
+    upload_cv_to_db(db, user_id, cv_data)
+
+    # Save mapped skills
+    save_mapped_skills_to_db(db, user_id, skills)
+
+    db.commit()
+
+    return {"message": "CV extracted and processed successfully"}

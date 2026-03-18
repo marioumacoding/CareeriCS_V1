@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 from typing import Optional, List, Dict
 from uuid import UUID
@@ -116,60 +118,6 @@ class AnswerRead(AnswerBase):
     session_id: UUID
     question_id: Optional[UUID] = None
     followup_id: Optional[UUID] = None
-    model_config = ConfigDict(from_attributes=True)
-
-
-# ======================================================
-# EMOTION
-# ======================================================
-
-class EmotionBase(BaseModel):
-    name: str
-
-
-class EmotionCreate(EmotionBase):
-    answer_id: UUID
-
-
-class EmotionRead(EmotionBase):
-    id: UUID
-    answer_id: UUID
-    model_config = ConfigDict(from_attributes=True)
-
-
-# ======================================================
-# TONE
-# ======================================================
-
-class ToneBase(BaseModel):
-    name: str
-
-
-class ToneCreate(ToneBase):
-    answer_id: UUID
-
-
-class ToneRead(ToneBase):
-    id: UUID
-    answer_id: UUID
-    model_config = ConfigDict(from_attributes=True)
-
-
-# ======================================================
-# SENTIMENT
-# ======================================================
-
-class SentimentBase(BaseModel):
-    name: str
-
-
-class SentimentCreate(SentimentBase):
-    answer_id: UUID
-
-
-class SentimentRead(SentimentBase):
-    id: UUID
-    answer_id: UUID
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -353,44 +301,77 @@ class SAQuestionOut(SAQuestionBase):
 
 
 # =====================================================
-# SKILL ASSESSMENT ANSWER SCHEMAS
+# ASSESSMENT SCHEMAS
 # =====================================================
 
-# =========================
-# ANSWER OUTPUT
-# =========================
+# =====================================================
+# START ASSESSMENT
+# =====================================================
+class StartAssessmentRequest(BaseModel):
+    skill_id: UUID
+    num_questions: int = Field(gt=0, le=50)  # max 50 questions
 
-class SAAnswerOut(BaseModel):
+
+class AssessmentQuestionResponse(BaseModel):
     id: UUID
-    answer_text: Optional[str] = None
-    feedback: Optional[str] = None
-    score: float
-    question_id: UUID
+    question_text: str
+    options: List[str]
 
     class Config:
         from_attributes = True
 
 
-# =========================
-# ANSWER UPDATE
-# =========================
-
-class SAAnswerUpdate(BaseModel):
-    answer_text: Optional[str] = None
-    feedback: Optional[str] = None
-    score: Optional[float] = None
+class StartAssessmentResponse(BaseModel):
+    session_id: UUID
+    questions: List[AssessmentQuestionResponse]
 
 
-# =========================
-# SUBMIT ANSWERS (FORM INPUT)
-# =========================
-
-class SAAnswerSubmit(BaseModel):
+# =====================================================
+# SUBMIT ASSESSMENT
+# =====================================================
+class AssessmentAnswerInput(BaseModel):
     question_id: UUID
-    answer_text: str
+    selected_answer: str
 
 
-class SAAnswerSubmitRequest(BaseModel):
-    user_id: UUID
-    skill_id: UUID
-    answers: List[SAAnswerSubmit]
+class SubmitAssessmentRequest(BaseModel):
+    session_id: UUID
+    answers: List[AssessmentAnswerInput]
+
+
+# =====================================================
+# RESULT / FEEDBACK
+# =====================================================
+class AssessmentQuestionResult(BaseModel):
+    question_id: UUID
+    selected_answer: str
+    correct_answer: str
+    explanation: str
+    is_correct: bool
+
+
+class SubmitAssessmentResponse(BaseModel):
+    session_id: UUID
+    score: int  # percentage
+    total_questions: int
+    results: List[AssessmentQuestionResult]
+
+
+# =====================================================
+# REPORT SCHEMAS
+# =====================================================
+class ReportSchema(BaseModel):
+    id: UUID
+    filename: str
+    created_at: datetime
+    type: str
+
+    class Config:
+        from_attributes = True
+
+
+# =====================================================
+# CV BUILD REQUEST SCHEMA
+# =====================================================
+class CVBuildRequest(BaseModel):
+    cv_text: str

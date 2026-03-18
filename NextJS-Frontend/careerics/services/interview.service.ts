@@ -19,6 +19,8 @@ import type {
   APIQuestionCreate,
   APISubmitAnswerResponse,
   APIEvaluationResponse,
+  APIFollowup,
+  APIFollowupRead,
 } from "@/types";
 
 export const interviewService = {
@@ -103,5 +105,34 @@ export const interviewService = {
     form.append("session_id", sessionId);
     form.append("question_id", questionId);
     return fastapiApi.post<APIEvaluationResponse>("/answers/evaluate/", form);
+  },
+
+  async getFollowupByAnswerId(
+    answerId: string,
+  ): Promise<ApiResponse<APIFollowup | null>> {
+    const response = await fastapiApi.get<APIFollowupRead | null>(`/followups/${answerId}`);
+
+    if (!response.success) {
+      return {
+        ...response,
+        data: null,
+      };
+    }
+
+    if (!response.data) {
+      return {
+        ...response,
+        data: null,
+      };
+    }
+
+    return {
+      ...response,
+      data: {
+        id: response.data.id,
+        text: response.data.fquestion_text,
+        audio: response.data.fquestion_audio || "",
+      },
+    };
   },
 } as const;

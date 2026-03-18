@@ -135,7 +135,11 @@ export class HttpClient {
           return {
             data: null as T,
             success: false,
-            message: errorBody.message ?? response.statusText,
+            message:
+              errorBody.message ??
+              errorBody.detail ??
+              (Array.isArray(errorBody.errors) && errorBody.errors[0]?.message) ??
+              response.statusText,
             errors: errorBody.errors ?? [
               { code: `HTTP_${response.status}`, message: response.statusText },
             ],

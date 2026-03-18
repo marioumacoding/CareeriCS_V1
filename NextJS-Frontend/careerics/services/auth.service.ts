@@ -25,6 +25,11 @@ export interface RegisterPayload {
   displayName: string;
 }
 
+function getSafeInternalCallbackPath(callbackUrl?: string): string | null {
+  if (!callbackUrl) return null;
+  return callbackUrl.startsWith("/") ? callbackUrl : null;
+}
+
 // ── Service ─────────────────────────────────────────────────────
 export const authService = {
   /**
@@ -33,12 +38,17 @@ export const authService = {
    * "Confirm email" is enabled in your Supabase dashboard.
    */
   async signUp({ email, password, displayName }: RegisterPayload) {
+    const username = (email.split("@")[0] || "user").trim().toLowerCase();
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         // Store extra profile info in Supabase user_metadata
-        data: { display_name: displayName },
+        data: {
+          display_name: displayName,
+          full_name: displayName,
+          username,
+        },
       },
     });
     if (error) throw error;
@@ -95,11 +105,18 @@ export const authService = {
    * Sign in with Google OAuth via Supabase.
    * Redirects the browser to Google's consent screen.
    */
-  async signInWithGoogle() {
+  async signInWithGoogle(callbackUrl?: string) {
+    const callbackPath = getSafeInternalCallbackPath(callbackUrl);
+    const redirectUrl = new URL(`${window.location.origin}/auth/callback`);
+
+    if (callbackPath) {
+      redirectUrl.searchParams.set("callbackUrl", callbackPath);
+    }
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: redirectUrl.toString(),
       },
     });
     if (error) throw error;

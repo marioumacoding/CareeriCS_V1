@@ -2,7 +2,6 @@
 import { useState } from 'react'; // Added useState
 import RootLayout from "@/app/features/layout";
 import ArchiveCard from "@/components/ui/archive-card";
-import { Button } from "@/components/ui/button";
 import ChoiceCard from "@/components/ui/choice-card";
 import TipCard from "@/components/ui/tipcard";
 import CustomizeInterviewPopup from "@/components/ui/popup"; // Custom component
@@ -33,7 +32,7 @@ export default function Interview() {
         title="Behavioral Mock Interview"
         description="Practice answering the most common interview questions and improve how you present yourself and your skills."
         buttonVariant="primary-inverted"
-        route="/interview-feature/recording"
+        route="/interview-feature/recording?type=hr"
         icon="/interview/HR Interview Icon.png"
         style={{ gridArea: "1 / 1 / 3 / 2" }}
       />

@@ -1,6 +1,10 @@
+import datetime
 import uuid
 from sqlalchemy import (
+    TIMESTAMP,
     Column,
+    Enum,
+    Integer,
     String,
     Boolean,
     ForeignKey,
@@ -11,10 +15,12 @@ from sqlalchemy import (
     Float
 )
 from sqlalchemy.orm import relationship
-from sqlalchemy.dialects.postgresql import ARRAY, UUID
+from sqlalchemy.dialects.postgresql import ARRAY, BYTEA, JSONB, UUID
 from sqlalchemy.sql import func
 
 from db.base import Base
+
+from enum import Enum as enum
 
 
 # =========================
@@ -50,11 +56,12 @@ class User(Base):
     awards = relationship("Award", back_populates="user", cascade="all, delete-orphan")
     references = relationship("Reference", back_populates="user", cascade="all, delete-orphan")
     sessions = relationship("Session", back_populates="user", cascade="all, delete-orphan")
+    reports = relationship("Report", back_populates="user")
 
 
-# #########################
+# ###########################################################################################################################
 # INTERVIEW
-# #########################
+# ###########################################################################################################################
 
 # =========================
 # QUESTION
@@ -126,10 +133,6 @@ class Answer(Base):
         cascade="all, delete-orphan"
     )
 
-    emotions = relationship("Emotion", back_populates="answer", cascade="all, delete-orphan")
-    tones = relationship("Tone", back_populates="answer", cascade="all, delete-orphan")
-    sentiments = relationship("Sentiment", back_populates="answer", cascade="all, delete-orphan")
-
 
 # =========================
 # FOLLOWUP
@@ -151,51 +154,10 @@ class Followup(Base):
     answer = relationship("Answer", back_populates="followup")
 
 
-# =========================
-# EMOTION
-# =========================
-class Emotion(Base):
-    __tablename__ = "interview_emotions"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    name = Column(String, nullable=False)
-
-    answer_id = Column(UUID(as_uuid=True), ForeignKey("interview_answers.id"), nullable=False)
-
-    answer = relationship("Answer", back_populates="emotions")
-
-
-# =========================
-# TONE
-# =========================
-class Tone(Base):
-    __tablename__ = "interview_tones"
-
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    name = Column(String, nullable=False)
-
-    answer_id = Column(UUID(as_uuid=True), ForeignKey("interview_answers.id"), nullable=False)
-
-    answer = relationship("Answer", back_populates="tones")
-
-
-# =========================
-# SENTIMENT
-# =========================
-class Sentiment(Base):
-    __tablename__ = "interview_sentiments"
-
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    name = Column(String, nullable=False)
-
-    answer_id = Column(UUID(as_uuid=True), ForeignKey("interview_answers.id"), nullable=False)
-
-    answer = relationship("Answer", back_populates="sentiments")
-
-
-# #########################
+# ###########################################################################################################################
 # CV
-# #########################
+# ###########################################################################################################################
 
 # =========================
 # SKILL
@@ -220,6 +182,7 @@ class UserSkill(Base):
 
     isCV = Column(Boolean, nullable=False, default=False)
     proficiency = Column(String)
+    score = Column(Integer, nullable=True)
 
     user = relationship("User", back_populates="skills")
     skill = relationship("Skill")
@@ -340,40 +303,139 @@ class Reference(Base):
     user = relationship("User", back_populates="references")
 
 
-# #########################
+# ###########################################################################################################################
 # SKILL_ASSESSMENT
-# #########################
+# ###########################################################################################################################
+
+# =========================
+# SKILL ASSESSMENT SESSION
+# =========================
+class AssessmentSession(Base):
+    __tablename__ = "assessment_sessions"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), nullable=False)
+    skill_id = Column(UUID(as_uuid=True), ForeignKey("skills.id"), nullable=False)
+
+    total_questions = Column(Integer, nullable=False)
+    score = Column(Integer, default=0)
+
+    status = Column(String, default="in_progress")  # in_progress, submitted
+
+    started_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False
+    )
+    submitted_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False
+    )
+
+    assessment_questions = relationship(
+        "AssessmentQuestion",
+        back_populates="session",
+        cascade="all, delete"
+    )
+
+    assessment_answers = relationship(
+        "AssessmentAnswer",
+        back_populates="session",
+        cascade="all, delete"
+    )
+
 
 # =========================
 # SKILL ASSESSMENT QUESTION
 # =========================
-class SAQuestion(Base):
-    __tablename__ = "skill_assessment_questions"
+class AssessmentQuestion(Base):
+    __tablename__ = "assessment_questions"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    question_text = Column(String, nullable=False)
+    session_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("assessment_sessions.id"),
+        nullable=False
+    )
 
-    skill_id = Column(UUID(as_uuid=True), ForeignKey("skills.id"), nullable=False)
+    question_text = Column(Text, nullable=False)
+    options = Column(JSONB, nullable=False)
+    correct_answer = Column(String, nullable=False)
 
-    skill = relationship("Skill")
-    answers = relationship("SAAnswer", back_populates="question", cascade="all, delete-orphan")
+    explanation = Column(Text, nullable=True)
+    difficulty = Column(String, nullable=True)
+
+    created_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False
+    )
+
+    session = relationship("AssessmentSession", back_populates="assessment_questions")
+
+    assessment_answers = relationship(
+        "AssessmentAnswer",
+        back_populates="question"
+    )
 
 
 # =========================
 # SKILL ASSESSMENT ANSWER
 # =========================
-class SAAnswer(Base):
-    __tablename__ = "skill_assessment_answers"
+class AssessmentAnswer(Base):
+    __tablename__ = "assessment_answers"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
 
-    answer_text = Column(String, nullable=True)
-    feedback = Column(String, nullable=True)
+    session_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("assessment_sessions.id"),
+        nullable=False
+    )
 
-    score = Column(Float, nullable=False)
+    question_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("assessment_questions.id"),
+        nullable=False
+    )
 
+    selected_answer = Column(String, nullable=False)
+    is_correct = Column(Boolean, nullable=False)
+
+    answered_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False
+    )
+
+    session = relationship("AssessmentSession", back_populates="assessment_answers")
+    question = relationship("AssessmentQuestion", back_populates="assessment_answers")
+
+
+# =========================
+# Reports
+# =========================
+class ReportTypeEnum(str, enum):
+    CV = "cv"
+    INTERVIEW_SESSION = "interview_session"
+    SKILL_ASSESSMENT = "skill_assessment"
+    OTHER = "other"
+
+class Report(Base):
+    __tablename__ = "reports"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    question_id = Column(UUID(as_uuid=True), ForeignKey("skill_assessment_questions.id"), nullable=False)
+    type = Column(Enum(ReportTypeEnum), nullable=False)
+    filename = Column(String, nullable=False)
+    file_data = Column(BYTEA, nullable=False)  
+    created_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False
+    )
 
-    question = relationship("SAQuestion", back_populates="answers")
-    user = relationship("User")
+    user = relationship("User", back_populates="reports")  
+
+

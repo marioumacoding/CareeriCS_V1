@@ -98,9 +98,17 @@ export interface APIFollowup {
   audio: string;
 }
 
+export interface APIFollowupRead {
+  id: string;
+  answer_id: string;
+  fquestion_text: string;
+  fquestion_audio: string | null;
+}
+
 export interface APIEvaluationResponse {
   evaluation: string | null;
   grade: number | null;
+  followup_recommended?: boolean;
   followup: APIFollowup | null;
   emotion_evaluation: Record<string, unknown> | null;
   tone_evaluation: Record<string, unknown> | null;

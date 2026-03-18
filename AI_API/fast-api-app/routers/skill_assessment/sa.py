@@ -1,7 +1,7 @@
-from .questions_router import router as question_router
+from .sessions_router import router as session_router
 from .answers_router import router as answer_router
 
 routers = [
-    question_router,
+    session_router,
     answer_router
 ]

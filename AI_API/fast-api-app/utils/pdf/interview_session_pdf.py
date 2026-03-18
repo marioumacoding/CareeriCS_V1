@@ -1,52 +1,50 @@
+# service/session_report_service.py
 import io
 from sqlalchemy.orm import Session
-from utils.util import extract_session_data
 from reportlab.lib.pagesizes import letter
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak
 
-def build_session_report_pdf(db: Session, session_id: int):
+from utils.util import extract_session_data
+from db.models import ReportTypeEnum
+from services.reports.report_service import save_report
+from fastapi.responses import StreamingResponse
+
+
+def build_session_report_pdf(db: Session, session_id: int, user_id: str):
     data = extract_session_data(db, session_id)
     report_data = data.get("session_report", {})
     session_name = report_data.get("session_name", "session")
-    
+
     summaries = report_data.get("structured_interview_summaries", [])
-    
-    # --- Calculation Logic ---
     num_questions = len(summaries)
     total_score = sum(item.get("score", 0) for item in summaries)
-    
-    # overall_score = (total_sum / (N * 5)) * 5  => simplified to: total_sum / N
-    if num_questions > 0:
-        calculated_overall = round(total_score / num_questions, 2)
-    else:
-        calculated_overall = 0
 
     buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=50, leftMargin=50, topMargin=50, bottomMargin=50)
-    
+    doc = SimpleDocTemplate(
+        buffer, pagesize=letter,
+        rightMargin=50, leftMargin=50, topMargin=50, bottomMargin=50
+    )
+
     styles = getSampleStyleSheet()
-    
-    # Custom Styles
     title_style = ParagraphStyle('TitleStyle', parent=styles['Heading1'], fontSize=22, textColor=colors.HexColor("#2E5077"), spaceAfter=12)
     heading_style = ParagraphStyle('HeadingStyle', parent=styles['Heading2'], fontSize=14, textColor=colors.HexColor("#4DA1A9"), spaceBefore=10, spaceAfter=10)
     label_style = ParagraphStyle('LabelStyle', parent=styles['Normal'], fontSize=10, fontName='Helvetica-Bold')
     body_style = styles['Normal']
-    
+
     elements = []
 
-    # 1. Header & Basic Details
+    # --- Header & Basic Details ---
     elements.append(Paragraph(f"Session Report: {report_data.get('session_name')}", title_style))
     elements.append(Spacer(1, 12))
-    
+
     basic = report_data.get("basic_details", {})
     details_data = [
         [Paragraph("<b>Name:</b>", body_style), basic.get("user_name")],
         [Paragraph("<b>Interview Type:</b>", body_style), basic.get("interview_type")],
         [Paragraph("<b>Interview Date:</b>", body_style), basic.get("interview_date") or "N/A"]
     ]
-    
     details_table = Table(details_data, colWidths=[120, 300])
     details_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.whitesmoke),
@@ -57,20 +55,13 @@ def build_session_report_pdf(db: Session, session_id: int):
     elements.append(details_table)
     elements.append(Spacer(1, 20))
 
-    # 2. Structured Interview Summaries
+    # --- Structured Interview Summaries ---
     elements.append(Paragraph("Interview Q&A Breakdown", heading_style))
-    
-    for item in report_data.get("structured_interview_summaries", []):
-        q_num = item.get("question_number")
-        # Question Header
-        elements.append(Paragraph(f"Question {q_num}: {item.get('question_text')}", label_style))
+    for item in summaries:
+        elements.append(Paragraph(f"Question {item.get('question_number')}: {item.get('question_text')}", label_style))
         elements.append(Spacer(1, 4))
-        
-        # Summary
         elements.append(Paragraph(f"<b>Answer Summary:</b> {item.get('answer_summary')}", body_style))
         elements.append(Spacer(1, 6))
-        
-        # Feedback and Score
         feedback_box = [
             [Paragraph(f"<b>Score:</b> {item.get('score')}/5", body_style)],
             [Paragraph(f"<b>Feedback:</b> {item.get('feedback')}", body_style)]
@@ -87,17 +78,15 @@ def build_session_report_pdf(db: Session, session_id: int):
         elements.append(fb_table)
         elements.append(Spacer(1, 15))
 
-    # 3. Behavioral Insights
+    # --- Behavioral Insights ---
     elements.append(PageBreak())
     elements.append(Paragraph("Behavioral & AI Insights", heading_style))
-    
     beh = report_data.get("behavioral_insights", {})
     insights = [
         [Paragraph("<b>Facial Expression (FER):</b>", body_style), Paragraph(beh.get("FER"), body_style)],
         [Paragraph("<b>Tone Analysis (SER):</b>", body_style), Paragraph(beh.get("SER"), body_style)],
         [Paragraph("<b>Sentiment:</b>", body_style), Paragraph(beh.get("sentiment_analysis"), body_style)],
     ]
-    
     ins_table = Table(insights, colWidths=[150, 310])
     ins_table.setStyle(TableStyle([
         ('GRID', (0,0), (-1,-1), 0.5, colors.lightgrey),
@@ -108,28 +97,39 @@ def build_session_report_pdf(db: Session, session_id: int):
     elements.append(ins_table)
     elements.append(Spacer(1, 20))
 
-    # 4. Overall Assessment
+    # --- Overall Assessment ---
     elements.append(Paragraph("Overall Assessment", heading_style))
     overall = report_data.get("overall_assessment_and_recommendation", {})
-    
-    # Strengths and Improvements
     elements.append(Paragraph(f"<b>Overall Score:</b> {total_score} / {num_questions * 5}", body_style))
     elements.append(Spacer(1, 10))
-    
     elements.append(Paragraph("Key Strengths:", label_style))
     for s in overall.get("strengths", []):
         elements.append(Paragraph(f"• {s}", body_style))
-    
     elements.append(Spacer(1, 10))
     elements.append(Paragraph("Areas for Improvement:", label_style))
     for imp in overall.get("areas_for_improvement", []):
         elements.append(Paragraph(f"• {imp}", body_style))
-    
     elements.append(Spacer(1, 15))
     elements.append(Paragraph("Final Recommendation:", label_style))
     elements.append(Paragraph(overall.get("final_recommendation"), body_style))
 
-    # Build PDF
+    # --- Build PDF ---
     doc.build(elements)
     buffer.seek(0)
-    return buffer, session_name
+
+    # --- Save PDF to Reports Table ---
+    filename = f"{session_name}_report.pdf"
+    report_bytes = buffer.getvalue()
+    report = save_report(
+        db=db,
+        user_id=user_id,
+        file_bytes=report_bytes,
+        filename=filename,
+        report_type=ReportTypeEnum.INTERVIEW_SESSION
+    )
+
+    return StreamingResponse(
+        io.BytesIO(report.file_data),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename={report.filename}"}
+    )

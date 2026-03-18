@@ -1,8 +1,7 @@
 from uuid import UUID
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import StreamingResponse
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 import schemas
@@ -58,17 +57,12 @@ def delete_session(
 @router.get("/{session_id}/report")
 def generate_session_report(
     session_id: UUID,
+    user_id: UUID,
     db: Session = Depends(get_db),
 ):
-    try:
-        pdf_buffer, session_name = build_session_report_pdf(db, session_id)
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-
-    return StreamingResponse(
-        pdf_buffer,
-        media_type="application/pdf",
-        headers={
-            "Content-Disposition": f"attachment; filename={session_name}_report.pdf"
-        },
+    return build_session_report_pdf(
+        db=db, 
+        session_id=session_id,
+        user_id=user_id
     )
+    

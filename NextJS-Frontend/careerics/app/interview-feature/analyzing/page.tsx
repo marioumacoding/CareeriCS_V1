@@ -1,28 +1,74 @@
 "use client";
 import React, { useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import InterviewLayout from '@/components/ui/interview';
+import { interviewService } from '@/services/interview.service';
+import type { APIFollowup } from '@/types';
+import { useInterviewFlow } from '@/hooks';
 
 export default function AnalyzingPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const {
+    interviewType,
+    sessionId,
+    questionId,
+    answerId,
+    currentQ,
+    questions,
+    buildRecordingUrl,
+  } = useInterviewFlow();
   
-  // 1. Get the current question ID from the URL (default to 1)
-  // We use searchParams.get('q') directly to ensure it stays in sync with the URL
-  const queryValue = searchParams.get('q');
-  const currentQ = queryValue ? parseInt(queryValue) : 1;
-
   const [isFinished, setIsFinished] = useState(false);
+  const [isEvaluating, setIsEvaluating] = useState(true);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [followup, setFollowup] = useState<APIFollowup | null>(null);
+  const missingContext = !sessionId || !questionId;
 
-  const questions = [
-    { id: 1, text: "Where do you see yourself in 5 years?" },
-    { id: 2, text: "What is your biggest professional achievement?" },
-    { id: 3, text: "How do you handle conflict with a coworker?" },
-    { id: 4, text: "Why are you looking to leave your current role?" },
-    { id: 5, text: "How do you handle high-pressure situations?" },
-    { id: 6, text: "What is your preferred work style?" },
-    { id: 7, text: "Do you have any questions for us?" },
-  ];
+  useEffect(() => {
+    if (missingContext) {
+      return;
+    }
+
+    let alive = true;
+
+    const evaluate = async () => {
+      setIsEvaluating(true);
+      setErrorMessage('');
+      setFollowup(null);
+
+      const response = await interviewService.evaluateAnswer(sessionId, questionId);
+      if (!alive) return;
+
+      if (!response.success || !response.data) {
+        setErrorMessage(response.message || 'Evaluation failed. Please try again.');
+        setIsFinished(false);
+        setIsEvaluating(false);
+        return;
+      }
+
+      const isFollowupRequired =
+        Boolean(response.data.followup_recommended) || Boolean(response.data.followup);
+
+      if (isFollowupRequired) {
+        if (!answerId) {
+          setErrorMessage('Follow-up is required but answer context is missing. Please submit your answer again.');
+          setIsFinished(false);
+          setIsEvaluating(false);
+          return;
+        }
+
+        const followupResponse = await interviewService.getFollowupByAnswerId(answerId);
+        if (!alive) return;
+
+        if (!followupResponse.success || !followupResponse.data) {
+          setErrorMessage(followupResponse.message || 'Could not load follow-up question. Please try again.');
+          setIsFinished(false);
+          setIsEvaluating(false);
+          return;
+        }
+
+        setFollowup(followupResponse.data);
+      }
 
   // 2. Reset and start timer whenever the question ID (currentQ) changes
   useEffect(() => {
@@ -30,21 +76,40 @@ export default function AnalyzingPage() {
 
     const timer = setTimeout(() => {
       setIsFinished(true);
-    }, 5000);
+      setIsEvaluating(false);
+    };
 
-    return () => clearTimeout(timer); 
-  }, [currentQ]); 
+    evaluate();
+
+    return () => {
+      alive = false;
+    };
+  }, [sessionId, questionId, answerId, missingContext]);
 
   // 3. Updated Navigation Logic
   const handleNext = () => {
-    const nextQ = currentQ + 1;
+    if (followup) {
+      router.push(buildRecordingUrl({
+        type: interviewType,
+        sessionId,
+        q: String(currentQ),
+        followup: followup.text,
+        questionId: null,
+      }));
+      return;
+    }
 
-    if (nextQ <= questions.length) {
-      // Navigate to recording page with the INCREMENTED ID
-      console.log("Navigating to Question:", nextQ); // Debug check
-      router.push(`/interview-feature/recording?q=${nextQ}`);
+    if (currentQ < questions.length) {
+      const nextQuestion = questions[currentQ];
+      router.push(buildRecordingUrl({
+        type: interviewType,
+        sessionId,
+        q: String(currentQ + 1),
+        questionId: nextQuestion?.questionId || null,
+        followup: null,
+      }));
     } else {
-      router.push('/interview-feature/complete');
+      router.push('/features/interview');
     }
   };
 
@@ -52,7 +117,16 @@ export default function AnalyzingPage() {
     <InterviewLayout
       questions={questions}
       currentActiveId={currentQ}
-      onQuestionClick={(id: number) => router.push(`/interview-feature/recording?q=${id}`)}
+      onQuestionClick={(id: number) => {
+        const target = questions.find((q) => q.id === id);
+        router.push(buildRecordingUrl({
+          type: interviewType,
+          sessionId,
+          q: String(id),
+          questionId: target?.questionId || null,
+          followup: null,
+        }));
+      }}
       closeIconSrc="/interview/Close.svg"
     >
       <div style={{ 
@@ -73,15 +147,29 @@ export default function AnalyzingPage() {
           lineHeight: '1.6',
           marginBottom: '50px' 
         }}>
-          {isFinished ? (
+          {missingContext ? (
+            <>Missing session or question context. Please restart interview flow.</>
+          ) : errorMessage ? (
+            <>{errorMessage}</>
+          ) : isEvaluating ? (
+            <>
+              Our Model is analyzing your answers,<br />
+              Give us a moment
+            </>
+          ) : isFinished && followup ? (
+            <>
+              We need a follow-up answer before final scoring:<br />
+              {followup.text}
+            </>
+          ) : isFinished ? (
             <>
               Our Model has finished the analysis,<br />
               Ready for the next question?
             </>
           ) : (
             <>
-              Our Model is analyzing your answers,<br />
-              Give us a moment
+              Evaluation is not complete yet.<br />
+              Please try again
             </>
           )}
         </h2>
@@ -118,7 +206,7 @@ export default function AnalyzingPage() {
             opacity: isFinished ? 1 : 0.8
           }}
         >
-          Next Question
+          {followup ? 'Answer Follow-up' : 'Next Question'}
         </button>
       </div>
     </InterviewLayout>

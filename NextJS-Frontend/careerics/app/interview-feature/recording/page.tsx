@@ -3,44 +3,105 @@ import { useRouter, useSearchParams } from "next/navigation";
 import React, { useState, useEffect, useRef } from "react";
 import InterviewLayout from "@/components/ui/interview";
 import InterviewContainer from "@/components/ui/interview-card";
+import { interviewService } from "@/services/interview.service";
+import { useAuth } from "@/providers/auth-provider";
+import { useInterviewFlow } from "@/hooks";
 
 export default function RecordingPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const { user } = useAuth();
+  const {
+    interviewType,
+    sessionId,
+    followupText,
+    currentQ,
+    questions,
+    isQuestionsLoading,
+    questionsError,
+    buildRecordingUrl,
+    buildAnalyzingUrl,
+  } = useInterviewFlow();
 
-  // 1. Data Definitions
-  const questions = [
-    { id: 1, title: "Future Goals", text: "Where do you see yourself in 5 years?" },
-    { id: 2, title: "Achievement", text: "What is your biggest professional achievement?" },
-    { id: 3, title: "Conflict", text: "How do you handle conflict with a coworker?" },
-    { id: 4, title: "Transitions", text: "Why are you looking to leave your current role?" },
-    { id: 5, title: "Pressure", text: "How do you handle high-pressure situations?" },
-    { id: 6, title: "Work Style", text: "What is your preferred work style?" },
-    { id: 7, title: "Closing", text: "Do you have any questions for us?" },
-  ];
-
-  // 2. State Management
-  // activeId: Controls which tab is expanded in the sidebar (the "Peek")
-  const [activeId, setActiveId] = useState(1);
-  // unlockedId: Controls which question is actually being recorded on screen (the "Sticky")
+  const [activeId, setActiveId] = useState(currentQ);
   const [unlockedId, setUnlockedId] = useState(1); 
-  
+
   const [status, setStatus] = useState<"idle" | "recording" | "stopped">("idle");
   const [seconds, setSeconds] = useState(0);
+  const [recordedMedia, setRecordedMedia] = useState<Blob | null>(null);
+  const [recordedPreviewUrl, setRecordedPreviewUrl] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isFinalizingRecording, setIsFinalizingRecording] = useState(false);
+  const [actionError, setActionError] = useState("");
+
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const streamRef = useRef<MediaStream | null>(null);
+  const previewVideoRef = useRef<HTMLVideoElement | null>(null);
+  const hasCreatedSessionRef = useRef(false);
+  const pendingSubmitRef = useRef(false);
 
-  // STICKY LOGIC: Always find the text for the UNLOCKED ID, not the Active ID
-  const currentQuestionText = questions.find((q) => q.id === unlockedId)?.text || "";
+  const currentQuestion = questions.find((q) => q.id === activeId) || null;
+  const currentQuestionText = followupText || currentQuestion?.text || "";
+  const submitBlockedReason =
+    !sessionId
+      ? "Please sign in first so an interview session can be created."
+      : isQuestionsLoading
+      ? "Questions are still loading."
+      : isSubmitting
+      ? "Submission is already in progress."
+      : !questions.length
+      ? "No questions are available for this interview type."
+      : !currentQuestion?.questionId
+      ? "Current question is not ready yet."
+      : "";
 
-  // Sync state with URL on initial load
+  const isSubmitDisabled = Boolean(submitBlockedReason);
+
   useEffect(() => {
-    const q = searchParams.get("q");
-    if (q) {
-      const parsedQ = parseInt(q);
-      setUnlockedId(parsedQ);
-      setActiveId(parsedQ);
+    setActiveId(currentQ);
+  }, [currentQ]);
+
+  useEffect(() => {
+    if (hasCreatedSessionRef.current || sessionId || !user?.id) {
+      return;
     }
-  }, [searchParams]);
+
+    let alive = true;
+
+    const createSession = async () => {
+      hasCreatedSessionRef.current = true;
+      const payload = {
+        name: `${interviewType.toUpperCase()} Mock Interview`,
+        type: interviewType,
+        status: "in_progress",
+        user_id: user.id,
+      };
+
+      const response = await interviewService.createSession(payload);
+
+      if (!alive) return;
+
+      if (!response.success || !response.data?.id) {
+        setActionError(response.message || "Failed to create interview session.");
+        return;
+      }
+
+      router.replace(
+        buildRecordingUrl({
+          type: interviewType,
+          sessionId: response.data.id,
+          q: String(currentQ || 1),
+        }),
+      );
+    };
+
+    createSession();
+
+    return () => {
+      alive = false;
+    };
+  }, [sessionId, user?.id, interviewType, currentQ, router, buildRecordingUrl]);
 
   // 3. Timer Logic
   useEffect(() => {
@@ -58,39 +119,190 @@ export default function RecordingPage() {
     return `${mins}:${secs}`;
   };
 
-  // 4. Action Handlers
-  const handleCameraToggle = () => {
-    // Logic: User can only record if they aren't "peeking" at another question in the sidebar
-    if (activeId !== unlockedId) return;
+  const stopAndCleanupMedia = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      mediaRecorderRef.current.stop();
+    }
 
-    if (status === "idle" || status === "stopped") setStatus("recording");
-    else setStatus("stopped");
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+
+    if (previewVideoRef.current) {
+      previewVideoRef.current.srcObject = null;
+    }
+  };
+
+  const getRecorderOptions = (): MediaRecorderOptions | undefined => {
+    if (typeof MediaRecorder === "undefined") return undefined;
+
+    const preferredTypes = [
+      "video/webm;codecs=vp9,opus",
+      "video/webm;codecs=vp8,opus",
+      "video/webm",
+    ];
+
+    const supportedType = preferredTypes.find((type) => MediaRecorder.isTypeSupported(type));
+    return supportedType ? { mimeType: supportedType } : undefined;
+  };
+
+  // 4. Action Handlers
+  const handleCameraToggle = async () => {
+    if (status === "recording") {
+      setIsFinalizingRecording(true);
+      stopAndCleanupMedia();
+      setStatus("stopped");
+      return;
+    }
+
+    try {
+      setActionError("");
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+      streamRef.current = stream;
+
+      if (previewVideoRef.current) {
+        previewVideoRef.current.srcObject = stream;
+      }
+
+      const recorder = new MediaRecorder(stream, getRecorderOptions());
+      chunksRef.current = [];
+
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          chunksRef.current.push(event.data);
+        }
+      };
+
+      recorder.onstop = () => {
+        setIsFinalizingRecording(false);
+
+        const blob = new Blob(chunksRef.current, {
+          type: recorder.mimeType || "video/webm",
+        });
+        if (blob.size > 0) {
+          if (recordedPreviewUrl) {
+            URL.revokeObjectURL(recordedPreviewUrl);
+          }
+
+          setRecordedMedia(blob);
+          setRecordedPreviewUrl(URL.createObjectURL(blob));
+
+          if (pendingSubmitRef.current) {
+            pendingSubmitRef.current = false;
+            void submitRecordedAnswer(blob);
+          }
+        } else if (pendingSubmitRef.current) {
+          pendingSubmitRef.current = false;
+          setActionError("No recording data was captured. Please record again.");
+        }
+      };
+
+      mediaRecorderRef.current = recorder;
+      recorder.start();
+      setRecordedMedia(null);
+      if (recordedPreviewUrl) {
+        URL.revokeObjectURL(recordedPreviewUrl);
+        setRecordedPreviewUrl(null);
+      }
+      setSeconds(0);
+      setStatus("recording");
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "NotAllowedError") {
+        setActionError("Camera and microphone access are required to record an answer. Please allow permissions in your browser settings.");
+      } else if (error instanceof DOMException && error.name === "NotFoundError") {
+        setActionError("No camera or microphone device was found.");
+      } else {
+        setActionError("Unable to start recording. Please refresh and try again.");
+      }
+      setStatus("idle");
+    }
   };
 
   const handleReset = () => {
-    if (activeId !== unlockedId) return;
+    pendingSubmitRef.current = false;
+    stopAndCleanupMedia();
     setStatus("idle");
+    setIsFinalizingRecording(false);
     setSeconds(0);
-  };
-
-  const handleSidebarClick = (targetId: number) => {
-    // Prevent going back to completed questions
-    if (targetId < unlockedId) return;
-
-    // EXPAND Logic: Update activeId so the sidebar accordion opens
-    // Note: We do NOT update unlockedId here, so the main screen stays sticky
-    setActiveId(targetId);
-  };
-
-  const handleSubmit = () => {
-    // Only allow submit if we are on the current question and have recorded something
-    if (seconds > 0 && activeId === unlockedId) {
-      if (unlockedId === questions.length) {
-        router.push(`/interview-feature/last-analysis?q=${unlockedId}`);
-      } else {
-        router.push(`/interview-feature/analyzing?q=${unlockedId}`);
-      }
+    setRecordedMedia(null);
+    if (recordedPreviewUrl) {
+      URL.revokeObjectURL(recordedPreviewUrl);
+      setRecordedPreviewUrl(null);
     }
+    setActionError("");
+  };
+
+  useEffect(() => {
+    return () => {
+      stopAndCleanupMedia();
+      if (recordedPreviewUrl) {
+        URL.revokeObjectURL(recordedPreviewUrl);
+      }
+    };
+  }, [recordedPreviewUrl]);
+
+  const submitRecordedAnswer = async (media: Blob) => {
+    if (!sessionId || !currentQuestion?.questionId || isSubmitting) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    setActionError("");
+
+    const submitResponse = await interviewService.submitAnswer(
+      sessionId,
+      currentQuestion.questionId,
+      media,
+    );
+
+    setIsSubmitting(false);
+
+    if (!submitResponse.success) {
+      setActionError(submitResponse.message || "Failed to submit answer.");
+      return;
+    }
+
+    router.push(
+      buildAnalyzingUrl({
+        q: String(activeId),
+        questionId: currentQuestion.questionId,
+        answerId: submitResponse.data?.answer_id,
+      }),
+    );
+  };
+
+  const handleSubmit = async () => {
+    if (!sessionId || !currentQuestion?.questionId || isSubmitting) {
+      return;
+    }
+
+    if (status === "recording") {
+      pendingSubmitRef.current = true;
+      setIsFinalizingRecording(true);
+      stopAndCleanupMedia();
+      setStatus("stopped");
+      return;
+    }
+
+    if (status === "stopped" && isFinalizingRecording) {
+      pendingSubmitRef.current = true;
+      return;
+    }
+
+    if (!recordedMedia) {
+      setActionError("Record your answer first, then submit.");
+      return;
+    }
+
+    await submitRecordedAnswer(recordedMedia);
+  };
+
+  const onQuestionClick = (id: number) => {
+    pendingSubmitRef.current = false;
+    setActiveId(id);
+    router.replace(buildRecordingUrl({ q: String(id), followup: null, questionId: null }));
+    handleReset();
   };
 
   // 5. UI Controls
@@ -107,7 +319,7 @@ export default function RecordingPage() {
       <img
         src={status === "idle" ? "/interview/Record.svg" : status === "recording" ? "/interview/Pause.svg" : "/interview/Play.svg"}
         alt="Control"
-        style={{ width: "60px", cursor: "pointer" }}
+        style={{ width: "60px", cursor: isQuestionsLoading ? "not-allowed" : "pointer", opacity: isQuestionsLoading ? 0.5 : 1 }}
         onClick={handleCameraToggle}
       />
       <span style={{ fontSize: "40px", color: "white", fontFamily: "var(--font-nova-square)", minWidth: "120px", textAlign: "center" }}>
@@ -135,23 +347,45 @@ export default function RecordingPage() {
         questionTitle={`${unlockedId}. ${currentQuestionText}`}
         videoContent={
           <div style={{ color: "white", fontSize: "18px", textAlign: "center" }}>
-            {isPeeking ? (
-              <div style={{ color: "#d4ff47", fontWeight: "bold" }}>
-                <p>Peeking at Question {activeId}</p>
-                <p style={{ fontSize: "14px", color: "white", opacity: 0.7 }}>
-                  Click "Question {unlockedId}" in sidebar to resume recording.
-                </p>
-              </div>
-            ) : (
-              status === "recording" ? "● Recording..." : "Ready to record"
-            )}
+            {isQuestionsLoading
+              ? "Loading questions..."
+              : questionsError || actionError
+              ? questionsError || actionError
+              : !sessionId && !user?.id
+              ? "Please sign in to start interview session."
+              : status === "recording"
+              ? " Recording..."
+              : isFinalizingRecording
+              ? "Finalizing recording..."
+              : status === "stopped"
+              ? "⏸ Paused"
+              : recordedMedia
+              ? "Ready to submit"
+              : ""}
+
+            <video
+              ref={previewVideoRef}
+              autoPlay={status === "recording"}
+              muted
+              playsInline
+              controls={status !== "recording"}
+              src={status !== "recording" ? (recordedPreviewUrl ?? undefined) : undefined}
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                borderRadius: "24px",
+                display: status === "recording" || recordedPreviewUrl ? "block" : "none",
+              }}
+            />
           </div>
         }
         controlsContent={controls}
         actionButton={
           <button
             onClick={handleSubmit}
-            disabled={isPeeking || seconds === 0}
+            disabled={isSubmitDisabled}
+            title={submitBlockedReason || undefined}
             style={{
               background: "#d4ff47",
               padding: "15px 100px",
@@ -159,12 +393,14 @@ export default function RecordingPage() {
               border: "none",
               fontWeight: "bold",
               fontSize: "18px",
-              cursor: (isPeeking || seconds === 0) ? "not-allowed" : "pointer",
-              opacity: (isPeeking || seconds === 0) ? 0.5 : 1,
+              fontFamily: "var(--font-nova-square)",
+              cursor: isSubmitDisabled ? "not-allowed" : "pointer",
+              opacity: isSubmitDisabled ? 0.5 : 1,
+              transition: "0.3s",
               color: "#1a1a1a"
             }}
           >
-            Submit
+            {isSubmitting ? "Submitting..." : isFinalizingRecording ? "Preparing..." : "Submit"}
           </button>
         }
       />

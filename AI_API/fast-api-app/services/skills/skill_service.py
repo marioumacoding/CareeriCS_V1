@@ -1,18 +1,12 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import update
-from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy import delete, update
 from typing import List
 
 from db.models import Skill, UserSkill
 from schemas import SkillCreate
 
-from utils.util import (_safe_json_parse, 
-    normalize_skill, 
-    find_exact_match, 
-    find_fuzzy_match, 
+from utils.util import (
     map_skills_to_global,
-    build_global_skill_index
 )
 
 
@@ -95,9 +89,16 @@ def save_mapped_skills_to_db(
 # Reset CV Skills
 # ============================================================
 def reset_user_cv_skills(db: Session, user_id):
-    
+    db.execute(
+        delete(UserSkill)
+        .where(UserSkill.user_id == user_id)
+        .where(UserSkill.proficiency == None)
+    )
+
     db.execute(
         update(UserSkill)
         .where(UserSkill.user_id == user_id)
         .values(isCV=False)
     )
+
+    db.commit()

@@ -16,6 +16,7 @@ interface InterviewLayoutProps {
   closeIconSrc: string;
   children: ReactNode;
   label?: string;
+  title?: string; // El prop elly hayghayar el title
 }
 
 export default function InterviewLayout({
@@ -26,6 +27,7 @@ export default function InterviewLayout({
   closeIconSrc,
   children,
   label = "Question",
+  title = "CV Builder", // El default title law maba3atsh haga
 }: InterviewLayoutProps) {
   const router = useRouter();
 
@@ -38,7 +40,11 @@ export default function InterviewLayout({
     <div style={{ display: "flex", height: "100vh", width: "100vw", background: "linear-gradient(180deg, #142143 0%, black 100%)", overflow: "hidden" }}>
       {/* SIDEBAR */}
       <aside style={{ width: "320px", backgroundColor: "#b4b4b4", padding: "40px 20px", display: "flex", flexDirection: "column" }}>
-        <h1 style={{ fontSize: "24px", color: "#1a1a1a", fontWeight: 700, marginBottom: "30px" }}>CV Builder</h1>
+        
+        {/* --- Dalo2ti bey-esta5dem el 'title' prop badal el fixed text --- */}
+        <h1 style={{ fontSize: "24px", color: "#1a1a1a", fontWeight: 700, marginBottom: "30px" }}>
+          {title}
+        </h1>
 
         <div style={{ flex: 1, overflowY: "auto" }}>
           {questions.map((q) => {
@@ -57,13 +63,12 @@ export default function InterviewLayout({
                   cursor: isPast ? "default" : "pointer",
                   marginBottom: "10px",
                   transition: "all 0.3s ease",
-                  opacity: isPast ? 0.5 : 1, // Dim past questions
+                  opacity: isPast ? 0.5 : 1, 
                 }}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", color: "#1a1a1a", fontWeight: 600 }}>
                   <span style={{ fontSize: "14px" }}>{label} {q.id}: {q.title}</span>
                   <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
-                    {/* Lock only appears here in sidebar */}
                     <span style={{ fontSize: "12px" }}>{isLocked ? "🔒" : isPast ? "✅" : ""}</span>
                     <span style={{ 
                       transition: "transform 0.3s", 
@@ -90,7 +95,7 @@ export default function InterviewLayout({
         </div>
       </aside>
 
-      {/* MAIN CONTENT - Always shows the children now */}
+      {/* MAIN CONTENT */}
       <main style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
         <button onClick={() => router.push('/')} style={{ position: "absolute", top: "30px", right: "30px", background: "none", border: "none", cursor: "pointer", zIndex: 10 }}>
           <img src={closeIconSrc} alt="close" style={{ width: "24px" }} />

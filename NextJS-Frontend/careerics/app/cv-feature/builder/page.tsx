@@ -80,7 +80,7 @@ export default function CVBuilderPage() {
       currentActiveId={expandedStepId} // Sidebar lights up based on expand logic
       unlockedStepId={activeStepId}    // Steps only unlock when form moves forward
       onQuestionClick={handleSidebarClick}
-      closeIconSrc="/icons/close.svg" 
+      closeIconSrc="/auth/close.svg" 
     >
       <div style={{ width: "100%", height: "100vh", display: "flex", flexDirection: "column", alignItems: "center", position: "relative", overflow: "hidden", scrollbarWidth: "none" }}>
         <div style={{ width: "100%", maxWidth: "800px", display: "flex", flexDirection: "column", gap: "20px", paddingLeft:"50px", paddingTop:"5px", height: "100%", overflowY: "auto", scrollbarWidth: "none" }}>

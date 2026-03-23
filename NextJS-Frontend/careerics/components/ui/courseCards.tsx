@@ -1,9 +1,10 @@
 "use client";
 import React, { useRef } from 'react';
 
-// --- Card 1: Courses currently taking (Horizontal Scroll) ---
+// --- Card 1: Courses currently taking (With Completion Logic) ---
 export const CurrentCoursesCard = ({ courses, selected, onSelect, style }: any) => {
   const scrollRef = useRef<HTMLDivElement>(null);
+  
   const handleScroll = () => {
     if (scrollRef.current) scrollRef.current.scrollBy({ left: 250, behavior: 'smooth' });
   };
@@ -18,24 +19,38 @@ export const CurrentCoursesCard = ({ courses, selected, onSelect, style }: any) 
       </h3>
       <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
         <div ref={scrollRef} style={{ display: "flex", gap: "15px", overflowX: "auto", scrollbarWidth: "none", msOverflowStyle: "none" }}>
-          {courses.map((course: any) => (
-            <div
-              key={course.title}
-              onClick={() => onSelect(course.title)}
-              style={{
-                padding: "20px", borderRadius: "15px", flexShrink: 0, minWidth: "220px",
-                backgroundColor: selected === course.title ? "#E6FFB2" : "#c1cbe6",
-                color: "black", cursor: "pointer", position: "relative", transition: "0.2s"
-              }}
-            >
-              <div style={{ fontWeight: "bold", fontSize: "14px" }}>{course.title}</div>
-              <div style={{ fontSize: "10px", opacity: 0.7 }}>by {course.provider}</div>
-              <div style={{ 
-                position: "absolute", right: "15px", top: "50%", transform: "translateY(-50%)", 
-                width: "20px", height: "20px", borderRadius: "50%", border: "2px solid black" 
-              }}></div>
-            </div>
-          ))}
+          {courses.map((course: any) => {
+            const isCompleted = course.completed === true;
+            
+            return (
+              <div
+                key={course.title}
+                onClick={() => onSelect(course.title)}
+                style={{
+                  padding: "20px", borderRadius: "15px", flexShrink: 0, minWidth: "220px",
+                  // Priority: Completed (Lime) > Selected (Light Green) > Default (Blue-Grey)
+                  backgroundColor: isCompleted ? "#D4FF47" : (selected === course.title ? "#E6FFB2" : "#c1cbe6"),
+                  color: "black", cursor: "pointer", position: "relative", transition: "0.2s",
+                  border: isCompleted ? "2px solid #2D5A27" : "none"
+                }}
+              >
+                <div style={{ fontWeight: "bold", fontSize: "14px" }}>{course.title}</div>
+                <div style={{ fontSize: "10px", opacity: 0.7 }}>by {course.provider}</div>
+                
+                {/* Status Indicator Circle */}
+                <div style={{ 
+                  position: "absolute", right: "15px", top: "50%", transform: "translateY(-50%)", 
+                  width: "22px", height: "22px", borderRadius: "50%", 
+                  border: "2px solid black", display: "flex", alignItems: "center", 
+                  justifyContent: "center", fontSize: "12px", fontWeight: "bold",
+                  backgroundColor: isCompleted ? "transparent" : "transparent",
+                  color: "black"
+                }}>
+                  {isCompleted ? "✓" : ""}
+                </div>
+              </div>
+            );
+          })}
         </div>
         <span onClick={handleScroll} style={{ fontSize: "24px", cursor: "pointer", color: "#c1cbe6" }}>❯</span>
       </div>
@@ -43,7 +58,7 @@ export const CurrentCoursesCard = ({ courses, selected, onSelect, style }: any) 
   );
 };
 
-// --- Card 2: More fields to discover (Fixed Center Arrow) ---
+// --- Card 2: More fields to discover ---
 export const FieldsDiscoverCard = ({ fields, selected, onSelect, style }: any) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const handleScroll = () => {
@@ -76,8 +91,6 @@ export const FieldsDiscoverCard = ({ fields, selected, onSelect, style }: any) =
               color: selected === field ? "black" : "white", 
               fontSize: "11px", fontWeight: "500", cursor: "pointer", transition: "0.2s"
             }}
-            onMouseEnter={(e) => { if (selected !== field) e.currentTarget.style.backgroundColor = "#2d5bb3"; }}
-            onMouseLeave={(e) => { if (selected !== field) e.currentTarget.style.backgroundColor = "#1C427B"; }}
           >
             {field}
           </button>
@@ -97,7 +110,7 @@ export const FieldsDiscoverCard = ({ fields, selected, onSelect, style }: any) =
   );
 };
 
-// --- Card 3: Completed Courses (Fixed Center Arrow) ---
+// --- Card 3: Completed Courses ---
 export const CompletedCoursesCard = ({ courses, style }: any) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const handleScroll = () => {

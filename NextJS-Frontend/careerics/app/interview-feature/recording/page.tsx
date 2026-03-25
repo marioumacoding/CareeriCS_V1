@@ -1,5 +1,5 @@
 "use client";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import React, { useState, useEffect, useRef } from "react";
 import InterviewLayout from "@/components/ui/interview";
 import InterviewContainer from "@/components/ui/interview-card";
@@ -14,6 +14,7 @@ export default function RecordingPage() {
     interviewType,
     sessionId,
     followupText,
+    followupId,
     currentQ,
     questions,
     isQuestionsLoading,
@@ -23,7 +24,7 @@ export default function RecordingPage() {
   } = useInterviewFlow();
 
   const [activeId, setActiveId] = useState(currentQ);
-  const [unlockedId, setUnlockedId] = useState(1);
+  const unlockedId = currentQ;
 
   const [status, setStatus] = useState<"idle" | "recording" | "stopped">("idle");
   const [seconds, setSeconds] = useState(0);
@@ -42,6 +43,7 @@ export default function RecordingPage() {
   const pendingSubmitRef = useRef(false);
 
   const currentQuestion = questions.find((q) => q.id === activeId) || null;
+  const isFollowupMode = Boolean(followupId);
   const currentQuestionText = followupText || currentQuestion?.text || "";
   const submitBlockedReason =
     !sessionId
@@ -53,7 +55,9 @@ export default function RecordingPage() {
           : !questions.length
             ? "No questions are available for this interview type."
             : !currentQuestion?.questionId
-              ? "Current question is not ready yet."
+              ? isFollowupMode
+                ? "Follow-up context is missing the linked main question. Please go back and try again."
+                : "Current question is not ready yet."
               : "";
 
   const isSubmitDisabled = Boolean(submitBlockedReason);
@@ -243,7 +247,11 @@ export default function RecordingPage() {
   }, [recordedPreviewUrl]);
 
   const submitRecordedAnswer = async (media: Blob) => {
-    if (!sessionId || !currentQuestion?.questionId || isSubmitting) {
+    if (!sessionId || isSubmitting) {
+      return;
+    }
+
+    if (!currentQuestion?.questionId) {
       return;
     }
 
@@ -263,6 +271,23 @@ export default function RecordingPage() {
       return;
     }
 
+    if (isFollowupMode) {
+      if (currentQ < questions.length) {
+        const nextQuestion = questions[currentQ];
+        router.push(
+          buildRecordingUrl({
+            q: String(currentQ + 1),
+            questionId: nextQuestion?.questionId || null,
+            followup: null,
+            followupId: null,
+          }),
+        );
+      } else {
+        router.push("/features/interview");
+      }
+      return;
+    }
+
     router.push(
       buildAnalyzingUrl({
         q: String(activeId),
@@ -273,7 +298,11 @@ export default function RecordingPage() {
   };
 
   const handleSubmit = async () => {
-    if (!sessionId || !currentQuestion?.questionId || isSubmitting) {
+    if (!sessionId || isSubmitting) {
+      return;
+    }
+
+    if (!currentQuestion?.questionId) {
       return;
     }
 
@@ -301,7 +330,7 @@ export default function RecordingPage() {
   const onQuestionClick = (id: number) => {
     pendingSubmitRef.current = false;
     setActiveId(id);
-    router.replace(buildRecordingUrl({ q: String(id), followup: null, questionId: null }));
+    router.replace(buildRecordingUrl({ q: String(id), followup: null, followupId: null, questionId: null }));
     handleReset();
   };
 

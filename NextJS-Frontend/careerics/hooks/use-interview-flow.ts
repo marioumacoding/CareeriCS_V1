@@ -18,6 +18,7 @@ interface RecordingOverrides {
   q?: string;
   questionId?: string | null;
   followup?: string | null;
+  followupId?: string | null;
 }
 
 interface AnalyzingOverrides {
@@ -70,6 +71,7 @@ export function useInterviewFlow() {
   const questionId = searchParams.get("questionId") || "";
   const answerId = searchParams.get("answerId") || "";
   const followupText = searchParams.get("followup") || "";
+  const followupId = searchParams.get("followupId") || "";
 
   const currentQ = useMemo(() => {
     const parsed = Number(searchParams.get("q") || "1");
@@ -147,6 +149,14 @@ export function useInterviewFlow() {
         next.set("followup", overrides.followup);
       }
 
+      if (overrides.followupId === null) {
+        next.delete("followupId");
+      } else if (typeof overrides.followupId === "string") {
+        next.set("followupId", overrides.followupId);
+      }
+
+      next.delete("answerId");
+
       return `/interview-feature/recording?${next.toString()}`;
     },
     [searchParams, interviewType],
@@ -176,6 +186,7 @@ export function useInterviewFlow() {
     questionId,
     answerId,
     followupText,
+    followupId,
     currentQ,
     questions,
     isQuestionsLoading,

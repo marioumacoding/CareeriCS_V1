@@ -116,20 +116,7 @@ export default function AnalyzingPage() {
   /**
    * Navigation logic
    */
-  const handleNext = () => {
-    if (followup) {
-      router.push(
-        buildRecordingUrl({
-          type: interviewType,
-          sessionId,
-          q: String(currentQ),
-          followup: followup.text,
-          questionId: null,
-        })
-      );
-      return;
-    }
-
+  const goToNextMainQuestion = () => {
     if (currentQ < questions.length) {
       const nextQuestion = questions[currentQ];
 
@@ -140,11 +127,44 @@ export default function AnalyzingPage() {
           q: String(currentQ + 1),
           questionId: nextQuestion?.questionId || null,
           followup: null,
+          followupId: null,
         })
       );
     } else {
       router.push("/features/interview");
     }
+  };
+
+  const handleConsent = async (accepted: boolean) => {
+    if (!followup) {
+      goToNextMainQuestion();
+      return;
+    }
+
+    if (accepted) {
+      router.push(
+        buildRecordingUrl({
+          type: interviewType,
+          sessionId,
+          q: String(currentQ),
+          followup: followup.text,
+          followupId: followup.id,
+          questionId,
+        }),
+      );
+      return;
+    }
+
+    goToNextMainQuestion();
+  };
+
+  const handleNext = () => {
+    if (followup) {
+      void handleConsent(true);
+      return;
+    }
+
+    goToNextMainQuestion();
   };
 
   return (
@@ -162,6 +182,7 @@ export default function AnalyzingPage() {
             q: String(id),
             questionId: target?.questionId || null,
             followup: null,
+            followupId: null,
           })
         );
       }}
@@ -232,6 +253,24 @@ export default function AnalyzingPage() {
           />
         </div>
 
+        {isFinished && followup && (
+          <div
+            style={{
+              marginBottom: "14px",
+              backgroundColor: "rgba(212, 255, 71, 0.2)",
+              border: "1px solid rgba(212, 255, 71, 0.7)",
+              color: "#d4ff47",
+              padding: "8px 16px",
+              borderRadius: "999px",
+              fontSize: "14px",
+              fontFamily: "var(--font-nova-square)",
+              letterSpacing: "0.2px",
+            }}
+          >
+            Follow-up optional
+          </div>
+        )}
+
         <button
           onClick={handleNext}
           disabled={!isFinished}
@@ -251,6 +290,27 @@ export default function AnalyzingPage() {
         >
           {followup ? "Answer Follow-up" : "Next Question"}
         </button>
+
+        {isFinished && followup && (
+          <button
+            onClick={() => void handleConsent(false)}
+            style={{
+              marginTop: "12px",
+              backgroundColor: "#cbd5e1",
+              color: "#0f172a",
+              padding: "12px 60px",
+              borderRadius: "14px",
+              border: "none",
+              fontSize: "16px",
+              fontFamily: "var(--font-nova-square)",
+              fontWeight: 600,
+              cursor: "pointer",
+              opacity: 1,
+            }}
+          >
+            Skip Follow-up
+          </button>
+        )}
       </div>
     </InterviewLayout>
   );

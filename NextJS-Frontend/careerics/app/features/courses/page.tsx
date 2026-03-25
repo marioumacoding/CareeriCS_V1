@@ -19,12 +19,11 @@ export default function CoursesPage() {
   // 2. State for Completed Courses
   const [completedCourses, setCompletedCourses] = useState([
     { title: "UX Fundamentals", provider: "Udemy" },
-    { title: "C++ Basics", provider: "Codecademy" },
+    { title: "Node.js Basics", provider: "Udemy" },
   ]);
 
   const fields = ["Intro to programming", "Problem Solving", "Frontend", "Backend", "Data Science", "Mobile Apps", "IT", "Cyber Security", "UI/UX", "AI"];
 
-  // 3. DYNAMIC LOGIC: 
   // This maps through current courses and checks if they exist in the completed list.
   const dynamicCurrentCourses = currentCourses.map(course => ({
     ...course,
@@ -56,12 +55,12 @@ export default function CoursesPage() {
           fields={fields}
           selected={selectedField}
           onSelect={setSelectedField}
-          style={{ gridArea: "3 / 1 / 5 / 3", height: "80%" }}
+          style={{ gridArea: "3 / 1 / 5 / 3", height: "100%" }}
         />
 
         <CompletedCoursesCard 
           courses={completedCourses}
-          style={{ gridArea: "3 / 3 / 5 / 5", height: "80%" }}
+          style={{ gridArea: "3 / 3 / 5 / 5", height: "100%" }}
         />
       </RootLayout>
     </div>

@@ -13,7 +13,7 @@ export default function HomePage() {
     { id: "CV-003", date: "created on 5/3/2026", type: "file" },
     { id: "CV-003", date: "created on 5/3/2026", type: "file" },
     { id: "Techh-003", date: "created on 5/3/2026", type: "file" },
-    { id: "Test-005", topic: "UX Fundamentals", score: 90, type: "test" },
+    { id: "Test-005", topic: "UX Fundamentals", score: 50, type: "test" },
   ];
 
   return (
@@ -35,7 +35,7 @@ export default function HomePage() {
           <RecentActivityCard activities={activities} />
         </div>
         <div style={{ gridArea: "3 / 1 / 5 / 2" }}>
-          <JourneyProgressCard percentage={10} />
+          <JourneyProgressCard percentage={75} />
         </div>
         <div style={{ gridArea: "3 / 2 / 5 / 6" }}>
           <NextPhaseCard />

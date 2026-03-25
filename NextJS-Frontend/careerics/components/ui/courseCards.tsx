@@ -1,7 +1,7 @@
 "use client";
 import React, { useRef } from 'react';
 
-// --- Card 1: Courses currently taking (With Completion Logic) ---
+// --- Card 1: Courses you are currently taking (Checkmark Logic Only) ---
 export const CurrentCoursesCard = ({ courses, selected, onSelect, style }: any) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   
@@ -18,7 +18,13 @@ export const CurrentCoursesCard = ({ courses, selected, onSelect, style }: any) 
         Courses you are currently taking
       </h3>
       <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
-        <div ref={scrollRef} style={{ display: "flex", gap: "15px", overflowX: "auto", scrollbarWidth: "none", msOverflowStyle: "none" }}>
+        <div 
+          ref={scrollRef} 
+          style={{ 
+            display: "flex", gap: "15px", overflowX: "auto", 
+            scrollbarWidth: "none", msOverflowStyle: "none" 
+          }}
+        >
           {courses.map((course: any) => {
             const isCompleted = course.completed === true;
             
@@ -28,23 +34,21 @@ export const CurrentCoursesCard = ({ courses, selected, onSelect, style }: any) 
                 onClick={() => onSelect(course.title)}
                 style={{
                   padding: "20px", borderRadius: "15px", flexShrink: 0, minWidth: "220px",
-                  // Priority: Completed (Lime) > Selected (Light Green) > Default (Blue-Grey)
-                  backgroundColor: isCompleted ? "#D4FF47" : (selected === course.title ? "#E6FFB2" : "#c1cbe6"),
-                  color: "black", cursor: "pointer", position: "relative", transition: "0.2s",
-                  border: isCompleted ? "2px solid #2D5A27" : "none"
+                  // El lon sabet: ya selected (Light Green) ya default (Grey-Blue)
+                  backgroundColor: selected === course.title ? "#E6FFB2" : "#c1cbe6",
+                  color: "black", cursor: "pointer", position: "relative", transition: "0.2s"
                 }}
               >
                 <div style={{ fontWeight: "bold", fontSize: "14px" }}>{course.title}</div>
                 <div style={{ fontSize: "10px", opacity: 0.7 }}>by {course.provider}</div>
                 
-                {/* Status Indicator Circle */}
+                {/* Status Indicator Circle - Only shows ✓ if completed */}
                 <div style={{ 
                   position: "absolute", right: "15px", top: "50%", transform: "translateY(-50%)", 
                   width: "22px", height: "22px", borderRadius: "50%", 
                   border: "2px solid black", display: "flex", alignItems: "center", 
-                  justifyContent: "center", fontSize: "12px", fontWeight: "bold",
-                  backgroundColor: isCompleted ? "transparent" : "transparent",
-                  color: "black"
+                  justifyContent: "center", fontSize: "14px", fontWeight: "bold",
+                  backgroundColor: "transparent", color: "black"
                 }}>
                   {isCompleted ? "✓" : ""}
                 </div>

@@ -16,7 +16,7 @@ interface InterviewLayoutProps {
   closeIconSrc: string;
   children: ReactNode;
   label?: string;
-  title?: string; // El prop elly hayghayar el title
+  title?: string; 
 }
 
 export default function InterviewLayout({

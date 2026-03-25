@@ -1,6 +1,45 @@
 "use client";
 import React, { useRef } from 'react';
 
+// --- Helper: Dynamic Circle Component (Green Only) ---
+const CircleScore = ({ score }: { score: number }) => {
+  const radius = 18; 
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (score / 100) * circumference;
+
+  return (
+    <div style={{ 
+      position: "relative", width: "55px", height: "55px", 
+      backgroundColor: "#1A2E5A", borderRadius: "12px",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      flexShrink: 0
+    }}>
+      <svg width="45" height="45" style={{ transform: "rotate(-90deg)" }}>
+        {/* Track (Transparent Green) */}
+        <circle
+          cx="22.5" cy="22.5" r={radius}
+          fill="none" stroke="rgba(212, 255, 71, 0.1)" strokeWidth="3.5"
+        />
+        {/* Progress (Solid Green) */}
+        <circle
+          cx="22.5" cy="22.5" r={radius}
+          fill="none" stroke="#d4ff47" strokeWidth="3.5"
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+          strokeLinecap="round"
+          style={{ transition: "stroke-dashoffset 0.5s ease" }}
+        />
+      </svg>
+      <span style={{ 
+        position: "absolute", color: "white", fontSize: "11px", 
+        fontWeight: "bold", fontFamily: 'var(--font-nova-square)' 
+      }}>
+        {score}%
+      </span>
+    </div>
+  );
+};
+
 // --- Card 1: Learning Skills (Horizontal Scroll) ---
 export const LearningSkillsCard = ({ skills, selected, onSelect, style }: any) => {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -25,7 +64,7 @@ export const LearningSkillsCard = ({ skills, selected, onSelect, style }: any) =
               onClick={() => onSelect(skill)}
               style={{
                 padding: "15px 30px", borderRadius: "10px", border: "none", flexShrink: 0,
-                backgroundColor: selected === skill ? "#d4ff47" : "#c1cbe6",
+                backgroundColor: selected === skill ? "#E6FFB2" : "#c1cbe6",
                 color: "black", fontWeight: "bold", cursor: "pointer", fontSize: "13px",
                 transition: "transform 0.2s"
               }}
@@ -42,7 +81,7 @@ export const LearningSkillsCard = ({ skills, selected, onSelect, style }: any) =
   );
 };
 
-// --- Card 2: Past Tests (Vertical Scroll) ---
+// --- Card 2: Past Tests (VERTICAL EDIT) ---
 export const PastTestsCard = ({ tests, style }: any) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const handleScroll = () => {
@@ -51,29 +90,35 @@ export const PastTestsCard = ({ tests, style }: any) => {
 
   return (
     <div style={{ 
-      backgroundColor: "#1C427B", borderRadius: "20px", padding: "15px", color: "white",
+      backgroundColor: "#1C427B", borderRadius: "25px", padding: "15px", color: "white",
       display: "flex", flexDirection: "column", gap: "5px", position: "relative", ...style 
     }}>
-      <h3 style={{ fontSize: "20px", textAlign: "center", marginBottom: "5px", fontFamily: 'var(--font-nova-square)' }}>Past Tests</h3>
-      <div ref={scrollRef} style={{ display: "flex", flexDirection: "column", gap: "8px", overflowY: "auto", scrollbarWidth: "none", flexGrow: 1 }}>
+      <h3 style={{ fontSize: "22px", textAlign: "center", marginBottom: "10px", fontFamily: 'var(--font-nova-square)' }}>Past Tests</h3>
+      
+      <div ref={scrollRef} style={{ 
+        display: "flex", flexDirection: "column", gap: "5px", 
+        overflowY: "auto", scrollbarWidth: "none", flexGrow: 1 
+      }}>
         {tests.map((test: any) => (
           <div key={test.id} style={{ 
-            backgroundColor: "#c1cbe6", borderRadius: "14px", padding: "8px 15px", 
-            display: "flex", justifyContent: "space-between", alignItems: "center", color: "black"
+            backgroundColor: "rgba(193, 203, 230, 0.95)", borderRadius: "18px", padding: "5px 10px", 
+            display: "flex", justifyContent: "space-between", alignItems: "center", color: "#1A213D"
           }}>
-            <div>
-              <div style={{ fontWeight: "bold", fontSize: "12px" }}>Test-{test.id}</div>
-              <div style={{ fontSize: "10px", opacity: 0.7 }}>On {test.title}</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+              <div style={{ fontWeight: "800", fontSize: "14px", fontFamily: 'var(--font-nova-square)' }}>Test-{test.id}</div>
+              <div style={{ fontSize: "11px", fontWeight: "500", opacity: 0.8, fontFamily: 'var(--font-nova-square)' }}>On {test.title}</div>
             </div>
-            <div style={{ 
-              width: "32px", height: "32px", borderRadius: "50%", 
-              border: `2px solid ${test.score > 50 ? '#d4ff47' : '#f44336'}`,
-              display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10px", fontWeight: "bold"
-            }}>{test.score}%</div>
+            
+            {/* Dynamic Circle Score (ALWAYS GREEN) */}
+            <CircleScore score={test.score} />
           </div>
         ))}
       </div>
-      <div onClick={handleScroll} style={{ textAlign: "right", cursor: "pointer", color: "#c1cbe6", fontSize: "20px", transform: "rotate(90deg)", paddingRight: "10px" }}>❯</div>
+
+      <div onClick={handleScroll} style={{ 
+        textAlign: "center", cursor: "pointer", color: "#c1cbe6", 
+        fontSize: "24px", transform: "rotate(90deg)"
+      }}>❯</div>
     </div>
   );
 };
@@ -95,11 +140,10 @@ export const MoreSkillsCard = ({ skills, selected, onSelect, style }: any) => {
         {skills.map((skill: string) => (
           <button
             key={skill}
-            onClick={() => onSelect(skill)} // Hena bn-update el selection
+            onClick={() => onSelect(skill)}
             style={{
               padding: "15px 5px", borderRadius: "15px", border: "none",
-              // LOGIC: Law el skill de heyya el selected, khaliha abiad, law la2 khaliha blue
-              backgroundColor: selected === skill ? "#ffffff" : "#1C427B",
+              backgroundColor: selected === skill ? "#E6FFB2" : "#1C427B",
               color: selected === skill ? "black" : "white", 
               fontSize: "11px", fontWeight: "500", cursor: "pointer",
               transition: "all 0.2s ease"
@@ -117,7 +161,9 @@ export const MoreSkillsCard = ({ skills, selected, onSelect, style }: any) => {
           </button>
         ))}
       </div>
-      <div onClick={handleScroll} style={{ textAlign: "right", cursor: "pointer", color: "#c1cbe6", fontSize: "20px", transform: "rotate(90deg)", paddingRight: "10px" }}>❯</div>
-    </div>
+<div onClick={handleScroll} style={{ 
+        textAlign: "center", cursor: "pointer", color: "#c1cbe6", 
+        fontSize: "24px", transform: "rotate(90deg)"
+      }}>❯</div>    </div>
   );
 };

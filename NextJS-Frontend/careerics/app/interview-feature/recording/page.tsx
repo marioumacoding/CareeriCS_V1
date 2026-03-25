@@ -23,7 +23,7 @@ export default function RecordingPage() {
   } = useInterviewFlow();
 
   const [activeId, setActiveId] = useState(currentQ);
-  const [unlockedId, setUnlockedId] = useState(1); 
+  const [unlockedId, setUnlockedId] = useState(1);
 
   const [status, setStatus] = useState<"idle" | "recording" | "stopped">("idle");
   const [seconds, setSeconds] = useState(0);
@@ -47,14 +47,14 @@ export default function RecordingPage() {
     !sessionId
       ? "Please sign in first so an interview session can be created."
       : isQuestionsLoading
-      ? "Questions are still loading."
-      : isSubmitting
-      ? "Submission is already in progress."
-      : !questions.length
-      ? "No questions are available for this interview type."
-      : !currentQuestion?.questionId
-      ? "Current question is not ready yet."
-      : "";
+        ? "Questions are still loading."
+        : isSubmitting
+          ? "Submission is already in progress."
+          : !questions.length
+            ? "No questions are available for this interview type."
+            : !currentQuestion?.questionId
+              ? "Current question is not ready yet."
+              : "";
 
   const isSubmitDisabled = Boolean(submitBlockedReason);
 
@@ -309,12 +309,12 @@ export default function RecordingPage() {
   const isPeeking = activeId !== unlockedId;
 
   const controls = (
-    <div style={{ 
-      display: "flex", 
-      alignItems: "center", 
+    <div style={{
+      display: "flex",
+      alignItems: "center",
       gap: "80px",
       opacity: isPeeking ? 0.3 : 1, // Dim controls if looking at a future question
-      pointerEvents: isPeeking ? "none" : "auto" 
+      pointerEvents: isPeeking ? "none" : "auto"
     }}>
       <img
         src={status === "idle" ? "/interview/Record.svg" : status === "recording" ? "/interview/Pause.svg" : "/interview/Play.svg"}
@@ -325,21 +325,24 @@ export default function RecordingPage() {
       <span style={{ fontSize: "40px", color: "white", fontFamily: "var(--font-nova-square)", minWidth: "120px", textAlign: "center" }}>
         {formatTime(seconds)}
       </span>
-      <img 
-        src="/interview/Retake.svg" 
-        alt="Reset" 
-        style={{ width: "45px", cursor: "pointer" }} 
-        onClick={handleReset} 
+      <img
+        src="/interview/Retake.svg"
+        alt="Reset"
+        style={{ width: "45px", cursor: "pointer" }}
+        onClick={handleReset}
       />
     </div>
   );
 
   return (
-    <InterviewLayout 
-      questions={questions} 
+    <InterviewLayout
+      questions={questions.map(q => ({
+        ...q,
+        title: q.text
+      }))}
       currentActiveId={activeId}    // For Sidebar Expansion
       unlockedStepId={unlockedId}   // For Sidebar Lock Icons
-      onQuestionClick={handleSidebarClick}
+      onQuestionClick={onQuestionClick}
       closeIconSrc="/interview/Close.svg"
     >
       <InterviewContainer
@@ -350,18 +353,18 @@ export default function RecordingPage() {
             {isQuestionsLoading
               ? "Loading questions..."
               : questionsError || actionError
-              ? questionsError || actionError
-              : !sessionId && !user?.id
-              ? "Please sign in to start interview session."
-              : status === "recording"
-              ? " Recording..."
-              : isFinalizingRecording
-              ? "Finalizing recording..."
-              : status === "stopped"
-              ? "⏸ Paused"
-              : recordedMedia
-              ? "Ready to submit"
-              : ""}
+                ? questionsError || actionError
+                : !sessionId && !user?.id
+                  ? "Please sign in to start interview session."
+                  : status === "recording"
+                    ? " Recording..."
+                    : isFinalizingRecording
+                      ? "Finalizing recording..."
+                      : status === "stopped"
+                        ? "⏸ Paused"
+                        : recordedMedia
+                          ? "Ready to submit"
+                          : ""}
 
             <video
               ref={previewVideoRef}

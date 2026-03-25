@@ -57,6 +57,7 @@ export const dotnetGraphql = new GraphQLClient({
 export const fastapiApi = new HttpClient({
   baseUrl: resolveFastApiBaseUrl(publicConfig.fastapiUrl, "/api/fastapi"),
   onRequest: withAuth,
+  timeout: 60_000,
   next: { revalidate: 0 },
 });
 

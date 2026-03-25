@@ -4,7 +4,7 @@ import React, { useRef } from "react";
 interface CVPopProps {
   onClose: () => void;
   lastVersion: string;
-  onFileSelect?: (file: File) => void;
+  onFileSelect?: (file: File) => Promise<void> | void;
 }
 
 export default function CVPop({ 
@@ -21,9 +21,18 @@ export default function CVPop({
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file && onFileSelect) {
-      onFileSelect(file);
-      onClose(); // Close popup after selection
+    // Allow picking the same file again in a subsequent attempt.
+    event.target.value = "";
+
+    if (!file) {
+      return;
+    }
+
+    onClose();
+
+    if (onFileSelect) {
+      // Trigger upload flow in parent without blocking the modal close animation.
+      void onFileSelect(file);
     }
   };
 
@@ -94,7 +103,7 @@ export default function CVPop({
               ref={fileInputRef} 
               onChange={handleFileChange} 
               style={{ display: "none" }} 
-              accept=".pdf,.doc,.docx"
+              accept=".pdf,.docx"
             />
 
             <img 

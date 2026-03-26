@@ -1,10 +1,9 @@
 from ai.clients import *
 
-def minimax_response(prompt):
-    completion = minimax_client.chat.completions.create(
-        model="MiniMaxAI/MiniMax-M2",
+def qwen_response(prompt):
+    completion = qwen_client.chat.completions.create(
+        model="Qwen/Qwen2.5-1.5B-Instruct:featherless-ai",
         messages=[{"role": "user", "content": prompt}],
-        temperature=0.3,
     )
     raw_text = completion.choices[0].message.content.strip()
     return raw_text

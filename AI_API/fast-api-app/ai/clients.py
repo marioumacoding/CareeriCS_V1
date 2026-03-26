@@ -12,7 +12,7 @@ DS_Client = OpenAI(
     api_key=DS_TOKEN,
 )
 
-minimax_client = OpenAI(
+qwen_client = OpenAI(
     base_url="https://router.huggingface.co/v1",
     api_key=HF_TOKEN,
 )

@@ -72,19 +72,9 @@ export default function ResetPassword() {
           required
           isMargin={false}
         />
-        <p
-          style={{
-            color: "#B8EF46",
-            fontSize: "2vh",
-            marginLeft: "5vh",
-            marginTop: "1vh",
-            textAlign: "left"
-          }}
-        >
-          You can check your email now.
-        </p>
+       
         <Button
-          style={{ marginBottom: "2vh", paddingInline: "12vh" }}
+          style={{ marginBlock: "2vh", paddingInline: "12vh" }}
         >
           {loading ? "Sending..." : "Send Reset Link"}
         </Button>

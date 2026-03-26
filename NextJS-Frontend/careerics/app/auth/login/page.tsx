@@ -20,7 +20,7 @@ export default function Login() {
   const searchParams = useSearchParams();
 
   const callbackUrlRaw = searchParams.get("callbackUrl") || "";
-  const callbackUrl = callbackUrlRaw.startsWith("/") ? callbackUrlRaw : "/dashboard";
+  const callbackUrl = callbackUrlRaw.startsWith("/") ? callbackUrlRaw : "/features/home";
 
   // -- Form state --
   const [email, setEmail] = useState("");
@@ -95,6 +95,9 @@ export default function Login() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
+          style={{
+            width: "100%"
+          }}
         />
 
         <InputField
@@ -106,6 +109,9 @@ export default function Login() {
           onChange={(e) => setPassword(e.target.value)}
           required
           isMargin={false}
+          style={{
+            width: "100%"
+          }}
         />
 
         <Button
@@ -127,7 +133,7 @@ export default function Login() {
           <Button
             type="submit"
             variant="primary"
-            style={{ marginLeft: "5vh" }}
+            style={{ marginLeft: "5vh",whiteSpace: "nowrap"  }}
           >
             {loading ? "Signing in..." : "Sign In"}
           </Button>
@@ -148,10 +154,10 @@ export default function Login() {
             type="button"
             variant="secondary"
             onClick={handleGoogleLogin}
-            style={{ marginRight: "5vh" }}
+            style={{ marginRight: "5vh", whiteSpace: "nowrap" }}
           >
             <img src="/auth/Google.svg" alt="Google" style={{ height: "4vh" }} />
-            Sign in using Google
+            Continue with Google
           </Button>
         </div>
 

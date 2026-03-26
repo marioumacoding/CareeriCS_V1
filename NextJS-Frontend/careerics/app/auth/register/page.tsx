@@ -80,7 +80,7 @@ export default function Register() {
         setSuccess("Check your email for a confirmation link, then sign in.");
       } else {
         // Auto-confirmed  redirect to dashboard
-        router.push("/dashboard");
+        router.push("/features/home");
       }
     } catch (err: any) {
       setError(err.message ?? "Registration failed.");
@@ -119,6 +119,9 @@ export default function Register() {
           value={firstName}
           onChange={(e) => setFirstName(e.target.value)}
           required
+          style={{
+            width: "100%"
+          }}
         />
 
         <InputField
@@ -129,6 +132,9 @@ export default function Register() {
           value={lastName}
           onChange={(e) => setLastName(e.target.value)}
           required
+          style={{
+            width: "100%"
+          }}
         />
 
         <InputField
@@ -140,6 +146,9 @@ export default function Register() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
+          style={{
+            width: "100%"
+          }}
         />
 
         <InputField
@@ -151,6 +160,9 @@ export default function Register() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
+          style={{
+            width: "100%"
+          }}
         />
 
         <InputField
@@ -162,6 +174,9 @@ export default function Register() {
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
           required
+          style={{
+            width: "100%"
+          }}
         />
 
         <div
@@ -174,7 +189,7 @@ export default function Register() {
           <Button
             type="submit"
             variant="primary"
-            style={{ marginLeft: "5vh" }}
+            style={{ marginLeft: "5vh", whiteSpace: "nowrap" }}
           >
             {loading ? "Registering..." : "Register"}
           </Button>
@@ -193,10 +208,10 @@ export default function Register() {
             type="button"
             variant="secondary"
             onClick={handleGoogleRegister}
-            style={{ marginRight: "5vh" }}
+            style={{ marginRight: "5vh", whiteSpace: "nowrap" }}
           >
             <img src="/auth/Google.svg" alt="Google" style={{ height: "4vh" }} />
-            Register using Google
+            Continue with Google
           </Button>
         </div>
 

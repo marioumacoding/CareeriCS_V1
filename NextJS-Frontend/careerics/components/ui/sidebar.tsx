@@ -1,14 +1,26 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
+import { authService } from "@/services/auth.service";
 import { useAuth } from "@/providers/auth-provider";
 
 const Sidebar = () => {
   const pathname = usePathname();
   const [hoveredNav, setHoveredNav] = useState<number | null>(null);
   const { user, isLoading } = useAuth();
+  const router = useRouter();
+
+ async function handleLogout() {
+    try {
+      await authService.signOut();
+      router.push("/auth/login");
+    } catch (err: any) {
+      console.error("Logout failed:", err.message);
+    }
+  }
 
   const profileName = isLoading
     ? "Loading..."
@@ -125,6 +137,7 @@ const Sidebar = () => {
         />
 
         <div
+          onClick={handleLogout}
           style={{
             fontSize: "1rem",
             color: "#fff",

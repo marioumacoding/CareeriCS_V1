@@ -44,7 +44,7 @@ export function proxy(request: NextRequest) {
   // Redirect logged-in users away from login/register
   if (!SKIP_AUTH_LOCAL && AUTH_ROUTES.has(pathname) && token) {
     const dashUrl = request.nextUrl.clone();
-    dashUrl.pathname = "/dashboard";
+    dashUrl.pathname = "/features/home";
     return NextResponse.redirect(dashUrl);
   }
 

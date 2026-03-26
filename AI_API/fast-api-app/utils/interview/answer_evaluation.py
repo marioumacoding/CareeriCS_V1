@@ -1,6 +1,6 @@
 import json
 from ai.prompts import evaluate_answer_prompt
-from ai.completion import qwen_response
+from ai.completion import minimax_response
 
 
 def evaluate_answer_service(
@@ -16,7 +16,7 @@ def evaluate_answer_service(
         is_followup=is_followup
     )
 
-    raw_response = qwen_response(prompt)
+    raw_response = minimax_response(prompt)
 
     try:
         parsed = json.loads(raw_response)

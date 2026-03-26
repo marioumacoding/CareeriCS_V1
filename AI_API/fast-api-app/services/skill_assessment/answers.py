@@ -52,11 +52,30 @@ def submit_answers(db: Session, session_id: str, user_id: str, user_answers: lis
     session.submitted_at = datetime.utcnow()
     db.commit()
 
-    user_skill = db.query(UserSkill).filter_by(user_id=user_id, skill_id=session.skill_id).first()
+    user_skill = db.query(UserSkill).filter_by(
+        user_id=user_id,
+        skill_id=session.skill_id
+    ).first()
+
     if user_skill:
+        # Update existing skill
         user_skill.score = score
         user_skill.proficiency = score_to_proficiency(score)
-        db.commit()
+
+    else:
+        # Create new skill if not found
+        user_skill = UserSkill(
+            id=uuid4(),
+            user_id=user_id,
+            skill_id=session.skill_id,
+            score=score,
+            proficiency=score_to_proficiency(score),
+            isCV=True,  # <-- required
+        )
+
+        db.add(user_skill)
+
+    db.commit()
 
     return SubmitAssessmentResponse(
         session_id=session_id,

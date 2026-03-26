@@ -80,7 +80,7 @@ export default function Register() {
         setSuccess("Check your email for a confirmation link, then sign in.");
       } else {
         // Auto-confirmed  redirect to dashboard
-        router.push("/dashboard");
+        router.push("/features/home");
       }
     } catch (err: any) {
       setError(err.message ?? "Registration failed.");

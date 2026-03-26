@@ -73,7 +73,7 @@ export default function UpdatePassword() {
     setLoading(true);
     try {
       await authService.updatePassword(password);
-      router.push("/dashboard");
+      router.push("/features/home");
     } catch (err: any) {
       setError(err.message ?? "Failed to update password.");
     } finally {

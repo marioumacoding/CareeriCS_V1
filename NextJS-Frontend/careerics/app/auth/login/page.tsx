@@ -20,7 +20,7 @@ export default function Login() {
   const searchParams = useSearchParams();
 
   const callbackUrlRaw = searchParams.get("callbackUrl") || "";
-  const callbackUrl = callbackUrlRaw.startsWith("/") ? callbackUrlRaw : "/dashboard";
+  const callbackUrl = callbackUrlRaw.startsWith("/") ? callbackUrlRaw : "/features/home";
 
   // -- Form state --
   const [email, setEmail] = useState("");

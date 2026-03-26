@@ -1,42 +1,135 @@
 "use client";
-import React from "react";
+import React, { useState, useEffect } from "react";
 import FeatureCard from "@/components/ui/feature-card";
-import { useRouter } from 'next/navigation'
+import { useRouter } from "next/navigation";
 
 export default function LandingPage() {
   const router = useRouter();
-  return (
-    <div style={{
-      backgroundColor: "var(--bg-color)",
-      color: "#fff",
-      minHeight: "100vh",
-      fontFamily: "'Inter', sans-serif",
-      overflowX: "hidden"
-    }}>
 
-      {/* 1. NAVIGATION BAR */}
-      <header style={{
-        position: "fixed",
-        top: 0,
-        left: 0,
-        width: "100%",
-        height: "70px",
+  const [active, setActive] = useState("home");
+
+  const [hovered, setHovered] = useState<string | null>(null);
+
+  useEffect(() => {
+    const sections = ["home", "toolkit", "journey"];
+
+    const handleScroll = () => {
+      let current = "home";
+
+      sections.forEach((id) => {
+        const section = document.getElementById(id);
+
+        if (section) {
+          const top = section.offsetTop - 120;
+
+          if (window.scrollY >= top) {
+            current = id;
+          }
+        }
+      });
+
+      setActive(current);
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    handleScroll();
+
+    return () =>
+      window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const getLinkColor = (id: string) => {
+    if (active === id) return "#B8EF46";
+    if (hovered === id) return "#717171";
+    return "#fff";
+  };
+
+  return (
+    <div
+      style={{
         backgroundColor: "var(--bg-color)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        padding: "0 75px",
-        boxSizing: "border-box",
-        zIndex: 1000,
-      }}>
-        <div style={{ fontSize: "2vw", letterSpacing: "-1px", fontFamily: "var(--font-nova-square)" }}>
+        color: "#fff",
+        minHeight: "100vh",
+        fontFamily: "'Inter', sans-serif",
+        overflowX: "hidden",
+      }}
+    >
+      {/* NAVIGATION BAR */}
+      <header
+        style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          width: "100%",
+          height: "70px",
+          backgroundColor: "var(--bg-color)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "0 75px",
+          boxSizing: "border-box",
+          zIndex: 1000,
+        }}
+      >
+        <div
+          style={{
+            fontSize: "2vw",
+            letterSpacing: "-1px",
+            fontFamily: "var(--font-nova-square)",
+          }}
+        >
           CareeriCS
         </div>
-        <nav style={{ display: "flex", gap: "45px", fontSize: "1.5vw", fontWeight: "500", fontFamily: "var(--font-jura)" }}>
-          <a href="#" style={{ color: "#fff", textDecoration: "none" }}>Home</a>
-          <a href="#toolkit" style={{ color: "#fff", textDecoration: "none" }}>Toolkit</a>
-          <a href="#journey" style={{ color: "#fff", textDecoration: "none" }}>Journey Flow</a>
+
+        <nav
+          style={{
+            display: "flex",
+            gap: "45px",
+            fontSize: "1.5vw",
+            fontWeight: "500",
+            fontFamily: "var(--font-jura)",
+          }}
+        >
+          <a
+            href="#home"
+            style={{
+              color: getLinkColor("home"),
+              textDecoration: "none",
+              transition: "color 0.25s ease",
+            }}
+            onMouseEnter={() => setHovered("home")}
+            onMouseLeave={() => setHovered(null)}
+          >
+            Home
+          </a>
+
+          <a
+            href="#toolkit"
+            style={{
+              color: getLinkColor("toolkit"),
+              textDecoration: "none",
+              transition: "color 0.25s ease",
+            }}
+            onMouseEnter={() => setHovered("toolkit")}
+            onMouseLeave={() => setHovered(null)}
+          >
+            Toolkit
+          </a>
+
+          <a
+            href="#journey"
+            style={{
+              color: getLinkColor("journey"),
+              textDecoration: "none",
+              transition: "color 0.25s ease",
+            }}
+            onMouseEnter={() => setHovered("journey")}
+            onMouseLeave={() => setHovered(null)}
+          >
+            Journey Flow
+          </a>
         </nav>
+
         <button
           onClick={() => router.push("/auth/login")}
           style={{
@@ -48,14 +141,16 @@ export default function LandingPage() {
             fontSize: "1vw",
             cursor: "pointer",
             backgroundColor: "var(--bg-color)",
-            color: "#fff"
-          }}>
+            color: "#fff",
+          }}
+        >
           Sign In
         </button>
       </header>
 
       {/* Home */}
       <section
+        id="home"
         style={{
           position: "relative",
           scrollMarginTop: "100px",
@@ -63,9 +158,9 @@ export default function LandingPage() {
           width: "100%",
           minHeight: "100vh",
           overflow: "hidden",
+          marginBottom: "2vh",
         }}
       >
-
         <div
           style={{
             position: "absolute",
@@ -172,25 +267,23 @@ export default function LandingPage() {
             <path d="M-8.15392e-05 54.3333C-8.15392e-05 57.2789 2.38773 59.6667 5.33325 59.6667C8.27877 59.6667 10.6666 57.2789 10.6666 54.3333C10.6666 51.3878 8.27877 49 5.33325 49C2.38773 49 -8.15392e-05 51.3878 -8.15392e-05 54.3333ZM567 5.33334C567 8.27886 569.388 10.6667 572.333 10.6667C575.279 10.6667 577.667 8.27886 577.667 5.33334C577.667 2.38782 575.279 1.00136e-05 572.333 1.00136e-05C569.388 1.00136e-05 567 2.38782 567 5.33334ZM399.833 5.33334V4.33334H399.577L399.353 4.4562L399.833 5.33334ZM310.333 54.3333V55.3333H310.589L310.813 55.2105L310.333 54.3333ZM399.833 5.33334V6.33334H572.333V5.33334V4.33334H399.833V5.33334ZM5.33325 54.3333V55.3333H310.333V54.3333V53.3333H5.33325V54.3333ZM310.333 54.3333L310.813 55.2105L400.313 6.21049L399.833 5.33334L399.353 4.4562L309.853 53.4562L310.333 54.3333Z" fill="white" />
           </svg>
 
-          <p style={{ margin: "10px", fontFamily:"var(--font-nova-square)"}}>
+          <p style={{ margin: "10px", fontFamily: "var(--font-nova-square)" }}>
             Your Guide To Success
           </p>
 
         </div>
-
-
       </section>
 
       {/* Toolkit */}
       <section id="toolkit"
         style={{
-          scrollMarginTop: "35px",
+          scrollMarginTop: "70px",
           paddingInline: "75px",
           textAlign: "center",
           backgroundColor: "var(--bg-color)",
           padding: "10px",
         }}>
-        <h2 style={{ fontSize: "2.5vw", fontWeight: "500" }}>
+        <h2 style={{ fontSize: "2.5vw", fontWeight: "500", marginBottom: "40px" }}>
           Choose from our various features
         </h2>
         <div
@@ -200,8 +293,9 @@ export default function LandingPage() {
             gridTemplateRows: "repeat(3, 1fr)",
             gridColumnGap: "25px",
             gridRowGap: "25px",
-            marginLeft:"10%",
-            marginRight:"10%"
+            marginLeft: "10%",
+            marginRight: "10%",
+            marginBottom: "50px"
           }}
         >
 
@@ -209,7 +303,7 @@ export default function LandingPage() {
             <FeatureCard
               type="horizontal"
               title="Career Quiz"
-              description={<>Career confusion? We don’t know her.<br/> Discover where you’ll thrive with our 5-minute Quiz.</>}
+              description={<>Career confusion? We don’t know her.<br /> Discover where you’ll thrive with our 5-minute Quiz.</>}
               color="var(--phase1-color)"
             />
           </div>
@@ -218,7 +312,7 @@ export default function LandingPage() {
             <FeatureCard
               type="vertical"
               title={<>CV<br />Builder</>}
-              description={<>Never had a CV before and you got no idea how to start?<br />  Our Ai model will build you an ATS- friendly CV. <br/> No guesswork Just results. </>}
+              description={<>Never had a CV before and you got no idea how to start?<br />  Our Ai model will build you an ATS- friendly CV. <br /> No guesswork Just results. </>}
               color="var(--phase3-color)"
             />
           </div>
@@ -233,10 +327,10 @@ export default function LandingPage() {
           </div>
 
           <div style={{ gridArea: "2 / 1 / 4 / 2" }}>
-            <FeatureCard  
+            <FeatureCard
               type="vertical"
               title={<>Roadmap<br />Generation</>}
-              description={<>Unsure about your next steps?<br/>Get a clear map towards your dream role.<br/> We’ll tell you exactly what to learn and how.</>}
+              description={<>Unsure about your next steps?<br />Get a clear map towards your dream role.<br /> We’ll tell you exactly what to learn and how.</>}
               color="var(--phase2-color)"
             />
           </div>
@@ -291,8 +385,8 @@ export default function LandingPage() {
       </section>
 
       {/* 4. ROADMAP SECTION */}
-      <section id="journey" style={{ scrollMarginTop: "0.8%", paddingBottom: "1.5%", textAlign: "center", background: "var(--bg-color)" }}>
-        <h3 style={{ fontSize: "2.5vw", fontWeight: "400" }}>
+      <section id="journey" style={{ scrollMarginTop: "70px", paddingBottom: "5%", textAlign: "center", background: "var(--bg-color)" }}>
+        <h3 style={{ fontSize: "2.5vw", fontWeight: "400", marginBottom: "50px" }}>
           Follow your personalized career journey
         </h3>
         <div style={{ maxWidth: "100%", marginTop: "1.2%", marginRight: "0 auto", marginLeft: "0 auto" }}>

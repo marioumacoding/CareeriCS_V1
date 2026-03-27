@@ -3,13 +3,14 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import RootLayout from "@/app/features/layout";
 import { LearningSkillsCard, PastTestsCard, MoreSkillsCard } from "@/components/ui/cvArchive";
+import SkillConfirmPopup from "@/components/ui/skillConfirmPopup";
 import { useAuth } from "@/providers/auth-provider";
 import { skillAssessmentService, skillsService } from "@/services";
 import type { APIAssessmentSessionSummary, APISkill } from "@/types";
 
 export default function SkillAssessment() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, isLoading: isAuthLoading } = useAuth();
 
   const [skills, setSkills] = useState<APISkill[]>([]);
   const [sessions, setSessions] = useState<APIAssessmentSessionSummary[]>([]);
@@ -17,6 +18,8 @@ export default function SkillAssessment() {
   const [extraSelectedSkillId, setExtraSelectedSkillId] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
   const [isStarting, setIsStarting] = useState(false);
+  const [pendingSkillId, setPendingSkillId] = useState("");
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -40,8 +43,8 @@ export default function SkillAssessment() {
       setSkills(loadedSkills);
 
       if (loadedSkills.length) {
-        setSelectedSkillId((prev) => prev || loadedSkills[0].id);
-        setExtraSelectedSkillId((prev) => prev || loadedSkills[Math.min(1, loadedSkills.length - 1)].id);
+        setSelectedSkillId((prev) => prev || "");
+        setExtraSelectedSkillId((prev) => prev || "");
       }
 
       if (user?.id) {
@@ -84,6 +87,7 @@ export default function SkillAssessment() {
 
   const selectedLearningName = skillById.get(selectedSkillId)?.skill_name || "";
   const selectedMoreName = skillById.get(extraSelectedSkillId)?.skill_name || "";
+  const pendingSkillName = skillById.get(pendingSkillId)?.skill_name || "";
 
   const allPastTests = useMemo(
     () => sessions
@@ -97,29 +101,46 @@ export default function SkillAssessment() {
     [sessions, skillById],
   );
 
-  const selectedSkill = selectedSkillId || extraSelectedSkillId;
-
-  const handleStartAssessment = () => {
-    if (!user?.id || !selectedSkill) return;
+  const handleStartAssessment = (skillId: string) => {
+    if (!user?.id || !skillId) return;
 
     setIsStarting(true);
-    const selectedSkillName = skillById.get(selectedSkill)?.skill_name || "Selected Skill";
+    const selectedSkillName = skillById.get(skillId)?.skill_name || "Selected Skill";
+
+    const learningMatch = learningSkillObjects.find((skill) => skill.id === skillId);
+    if (learningMatch) {
+      setSelectedSkillId(skillId);
+      setExtraSelectedSkillId("");
+    } else {
+      setSelectedSkillId("");
+      setExtraSelectedSkillId(skillId);
+    }
 
     const params = new URLSearchParams({
-      skillId: selectedSkill,
+      skillId,
       skillName: selectedSkillName,
       numQuestions: "7",
     });
 
     const inProgressSession = sessions.find(
-      (session) => session.skill_id === selectedSkill && session.status === "in_progress",
+      (session) => session.skill_id === skillId && session.status === "in_progress",
     );
     if (inProgressSession) {
       params.set("sessionId", inProgressSession.id);
     }
 
+    setIsConfirmOpen(false);
     router.push(`/skill-feature/questions?${params.toString()}`);
     setIsStarting(false);
+  };
+
+  const handleSkillClick = (skillId: string) => {
+    if (isAuthLoading || !user?.id || isLoading || isStarting) {
+      return;
+    }
+
+    setPendingSkillId(skillId);
+    setIsConfirmOpen(true);
   };
 
 
@@ -142,7 +163,9 @@ export default function SkillAssessment() {
           selected={selectedLearningName}
           onSelect={(skillName: string) => {
             const selected = learningSkillObjects.find((skill) => skill.skill_name === skillName);
-            if (selected) setSelectedSkillId(selected.id);
+            if (selected) {
+              handleSkillClick(selected.id);
+            }
           }}
           style={{
             gridArea: "1 / 1 / 2 / 5",
@@ -167,7 +190,9 @@ export default function SkillAssessment() {
           selected={selectedMoreName} 
           onSelect={(skillName: string) => {
             const selected = moreSkillObjects.find((skill) => skill.skill_name === skillName);
-            if (selected) setExtraSelectedSkillId(selected.id);
+            if (selected) {
+              handleSkillClick(selected.id);
+            }
           }}
           style={{ 
             gridArea: "3 / 3 / 5 / 5", 
@@ -191,25 +216,22 @@ export default function SkillAssessment() {
           {isLoading ? (
             <p style={{ color: "#c1cbe6", fontSize: "13px", margin: 0 }}>Loading skills...</p>
           ) : null}
-          <button
-            type="button"
-            onClick={handleStartAssessment}
-            disabled={!selectedSkill || isLoading || isStarting || !user?.id}
-            style={{
-              border: "none",
-              borderRadius: "12px",
-              padding: "12px 18px",
-              backgroundColor: "#E6FFB2",
-              color: "#111827",
-              fontWeight: 800,
-              cursor: !selectedSkill || isLoading || isStarting || !user?.id ? "not-allowed" : "pointer",
-              opacity: !selectedSkill || isLoading || isStarting || !user?.id ? 0.6 : 1,
-            }}
-          >
-            {isStarting ? "Opening..." : "Start Assessment"}
-          </button>
         </div>
       </RootLayout>
+
+      {isConfirmOpen && pendingSkillName ? (
+        <SkillConfirmPopup
+          skillName={pendingSkillName}
+          isLoading={isStarting}
+          onCancel={() => {
+            if (!isStarting) {
+              setIsConfirmOpen(false);
+              setPendingSkillId("");
+            }
+          }}
+          onConfirm={() => handleStartAssessment(pendingSkillId)}
+        />
+      ) : null}
     </div>
   );
 }

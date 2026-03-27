@@ -29,7 +29,7 @@ function getProficiencyLevel(score: number): "Advanced" | "Intermediate" | "Begi
 export default function AssessmentPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user } = useAuth();
+  const { user, isLoading: isAuthLoading } = useAuth();
 
   const skillId = searchParams.get("skillId") || "";
   const skillName = searchParams.get("skillName") || "Skill Assessment";
@@ -138,6 +138,10 @@ export default function AssessmentPage() {
   };
 
   useEffect(() => {
+    if (isAuthLoading) {
+      return;
+    }
+
     const initKey = `${user?.id || ""}:${skillId}:${resumeSessionId}:${numQuestions}`;
     if (initKeyRef.current === initKey) return;
     initKeyRef.current = initKey;
@@ -185,7 +189,7 @@ export default function AssessmentPage() {
     };
 
     void initialize();
-  }, [numQuestions, resumeSessionId, skillId, skillName, user?.id]);
+  }, [isAuthLoading, numQuestions, resumeSessionId, skillId, skillName, user?.id]);
 
   useEffect(() => {
     if (!sessionId || !questions.length) return;
@@ -288,6 +292,7 @@ export default function AssessmentPage() {
         }
       }}
       closeIconSrc="/auth/Close.svg"
+      closeRoute="/features/skill"
       title={skillName}
     >
       <div style={{
@@ -299,7 +304,7 @@ export default function AssessmentPage() {
         {isInitializing ? (
           <div style={{ textAlign: "center", color: "white" }}>
             <h2 style={{ fontSize: "28px", fontFamily: "var(--font-nova-square)", marginBottom: "12px" }}>
-              Preparing your assessment...
+              {isAuthLoading ? "Checking your session..." : "Preparing your assessment..."}
             </h2>
             {error ? <p style={{ color: "#ffd3d3" }}>{error}</p> : null}
           </div>

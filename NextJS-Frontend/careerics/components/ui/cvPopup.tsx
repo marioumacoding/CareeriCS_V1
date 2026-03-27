@@ -1,5 +1,5 @@
 "use client";
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 
 interface CVPopProps {
   onClose: () => void;
@@ -13,6 +13,7 @@ export default function CVPop({
   onFileSelect 
 }: CVPopProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedFileName, setSelectedFileName] = useState("");
 
   const handleButtonClick = () => {
     // Triggers the hidden file input
@@ -27,11 +28,9 @@ export default function CVPop({
     if (!file) {
       return;
     }
-
-    onClose();
+    setSelectedFileName(file.name);
 
     if (onFileSelect) {
-      // Trigger upload flow in parent without blocking the modal close animation.
       void onFileSelect(file);
     }
   };
@@ -130,6 +129,22 @@ export default function CVPop({
             >
               Open Files
             </button>
+
+            {selectedFileName ? (
+              <p
+                style={{
+                  margin: 0,
+                  color: "#24340c",
+                  opacity: 0.85,
+                  maxWidth: "100%",
+                  textAlign: "center",
+                  wordBreak: "break-word",
+                  fontSize: "14px",
+                }}
+              >
+                {selectedFileName}
+              </p>
+            ) : null}
           </div>
         </div>
       </div>

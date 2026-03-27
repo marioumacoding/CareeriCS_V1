@@ -15,6 +15,7 @@ export default function CV() {
   const [error, setError] = useState<string | null>(null);
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
   const [downloadName, setDownloadName] = useState("enhanced-cv.pdf");
+  const [isOpeningDrive, setIsOpeningDrive] = useState(false);
   const router = useRouter();
   const { user } = useAuth();
 
@@ -77,6 +78,25 @@ export default function CV() {
       setStatus('idle');
       fileInputRef.current?.click();
     }
+  };
+
+  const handleGoogleDriveQuickOpen = () => {
+    if (isOpeningDrive) return;
+
+    setIsOpeningDrive(true);
+
+    if (downloadUrl) {
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = downloadName;
+      link.click();
+    }
+
+    window.open("https://drive.google.com/drive/my-drive", "_blank", "noopener,noreferrer");
+
+    window.setTimeout(() => {
+      setIsOpeningDrive(false);
+    }, 1400);
   };
 
   return (
@@ -177,8 +197,20 @@ export default function CV() {
                   borderRadius: '40px',
                 }}
                 videoContent={
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '40px', padding: '30px', height: '100%' }}>
-                    <div style={{ width: '180px', height: '240px', backgroundColor: 'white', borderRadius: '25px', flexShrink: 0 }} />
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '20px', padding: '20px', height: '100%', flexWrap: 'wrap' }}>
+                    <div style={{ width: 'min(34vw, 180px)', height: 'min(46vw, 240px)', minWidth: '130px', minHeight: '170px', backgroundColor: 'white', borderRadius: '25px', flexShrink: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {downloadUrl ? (
+                        <iframe
+                          src={`${downloadUrl}#view=FitH&zoom=page-fit&pagemode=none&toolbar=0`}
+                          title="CV preview"
+                          style={{ width: '100%', height: '100%', border: 'none' }}
+                        />
+                      ) : (
+                        <span style={{ color: '#6b7280', fontSize: '12px', textAlign: 'center', padding: '10px' }}>
+                          Preview unavailable
+                        </span>
+                      )}
+                    </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                       <a
                         href={downloadUrl ?? "#"}
@@ -200,8 +232,13 @@ export default function CV() {
                         Download
                       </a>
                       <span style={{ color: 'white', textAlign: 'center', opacity: 0.6 }}>or</span>
-                      <button style={{ backgroundColor: 'white', color: '#1a1a1a', border: 'none', padding: '12px 20px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '10px', width: '240px', justifyContent: 'center', cursor: 'pointer' }}>
-                        <img src="/interview/drive.svg" style={{ width: '18px' }} alt="Drive" /> Google Drive
+                      <button
+                        type="button"
+                        onClick={handleGoogleDriveQuickOpen}
+                        disabled={isOpeningDrive}
+                        style={{ backgroundColor: 'white', color: '#1a1a1a', border: 'none', padding: '12px 20px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '10px', width: '240px', justifyContent: 'center', cursor: isOpeningDrive ? 'default' : 'pointer', opacity: isOpeningDrive ? 0.7 : 1 }}
+                      >
+                        <img src="/interview/drive.svg" style={{ width: '18px' }} alt="Drive" /> {isOpeningDrive ? 'Opening Drive...' : 'Google Drive'}
                       </button>
                     </div>
                   </div>
@@ -209,7 +246,7 @@ export default function CV() {
               />
               
               <Button 
-                onClick={() => router.push('/')}
+                onClick={() => router.push('/features/home')}
                 style={{
                   width: "220px",
                   height: "35px",

@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect } from 'react';
+import { useRouter } from "next/navigation";
 import Interview from "@/components/ui/interview"; 
 import DynamicCVForm from "@/components/ui/cv-form";
 import { Button } from "@/components/ui/button";
@@ -107,7 +108,8 @@ function toBuilderPayload(
 }
 
 export default function CVBuilderPage() {
-  const { user } = useAuth();
+  const router = useRouter();
+  const { user, isLoading: isAuthLoading } = useAuth();
   const [activeStepId, setActiveStepId] = useState(1); // El Step elly zahra f el Form
   const [expandedStepId, setExpandedStepId] = useState<number>(1); // El Step elly expanded f el Sidebar
   const [isBuilding, setIsBuilding] = useState(false); 
@@ -116,6 +118,7 @@ export default function CVBuilderPage() {
   const [buildError, setBuildError] = useState<string | null>(null);
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
   const [downloadName, setDownloadName] = useState("generated-cv.pdf");
+  const [isOpeningDrive, setIsOpeningDrive] = useState(false);
 
   // --- Multi-Entry States ---
   const [educationList, setEducationList] = useState([{ id: Date.now() }]);
@@ -174,6 +177,11 @@ export default function CVBuilderPage() {
   };
 
   const handleSubmit = async () => {
+    if (isAuthLoading) {
+      setBuildError("Checking your session. Please try again in a moment.");
+      return;
+    }
+
     if (!user?.id) {
       setBuildError("Please sign in first to build your CV.");
       return;
@@ -219,13 +227,33 @@ export default function CVBuilderPage() {
     }
   };
 
+  const handleGoogleDriveQuickOpen = () => {
+    if (isOpeningDrive) return;
+
+    setIsOpeningDrive(true);
+
+    if (downloadUrl) {
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = downloadName;
+      link.click();
+    }
+
+    window.open("https://drive.google.com/drive/my-drive", "_blank", "noopener,noreferrer");
+
+    window.setTimeout(() => {
+      setIsOpeningDrive(false);
+    }, 1400);
+  };
+
   return (
     <Interview 
       questions={cvSteps}
       currentActiveId={expandedStepId} // Sidebar lights up based on expand logic
       unlockedStepId={activeStepId}    // Steps only unlock when form moves forward
       onQuestionClick={handleSidebarClick}
-      closeIconSrc="/auth/close.svg" 
+      closeIconSrc="/auth/close.svg"
+      closeRoute="/features/cv"
     >
       <div style={{ width: "100%", height: "100vh", display: "flex", flexDirection: "column", alignItems: "center", position: "relative", overflow: "hidden", scrollbarWidth: "none" }}>
         <div style={{ width: "100%", maxWidth: "800px", display: "flex", flexDirection: "column", gap: "20px", paddingLeft:"50px", paddingTop:"5px", height: "100%", overflowY: "auto", scrollbarWidth: "none" }}>
@@ -234,7 +262,14 @@ export default function CVBuilderPage() {
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "80%", textAlign: "center" }}>
               <h2 style={{ color: "white", fontSize: "28px", fontFamily: "var(--font-nova-square)", marginBottom: "10px" }}>Our Model is building your CV,</h2>
               <p style={{ color: "white", fontSize: "20px", opacity: 0.8, marginBottom: "40px" }}>Give us a moment</p>
-              <img src="/images/cv-building-abstract.png" alt="Building CV" style={{ width: "300px", height: "auto" }} />
+              <img
+                src="/cv/cv.svg"
+                alt="Building CV"
+                onError={(event) => {
+                  event.currentTarget.style.display = "none";
+                }}
+                style={{ width: "220px", height: "auto", opacity: 0.95 }}
+              />
             </div>
           ) : isFinished ? (
             <div style={{ padding: "20px", width: "100%" }}>
@@ -243,8 +278,20 @@ export default function CVBuilderPage() {
                 <InterviewCard
                   questionTitle=""
                   videoBoxStyle={{ background: 'rgba(255, 255, 255, 0.41)', width: '80%', height: '300px', borderRadius: '40px' }}
-                  videoContent={<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '40px', padding: '30px', height: '100%' }}>
-                    <div style={{ width: '180px', height: '240px', backgroundColor: 'white', borderRadius: '25px' }} />
+                  videoContent={<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '20px', padding: '20px', height: '100%', flexWrap: 'wrap' }}>
+                    <div style={{ width: 'min(34vw, 180px)', height: 'min(46vw, 240px)', minWidth: '130px', minHeight: '170px', backgroundColor: 'white', borderRadius: '25px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {downloadUrl ? (
+                        <iframe
+                          src={`${downloadUrl}#view=FitH&zoom=page-fit&pagemode=none&toolbar=0`}
+                          title="CV preview"
+                          style={{ width: '100%', height: '100%', border: 'none' }}
+                        />
+                      ) : (
+                        <span style={{ color: '#6b7280', fontSize: '12px', textAlign: 'center', padding: '10px' }}>
+                          Preview unavailable
+                        </span>
+                      )}
+                    </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                       <a
                         href={downloadUrl ?? "#"}
@@ -265,6 +312,28 @@ export default function CVBuilderPage() {
                       >
                         Download
                       </a>
+                      <span style={{ color: 'white', textAlign: 'center', opacity: 0.6 }}>or</span>
+                      <button
+                        type="button"
+                        onClick={handleGoogleDriveQuickOpen}
+                        disabled={isOpeningDrive}
+                        style={{
+                          backgroundColor: 'white',
+                          color: '#1a1a1a',
+                          border: 'none',
+                          padding: '12px 20px',
+                          borderRadius: '10px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '10px',
+                          width: '240px',
+                          justifyContent: 'center',
+                          cursor: isOpeningDrive ? 'default' : 'pointer',
+                          opacity: isOpeningDrive ? 0.7 : 1,
+                        }}
+                      >
+                        <img src="/interview/drive.svg" style={{ width: '18px' }} alt="Drive" /> {isOpeningDrive ? 'Opening Drive...' : 'Google Drive'}
+                      </button>
                     </div>
                   </div>}
                 />
@@ -287,7 +356,12 @@ export default function CVBuilderPage() {
                   >
                     Build another CV
                   </Button>
-                  <Button style={{ backgroundColor: "#334155", color: "white", width: "140px", height: "36px", fontSize: "13px", borderRadius: "12px" }}>Go back to home</Button>
+                  <Button
+                    onClick={() => router.push('/features/home')}
+                    style={{ backgroundColor: "#334155", color: "white", width: "140px", height: "36px", fontSize: "13px", borderRadius: "12px" }}
+                  >
+                    Go back to home
+                  </Button>
                 </div>
                </div>
             </div>

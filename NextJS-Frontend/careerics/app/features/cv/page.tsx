@@ -9,8 +9,6 @@ import { cvService, reportsService } from "@/services";
 import { useAuth } from "@/providers/auth-provider";
 import type { APIReport } from "@/types";
 
-type HistoryTab = "builder" | "enhancer";
-
 function formatReportDate(dateIso: string): string {
   const parsedDate = new Date(dateIso);
   if (Number.isNaN(parsedDate.getTime())) {
@@ -20,13 +18,8 @@ function formatReportDate(dateIso: string): string {
   return parsedDate.toLocaleDateString();
 }
 
-function isEnhancerReport(report: APIReport): boolean {
-  const fileName = report.filename.toLowerCase();
-  return fileName.includes("enhanc");
-}
-
 export default function CVCrafting() {
-  const { user } = useAuth();
+  const { user, isLoading: isAuthLoading } = useAuth();
   
   // State to manage the popup visibility
   const [isPopOpen, setIsPopOpen] = useState(false);
@@ -35,7 +28,6 @@ export default function CVCrafting() {
   const [reportsError, setReportsError] = useState<string | null>(null);
   const [extractorMessage, setExtractorMessage] = useState<string | null>(null);
   const [isExtracting, setIsExtracting] = useState(false);
-  const [activeTab, setActiveTab] = useState<HistoryTab>("builder");
 
   const refreshReports = async (): Promise<APIReport[]> => {
     if (!user?.id) {
@@ -71,6 +63,11 @@ export default function CVCrafting() {
   }, [user?.id]);
 
   const handleFileSelection = async (file: File) => {
+    if (isAuthLoading) {
+      setExtractorMessage("Checking your session. Please try again in a moment.");
+      return;
+    }
+
     if (!user?.id) {
       setExtractorMessage("Please sign in first to extract your CV.");
       return;
@@ -109,25 +106,13 @@ export default function CVCrafting() {
     }
   };
 
-  const builderReports = useMemo(
-    () => reports.filter((report) => !isEnhancerReport(report)),
-    [reports],
-  );
-
-  const enhancerReports = useMemo(
-    () => reports.filter((report) => isEnhancerReport(report)),
-    [reports],
-  );
-
-  const activeReports = activeTab === "builder" ? builderReports : enhancerReports;
-
   const archiveItems = useMemo(
-    () => activeReports.map((report) => ({
+    () => reports.map((report) => ({
       id: report.id,
       label: report.filename,
       date: formatReportDate(report.created_at),
     })),
-    [activeReports],
+    [reports],
   );
 
   const lastVersionLabel = reports[0]?.filename ?? "No extracted version";
@@ -174,10 +159,10 @@ export default function CVCrafting() {
         />
 
         <ArchiveCard
-          title={activeTab === "builder" ? "Builder History" : "Enhancer History"}
+          title="CV History"
           items={archiveItems}
           isLoading={isLoadingReports}
-          emptyLabel={activeTab === "builder" ? "No builder reports yet." : "No enhancer reports yet."}
+          emptyLabel="No CV history yet."
           onDownload={handleDownloadReport}
           style={{ gridArea: "1 / 5 / 6 / 7" }}
         />
@@ -191,18 +176,6 @@ export default function CVCrafting() {
             marginTop: "-6px",
           }}
         >
-          <Button
-            variant={activeTab === "builder" ? "primary-inverted" : "secondary"}
-            onClick={() => setActiveTab("builder")}
-          >
-            Builder Reports
-          </Button>
-          <Button
-            variant={activeTab === "enhancer" ? "primary-inverted" : "secondary"}
-            onClick={() => setActiveTab("enhancer")}
-          >
-            Enhancer Reports
-          </Button>
           {reportsError && <span style={{ color: "#ffb4b4" }}>{reportsError}</span>}
         </div>
 

@@ -1,4 +1,5 @@
 from sqlalchemy.orm import Session as DBSession
+from sqlalchemy import func
 from typing import List
 from fastapi import HTTPException
 import db.models as models
@@ -51,7 +52,7 @@ def get_questions_by_type_service(
 
     questions = (
         db.query(models.Question)
-        .filter(models.Question.type == question_type)
+        .filter(func.lower(models.Question.type) == question_type.lower())
         .all()
     )
 

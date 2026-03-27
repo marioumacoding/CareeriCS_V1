@@ -7,6 +7,16 @@ import { interviewService } from "@/services/interview.service";
 import { useAuth } from "@/providers/auth-provider";
 import { useInterviewFlow } from "@/hooks";
 
+const DEBUG_INTERVIEW_FLOW = process.env.NODE_ENV !== "production";
+
+function logRecordingFlow(event: string, payload: Record<string, unknown>) {
+  if (!DEBUG_INTERVIEW_FLOW) {
+    return;
+  }
+
+  console.debug("[InterviewFlow][Recording]", event, payload);
+}
+
 export default function RecordingPage() {
   const router = useRouter();
   const { user, isLoading: isAuthLoading } = useAuth();
@@ -15,10 +25,12 @@ export default function RecordingPage() {
     sessionId,
     followupText,
     followupId,
+    followupMode,
     currentQ,
     questions,
     isQuestionsLoading,
     questionsError,
+    getQuestionByStep,
     buildRecordingUrl,
     buildAnalyzingUrl,
   } = useInterviewFlow();
@@ -33,32 +45,38 @@ export default function RecordingPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isFinalizingRecording, setIsFinalizingRecording] = useState(false);
   const [actionError, setActionError] = useState("");
+  const [isSessionCreating, setIsSessionCreating] = useState(false);
+  const [sessionError, setSessionError] = useState("");
+  const [sessionRetryNonce, setSessionRetryNonce] = useState(0);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
   const previewVideoRef = useRef<HTMLVideoElement | null>(null);
-  const hasCreatedSessionRef = useRef(false);
+  const sessionCreationInFlightRef = useRef<Promise<void> | null>(null);
   const pendingSubmitRef = useRef(false);
 
-  const currentQuestion = questions.find((q) => q.id === activeId) || null;
-  const isFollowupMode = Boolean(followupId);
+  const currentQuestion = getQuestionByStep(activeId);
+  const canonicalQuestion = getQuestionByStep(currentQ);
+  const isFollowupMode = followupMode || Boolean(followupId);
   const currentQuestionText = followupText || currentQuestion?.text || "";
   const submitBlockedReason =
     isAuthLoading
       ? "Checking your session..."
       : !user?.id
         ? "Please sign in first so an interview session can be created."
+        : sessionError && !sessionId
+          ? sessionError
         : !sessionId
-          ? "Preparing your interview session..."
+          ? (isSessionCreating ? "Preparing your interview session..." : "Interview session is not ready yet. Please retry session setup.")
       : isQuestionsLoading
         ? "Questions are still loading."
         : isSubmitting
           ? "Submission is already in progress."
           : !questions.length
             ? "No questions are available for this interview type."
-            : !currentQuestion?.questionId
+            : !canonicalQuestion?.questionId
               ? isFollowupMode
                 ? "Follow-up context is missing the linked main question. Please go back and try again."
                 : "Current question is not ready yet."
@@ -67,53 +85,65 @@ export default function RecordingPage() {
   const isSubmitDisabled = Boolean(submitBlockedReason);
 
   useEffect(() => {
-    setActiveId(currentQ);
-  }, [currentQ]);
+    logRecordingFlow("step:sync", {
+      q: currentQ,
+      currentQ,
+      questionsLength: questions.length,
+      isQuestionsLoading,
+      followupMode,
+    });
+  }, [currentQ, questions.length, isQuestionsLoading, followupMode]);
 
   useEffect(() => {
     if (isAuthLoading) {
       return;
     }
 
-    if (hasCreatedSessionRef.current || sessionId || !user?.id) {
+    if (sessionId || !user?.id || sessionCreationInFlightRef.current) {
       return;
     }
 
-    let alive = true;
+    const request = (async () => {
+      setIsSessionCreating(true);
+      setSessionError("");
 
-    const createSession = async () => {
-      hasCreatedSessionRef.current = true;
       const payload = {
         name: `${interviewType.toUpperCase()} Mock Interview`,
-        type: interviewType,
+        type: "HR",
         status: "in_progress",
         user_id: user.id,
       };
 
       const response = await interviewService.createSession(payload);
 
-      if (!alive) return;
-
       if (!response.success || !response.data?.id) {
-        setActionError(response.message || "Failed to create interview session.");
+        setSessionError(response.message || "Failed to create interview session. Please retry.");
         return;
       }
 
+      logRecordingFlow("session:created", {
+        sessionId: response.data.id,
+        interviewType,
+      });
+
       router.replace(
-        buildRecordingUrl({
-          type: interviewType,
-          sessionId: response.data.id,
-          q: String(currentQ || 1),
-        }),
+        `/interview-feature/recording?type=${interviewType}&sessionId=${response.data.id}&q=1`,
       );
-    };
+    })()
+      .catch((error: unknown) => {
+        setSessionError(
+          error instanceof Error
+            ? error.message
+            : "Failed to create interview session. Please retry.",
+        );
+      })
+      .finally(() => {
+        sessionCreationInFlightRef.current = null;
+        setIsSessionCreating(false);
+      });
 
-    createSession();
-
-    return () => {
-      alive = false;
-    };
-  }, [isAuthLoading, sessionId, user?.id, interviewType, currentQ, router, buildRecordingUrl]);
+    sessionCreationInFlightRef.current = request;
+  }, [isAuthLoading, sessionId, user?.id, interviewType, router, sessionRetryNonce]);
 
   // 3. Timer Logic
   useEffect(() => {
@@ -160,7 +190,23 @@ export default function RecordingPage() {
   };
 
   // 4. Action Handlers
+  const retrySessionSetup = () => {
+    if (!user?.id || isAuthLoading || isSessionCreating || sessionId) {
+      return;
+    }
+
+    setActionError("");
+    setSessionError("");
+    sessionCreationInFlightRef.current = null;
+    setSessionRetryNonce((prev) => prev + 1);
+  };
+
   const handleCameraToggle = async () => {
+    if (!sessionId || isSessionCreating) {
+      setActionError(sessionError || "Please wait while interview session is preparing.");
+      return;
+    }
+
     if (status === "recording") {
       setIsFinalizingRecording(true);
       stopAndCleanupMedia();
@@ -259,48 +305,67 @@ export default function RecordingPage() {
       return;
     }
 
-    if (!currentQuestion?.questionId) {
+    if (!canonicalQuestion?.questionId) {
       return;
     }
+
+    logRecordingFlow("submit:start", {
+      q: activeId,
+      currentQ,
+      questionsLength: questions.length,
+      isQuestionsLoading,
+      followupMode: isFollowupMode,
+      questionId: canonicalQuestion.questionId,
+    });
 
     setIsSubmitting(true);
     setActionError("");
 
     const submitResponse = await interviewService.submitAnswer(
       sessionId,
-      currentQuestion.questionId,
+      canonicalQuestion.questionId,
       media,
     );
 
     setIsSubmitting(false);
 
     if (!submitResponse.success) {
+      logRecordingFlow("submit:failed", {
+        q: activeId,
+        currentQ,
+        questionsLength: questions.length,
+        message: submitResponse.message || "Failed to submit answer.",
+      });
       setActionError(submitResponse.message || "Failed to submit answer.");
       return;
     }
 
+    logRecordingFlow("submit:success", {
+      q: activeId,
+      currentQ,
+      questionsLength: questions.length,
+      answerId: submitResponse.data?.answer_id || "",
+      followupMode: isFollowupMode,
+    });
+
     if (isFollowupMode) {
-      if (currentQ < questions.length) {
-        const nextQuestion = questions[currentQ];
-        router.push(
-          buildRecordingUrl({
-            q: String(currentQ + 1),
-            questionId: nextQuestion?.questionId || null,
-            followup: null,
-            followupId: null,
-          }),
-        );
-      } else {
-        router.push("/features/interview");
-      }
+      router.push(
+        buildAnalyzingUrl({
+          q: String(currentQ),
+          questionId: canonicalQuestion.questionId,
+          answerId: submitResponse.data?.answer_id,
+          followupMode: true,
+        }),
+      );
       return;
     }
 
     router.push(
       buildAnalyzingUrl({
-        q: String(activeId),
-        questionId: currentQuestion.questionId,
+        q: String(currentQ),
+        questionId: canonicalQuestion.questionId,
         answerId: submitResponse.data?.answer_id,
+        followupMode: false,
       }),
     );
   };
@@ -310,7 +375,7 @@ export default function RecordingPage() {
       return;
     }
 
-    if (!currentQuestion?.questionId) {
+    if (!canonicalQuestion?.questionId) {
       return;
     }
 
@@ -336,9 +401,30 @@ export default function RecordingPage() {
   };
 
   const onQuestionClick = (id: number) => {
+    if (isFollowupMode) {
+      return;
+    }
+
     pendingSubmitRef.current = false;
     setActiveId(id);
-    router.replace(buildRecordingUrl({ q: String(id), followup: null, followupId: null, questionId: null }));
+
+    logRecordingFlow("sidebar:navigate", {
+      q: id,
+      currentQ,
+      questionsLength: questions.length,
+      isQuestionsLoading,
+      followupMode: isFollowupMode,
+    });
+
+    router.replace(
+      buildRecordingUrl({
+        q: String(id),
+        followup: null,
+        followupId: null,
+        followupMode: false,
+        questionId: null,
+      }),
+    );
     handleReset();
   };
 
@@ -373,13 +459,14 @@ export default function RecordingPage() {
 
   return (
     <InterviewLayout
+      title="Interview Questions"
       questions={questions.map(q => ({
         ...q,
         title: q.text
       }))}
       currentActiveId={activeId}    // For Sidebar Expansion
       unlockedStepId={unlockedId}   // For Sidebar Lock Icons
-      onQuestionClick={onQuestionClick}
+      onQuestionClick={isFollowupMode ? () => {} : onQuestionClick}
       closeIconSrc="/interview/Close.svg"
       closeRoute="/features/interview"
     >
@@ -427,26 +514,49 @@ export default function RecordingPage() {
         }
         controlsContent={controls}
         actionButton={
-          <button
-            onClick={handleSubmit}
-            disabled={isSubmitDisabled}
-            title={submitBlockedReason || undefined}
-            style={{
-              background: "#d4ff47",
-              padding: "15px 100px",
-              borderRadius: "15px",
-              border: "none",
-              fontWeight: "bold",
-              fontSize: "18px",
-              fontFamily: "var(--font-nova-square)",
-              cursor: isSubmitDisabled ? "not-allowed" : "pointer",
-              opacity: isSubmitDisabled ? 0.5 : 1,
-              transition: "0.3s",
-              color: "#1a1a1a"
-            }}
-          >
-            {isSubmitting ? "Submitting..." : isFinalizingRecording ? "Preparing..." : "Submit"}
-          </button>
+          !sessionId ? (
+            <button
+              onClick={retrySessionSetup}
+              disabled={isAuthLoading || isSessionCreating || !user?.id}
+              title={submitBlockedReason || undefined}
+              style={{
+                background: "#d4ff47",
+                padding: "15px 100px",
+                borderRadius: "15px",
+                border: "none",
+                fontWeight: "bold",
+                fontSize: "18px",
+                fontFamily: "var(--font-nova-square)",
+                cursor: isAuthLoading || isSessionCreating || !user?.id ? "not-allowed" : "pointer",
+                opacity: isAuthLoading || isSessionCreating || !user?.id ? 0.5 : 1,
+                transition: "0.3s",
+                color: "#1a1a1a"
+              }}
+            >
+              {isSessionCreating ? "Preparing Session..." : "Retry Session Setup"}
+            </button>
+          ) : (
+            <button
+              onClick={handleSubmit}
+              disabled={isSubmitDisabled}
+              title={submitBlockedReason || undefined}
+              style={{
+                background: "#d4ff47",
+                padding: "15px 100px",
+                borderRadius: "15px",
+                border: "none",
+                fontWeight: "bold",
+                fontSize: "18px",
+                fontFamily: "var(--font-nova-square)",
+                cursor: isSubmitDisabled ? "not-allowed" : "pointer",
+                opacity: isSubmitDisabled ? 0.5 : 1,
+                transition: "0.3s",
+                color: "#1a1a1a"
+              }}
+            >
+              {isSubmitting ? "Submitting..." : isFinalizingRecording ? "Preparing..." : "Submit"}
+            </button>
+          )
         }
       />
     </InterviewLayout>

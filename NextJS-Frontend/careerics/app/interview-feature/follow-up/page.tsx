@@ -1,5 +1,22 @@
-"use client";
-import React from 'react';
+"use client";"use client";
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+}  return null;  }, [router, searchParams]);    router.replace(`/interview-feature/analyzing${suffix}`);    const suffix = query ? `?${query}` : "";    const query = searchParams.toString();  useEffect(() => {  const searchParams = useSearchParams();  const router = useRouter();export default function LegacyFollowUpRedirectPage() {import { useRouter, useSearchParams } from "next/navigation";import { useEffect } from "react";import React from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import InterviewLayout from '@/components/ui/interview';
 

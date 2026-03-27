@@ -308,8 +308,9 @@ class SAQuestionOut(SAQuestionBase):
 # START ASSESSMENT
 # =====================================================
 class StartAssessmentRequest(BaseModel):
-    skill_id: UUID
-    num_questions: int = Field(gt=0, le=50)  # max 50 questions
+    target_id: UUID
+    num_questions: int = Field(gt=4, le=20)  # max 20 questions
+    session_type: str
 
 
 class AssessmentQuestionResponse(BaseModel):

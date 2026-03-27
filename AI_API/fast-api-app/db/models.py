@@ -56,7 +56,8 @@ class User(Base):
     awards = relationship("Award", back_populates="user", cascade="all, delete-orphan")
     references = relationship("Reference", back_populates="user", cascade="all, delete-orphan")
     sessions = relationship("Session", back_populates="user", cascade="all, delete-orphan")
-    reports = relationship("Report", back_populates="user")
+    reports = relationship("Report", back_populates="user",cascade="all, delete-orphan")
+    assessment = relationship("RoadmapAssessmentResult", back_populates="user", cascade="all, delete-orphan")
 
 
 # ###########################################################################################################################
@@ -316,34 +317,30 @@ class AssessmentSession(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), nullable=False)
     skill_id = Column(UUID(as_uuid=True), ForeignKey("skills.id"), nullable=False)
+    roadmap_id = Column(UUID(as_uuid=True), ForeignKey("roadmaps.id"), nullable=True)
+    section_id = Column(UUID(as_uuid=True), ForeignKey("roadmap_sections.id"), nullable=True)
+    step_id = Column(UUID(as_uuid=True), ForeignKey("roadmap_steps.id"), nullable=True)
 
     total_questions = Column(Integer, nullable=False)
     score = Column(Integer, default=0)
-
     status = Column(String, default="in_progress")  # in_progress, submitted
+    type = Column(String, nullable=False)  # skill, roadmap, section, step
 
-    started_at = Column(
-        DateTime(timezone=True),
-        server_default=func.now(),
-        nullable=False
-    )
-    submitted_at = Column(
-        DateTime(timezone=True),
-        server_default=func.now(),
-        nullable=False
-    )
+    started_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    submitted_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
+    # Relationships
     assessment_questions = relationship(
-        "AssessmentQuestion",
-        back_populates="session",
-        cascade="all, delete"
+        "AssessmentQuestion", back_populates="session", cascade="all, delete"
+    )
+    assessment_answers = relationship(
+        "AssessmentAnswer", back_populates="session", cascade="all, delete"
     )
 
-    assessment_answers = relationship(
-        "AssessmentAnswer",
-        back_populates="session",
-        cascade="all, delete"
-    )
+    # Optional relationships to roadmap entities (read-only)
+    roadmap = relationship("Roadmap", foreign_keys=[roadmap_id])
+    section = relationship("RoadmapSection", foreign_keys=[section_id])
+    step = relationship("RoadmapStep", foreign_keys=[step_id])
 
 
 # =========================
@@ -353,31 +350,17 @@ class AssessmentQuestion(Base):
     __tablename__ = "assessment_questions"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    session_id = Column(
-        UUID(as_uuid=True),
-        ForeignKey("assessment_sessions.id"),
-        nullable=False
-    )
+    session_id = Column(UUID(as_uuid=True), ForeignKey("assessment_sessions.id"), nullable=False)
 
     question_text = Column(Text, nullable=False)
     options = Column(JSONB, nullable=False)
     correct_answer = Column(String, nullable=False)
-
     explanation = Column(Text, nullable=True)
     difficulty = Column(String, nullable=True)
-
-    created_at = Column(
-        DateTime(timezone=True),
-        server_default=func.now(),
-        nullable=False
-    )
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     session = relationship("AssessmentSession", back_populates="assessment_questions")
-
-    assessment_answers = relationship(
-        "AssessmentAnswer",
-        back_populates="question"
-    )
+    assessment_answers = relationship("AssessmentAnswer", back_populates="question")
 
 
 # =========================
@@ -387,27 +370,12 @@ class AssessmentAnswer(Base):
     __tablename__ = "assessment_answers"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-
-    session_id = Column(
-        UUID(as_uuid=True),
-        ForeignKey("assessment_sessions.id"),
-        nullable=False
-    )
-
-    question_id = Column(
-        UUID(as_uuid=True),
-        ForeignKey("assessment_questions.id"),
-        nullable=False
-    )
+    session_id = Column(UUID(as_uuid=True), ForeignKey("assessment_sessions.id"), nullable=False)
+    question_id = Column(UUID(as_uuid=True), ForeignKey("assessment_questions.id"), nullable=False)
 
     selected_answer = Column(String, nullable=False)
     is_correct = Column(Boolean, nullable=False)
-
-    answered_at = Column(
-        DateTime(timezone=True),
-        server_default=func.now(),
-        nullable=False
-    )
+    answered_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     session = relationship("AssessmentSession", back_populates="assessment_answers")
     question = relationship("AssessmentQuestion", back_populates="assessment_answers")
@@ -421,6 +389,7 @@ class ReportTypeEnum(str, enum):
     INTERVIEW_SESSION = "interview_session"
     SKILL_ASSESSMENT = "skill_assessment"
     OTHER = "other"
+
 
 class Report(Base):
     __tablename__ = "reports"
@@ -439,3 +408,70 @@ class Report(Base):
     user = relationship("User", back_populates="reports")  
 
 
+# =========================
+# ROADMAP
+# =========================
+class Roadmap(Base):
+    __tablename__ = "roadmaps"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    title = Column(String, nullable=False)
+    description = Column(String, nullable=True)
+
+    section = relationship("RoadmapSection", back_populates="roadmap")
+    assessment = relationship("RoadmapAssessmentResult", back_populates="roadmap")
+
+
+# =========================
+# ROADMAP SECTION
+# =========================
+class RoadmapSection(Base):
+    __tablename__ = "roadmap_sections"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    roadmap_id = Column(UUID(as_uuid=True), ForeignKey("roadmaps.id"), nullable=False)
+    title = Column(String, nullable=False)
+    description = Column(String, nullable=True)
+    order = Column(Integer, nullable=False)
+
+    roadmap = relationship("Roadmap", back_populates="section")
+    steps = relationship("RoadmapStep", back_populates="section")
+    assessment = relationship("RoadmapAssessmentResult", back_populates="section")
+
+
+# =========================
+# ROADMAP STEP
+# =========================
+class RoadmapStep(Base):
+    __tablename__ = "roadmap_steps"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    section_id = Column(UUID(as_uuid=True), ForeignKey("roadmap_sections.id"), nullable=False)
+    title = Column(String, nullable=False)
+    description = Column(String, nullable=True)
+    order = Column(Integer, nullable=False)
+
+    section = relationship("RoadmapSection", back_populates="steps")
+    assessment = relationship("RoadmapAssessmentResult", back_populates="step")
+
+
+# =========================
+# ROADMAP ASSESSMENT RESULT
+# =========================
+class RoadmapAssessmentResult(Base):
+    __tablename__ = "roadmap_assessment_results"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    roadmap_id = Column(UUID(as_uuid=True), ForeignKey("roadmaps.id"), nullable=True)
+    section_id = Column(UUID(as_uuid=True), ForeignKey("roadmap_sections.id"), nullable=True)
+    step_id = Column(UUID(as_uuid=True), ForeignKey("roadmap_steps.id"), nullable=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+
+    type = Column(String, nullable=False)
+    proficiency = Column(String, nullable=True)
+    score = Column(Integer, nullable=True)
+
+    roadmap = relationship("Roadmap", back_populates="assessment")
+    section = relationship("RoadmapSection", back_populates="assessment")
+    step = relationship("RoadmapStep", back_populates="assessment")
+    user = relationship("User", back_populates="assessment")

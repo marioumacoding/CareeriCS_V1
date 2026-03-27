@@ -124,10 +124,12 @@ export default function FollowUpRecordingPage() {
 
   return (
     <InterviewLayout 
-      questions={questions} 
+      questions={questions.map((q) => ({ ...q, title: q.text }))}
       currentActiveId={activeId} 
+      unlockedStepId={activeId}
       onQuestionClick={handleSidebarClick} 
       closeIconSrc="/interview/Close.svg"
+      closeRoute="/features/interview"
     >
       <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
         

@@ -14,6 +14,7 @@ interface InterviewLayoutProps {
   unlockedStepId: number;
   onQuestionClick: (id: number) => void;
   closeIconSrc: string;
+  closeRoute?: string;
   children: ReactNode;
   label?: string;
   title?: string; 
@@ -25,6 +26,7 @@ export default function InterviewLayout({
   unlockedStepId,
   onQuestionClick,
   closeIconSrc,
+  closeRoute = "/",
   children,
   label = "Question",
   title = "CV Builder", // El default title law maba3atsh haga
@@ -97,7 +99,7 @@ export default function InterviewLayout({
 
       {/* MAIN CONTENT */}
       <main style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
-        <button onClick={() => router.push('/')} style={{ position: "absolute", top: "30px", right: "30px", background: "none", border: "none", cursor: "pointer", zIndex: 10 }}>
+        <button onClick={() => router.push(closeRoute)} style={{ position: "absolute", top: "30px", right: "30px", background: "none", border: "none", cursor: "pointer", zIndex: 10 }}>
           <img src={closeIconSrc} alt="close" style={{ width: "24px" }} />
         </button>
 

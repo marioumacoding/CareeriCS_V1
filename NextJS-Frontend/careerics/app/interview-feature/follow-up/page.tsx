@@ -36,10 +36,12 @@ export default function FollowUpPage() {
 
   return (
     <InterviewLayout
-      questions={questions}
+      questions={questions.map((q) => ({ ...q, title: q.text }))}
       currentActiveId={currentQ}
+      unlockedStepId={currentQ}
       onQuestionClick={() => {}} // Locked sidebar
       closeIconSrc="/interview/Close.svg"
+      closeRoute="/features/interview"
     >
       <div style={{ 
         display: 'flex', 

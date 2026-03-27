@@ -9,7 +9,7 @@ import { useInterviewFlow } from "@/hooks";
 
 export default function RecordingPage() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, isLoading: isAuthLoading } = useAuth();
   const {
     interviewType,
     sessionId,
@@ -46,8 +46,12 @@ export default function RecordingPage() {
   const isFollowupMode = Boolean(followupId);
   const currentQuestionText = followupText || currentQuestion?.text || "";
   const submitBlockedReason =
-    !sessionId
-      ? "Please sign in first so an interview session can be created."
+    isAuthLoading
+      ? "Checking your session..."
+      : !user?.id
+        ? "Please sign in first so an interview session can be created."
+        : !sessionId
+          ? "Preparing your interview session..."
       : isQuestionsLoading
         ? "Questions are still loading."
         : isSubmitting
@@ -67,6 +71,10 @@ export default function RecordingPage() {
   }, [currentQ]);
 
   useEffect(() => {
+    if (isAuthLoading) {
+      return;
+    }
+
     if (hasCreatedSessionRef.current || sessionId || !user?.id) {
       return;
     }
@@ -105,7 +113,7 @@ export default function RecordingPage() {
     return () => {
       alive = false;
     };
-  }, [sessionId, user?.id, interviewType, currentQ, router, buildRecordingUrl]);
+  }, [isAuthLoading, sessionId, user?.id, interviewType, currentQ, router, buildRecordingUrl]);
 
   // 3. Timer Logic
   useEffect(() => {
@@ -373,6 +381,7 @@ export default function RecordingPage() {
       unlockedStepId={unlockedId}   // For Sidebar Lock Icons
       onQuestionClick={onQuestionClick}
       closeIconSrc="/interview/Close.svg"
+      closeRoute="/features/interview"
     >
       <InterviewContainer
         // STICKY TITLE: Always shows the unlocked question
@@ -383,8 +392,12 @@ export default function RecordingPage() {
               ? "Loading questions..."
               : questionsError || actionError
                 ? questionsError || actionError
-                : !sessionId && !user?.id
-                  ? "Please sign in to start interview session."
+                  : isAuthLoading
+                    ? "Checking your session..."
+                    : !sessionId && !user?.id
+                      ? "Please sign in to start interview session."
+                      : !sessionId
+                        ? "Preparing your interview session..."
                   : status === "recording"
                     ? " Recording..."
                     : isFinalizingRecording

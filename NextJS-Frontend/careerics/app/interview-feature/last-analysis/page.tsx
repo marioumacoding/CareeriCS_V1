@@ -35,10 +35,12 @@ export default function PreparingAnalysisPage() {
   if (!showHighlights) {
     return (
       <InterviewLayout
-        questions={questions}
+        questions={questions.map((q) => ({ ...q, title: q.text }))}
         currentActiveId={currentQ}
+        unlockedStepId={currentQ}
         onQuestionClick={() => {}}
         closeIconSrc="/interview/Close.svg"
+        closeRoute="/features/interview"
       >
        <div style={{ 
   textAlign: 'center', 
@@ -75,10 +77,12 @@ export default function PreparingAnalysisPage() {
   // 2. Final Highlights State
   return (
     <InterviewLayout
-      questions={questions}
+      questions={questions.map((q) => ({ ...q, title: q.text }))}
       currentActiveId={currentQ}
+      unlockedStepId={currentQ}
       onQuestionClick={() => {}}
       closeIconSrc="/interview/Close.svg"
+      closeRoute="/features/interview"
     >
       <div style={{ 
         width: '100%', 
@@ -179,7 +183,7 @@ export default function PreparingAnalysisPage() {
             Practice more
           </button>
           <button 
-            onClick={() => router.push('/')}
+            onClick={() => router.push('/features/home')}
             style={{
               backgroundColor: '#CBD5E1', 
               color: 'black',

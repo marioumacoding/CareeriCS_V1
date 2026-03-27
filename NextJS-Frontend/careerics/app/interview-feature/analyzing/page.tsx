@@ -187,6 +187,7 @@ export default function AnalyzingPage() {
         );
       }}
       closeIconSrc="/interview/Close.svg"
+      closeRoute="/features/interview"
     >
       <div
         style={{

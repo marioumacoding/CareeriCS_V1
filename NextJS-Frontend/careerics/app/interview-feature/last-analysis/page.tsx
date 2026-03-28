@@ -18,6 +18,9 @@ export default function LastAnalysisPage() {
 
   const [isPreparing, setIsPreparing] = useState(true);
   const [reportError, setReportError] = useState("");
+  const [isOpeningDrive, setIsOpeningDrive] = useState(false);
+  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
+  const [downloadName, setDownloadName] = useState("interview-analysis.pdf");
 
   const reportUrl = useMemo(() => {
     if (!sessionId) {
@@ -48,7 +51,37 @@ export default function LastAnalysisPage() {
 
         if (!response.ok) {
           setReportError("Report is not ready yet. You can retry download below.");
+          setDownloadUrl((prev) => {
+            if (prev) {
+              URL.revokeObjectURL(prev);
+            }
+            return null;
+          });
+          return;
         }
+
+        const blob = await response.blob();
+        if (!blob.size) {
+          setReportError("Report is empty. Please retry download below.");
+          return;
+        }
+
+        const contentDisposition = response.headers.get("content-disposition") || "";
+        const utf8NameMatch = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
+        const simpleNameMatch = contentDisposition.match(/filename=\"?([^\";]+)\"?/i);
+        const derivedName = decodeURIComponent(
+          utf8NameMatch?.[1] || simpleNameMatch?.[1] || "interview-analysis.pdf"
+        );
+
+        const objectUrl = URL.createObjectURL(blob);
+        setDownloadName(derivedName);
+        setDownloadUrl((prev) => {
+          if (prev) {
+            URL.revokeObjectURL(prev);
+          }
+          return objectUrl;
+        });
+        setReportError("");
       } catch {
         if (!alive) {
           return;
@@ -69,6 +102,14 @@ export default function LastAnalysisPage() {
     };
   }, [sessionId, reportUrl]);
 
+  useEffect(() => {
+    return () => {
+      if (downloadUrl) {
+        URL.revokeObjectURL(downloadUrl);
+      }
+    };
+  }, [downloadUrl]);
+
   const layoutQuestions = questions.map((q) => ({
     ...q,
     title: q.text,
@@ -77,12 +118,36 @@ export default function LastAnalysisPage() {
   const lastStep = questions.length || currentQ || 1;
 
   const onDownloadReport = () => {
-    if (!reportUrl) {
-      setReportError("Missing session report link.");
+    if (!downloadUrl) {
+      setReportError("Report is not ready yet. Please retry in a moment.");
       return;
     }
 
-    window.open(reportUrl, "_blank", "noopener,noreferrer");
+    const link = document.createElement("a");
+    link.href = downloadUrl;
+    link.download = downloadName;
+    link.click();
+  };
+
+  const handleGoogleDriveQuickOpen = () => {
+    if (isOpeningDrive) {
+      return;
+    }
+
+    setIsOpeningDrive(true);
+
+    if (downloadUrl) {
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = downloadName;
+      link.click();
+    }
+
+    window.open("https://drive.google.com/drive/my-drive", "_blank", "noopener,noreferrer");
+
+    window.setTimeout(() => {
+      setIsOpeningDrive(false);
+    }, 1400);
   };
 
   if (isPreparing) {
@@ -228,13 +293,36 @@ export default function LastAnalysisPage() {
             >
               <div
                 style={{
-                  width: "220px",
-                  height: "310px",
+                  width: "180px",
+                  height: "240px",
                   backgroundColor: "white",
-                  borderRadius: "30px",
+                  borderRadius: "25px",
                   boxShadow: "0 10px 30px rgba(0,0,0,0.2)",
+                  overflow: "hidden",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
                 }}
-              />
+              >
+                {downloadUrl ? (
+                  <iframe
+                    src={`${downloadUrl}#view=FitH&zoom=page-fit&pagemode=none&toolbar=0`}
+                    title="Interview analysis preview"
+                    style={{ width: "100%", height: "100%", border: "none" }}
+                  />
+                ) : (
+                  <span
+                    style={{
+                      color: "#6b7280",
+                      fontSize: "12px",
+                      textAlign: "center",
+                      padding: "10px",
+                    }}
+                  >
+                    Preview unavailable
+                  </span>
+                )}
+              </div>
 
               <div
                 style={{
@@ -254,10 +342,12 @@ export default function LastAnalysisPage() {
                     borderRadius: "12px",
                     fontWeight: "bold",
                     width: "260px",
-                    cursor: "pointer",
+                    cursor: downloadUrl ? "pointer" : "default",
                     fontFamily: "var(--font-nova-square)",
                     fontSize: "16px",
+                    opacity: downloadUrl ? 1 : 0.55,
                   }}
+                  disabled={!downloadUrl}
                 >
                   Download
                 </button>
@@ -274,7 +364,9 @@ export default function LastAnalysisPage() {
                 </span>
 
                 <button
-                  onClick={onDownloadReport}
+                  type="button"
+                  onClick={handleGoogleDriveQuickOpen}
+                  disabled={isOpeningDrive}
                   style={{
                     backgroundColor: "white",
                     color: "#1a1a1a",
@@ -286,13 +378,14 @@ export default function LastAnalysisPage() {
                     gap: "12px",
                     width: "260px",
                     justifyContent: "center",
-                    cursor: "pointer",
+                    cursor: isOpeningDrive ? "default" : "pointer",
                     fontSize: "14px",
                     fontWeight: 600,
+                    opacity: isOpeningDrive ? 0.7 : downloadUrl ? 1 : 0.55,
                   }}
                 >
                   <img src="/interview/drive.svg" style={{ width: "20px" }} alt="Drive" />
-                  Open with Google Drive
+                  {isOpeningDrive ? "Opening Drive..." : "Google Drive"}
                 </button>
               </div>
             </div>

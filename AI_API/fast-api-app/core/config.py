@@ -29,6 +29,8 @@ class Settings:
 
     AUDIO_BASE = "audio"
 
+    ROADMAP_IMPORT_BASE = os.getenv("ROADMAP_IMPORT_BASE")
+
     AUDIO_PATHS = {
         "questions": "audio/questions",
         "answers": "audio/answers",

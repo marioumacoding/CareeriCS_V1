@@ -10,6 +10,7 @@ from routers.cv.cv import routers as cv_routers
 from routers.skills.skill import routers as skill_routers
 from routers.skill_assessment.sa import routers as skill_assessment_routers
 from routers.reports.report_router import router as report_router
+from routers.roadmaps.roadmap import routers as roadmap_routers
 
 Base.metadata.create_all(bind=engine)
 
@@ -45,6 +46,9 @@ for router in skill_routers:
     app.include_router(router)
 
 for router in skill_assessment_routers:
+    app.include_router(router)
+
+for router in roadmap_routers:
     app.include_router(router)
 
 app.include_router(report_router)

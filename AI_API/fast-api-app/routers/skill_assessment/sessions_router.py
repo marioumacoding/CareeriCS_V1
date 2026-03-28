@@ -16,7 +16,7 @@ async def start_session_endpoint(
     db: Session = Depends(get_db)
 ):
     try:
-        return start_session(db, str(user_id), payload.skill_id, payload.num_questions)
+        return start_session(db, str(user_id), payload.target_id, payload.num_questions, payload.session_type)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 

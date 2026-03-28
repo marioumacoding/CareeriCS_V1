@@ -1,9 +1,24 @@
 from sqlalchemy.orm import Session
 from uuid import uuid4
 from datetime import datetime
-from db.models import AssessmentAnswer, AssessmentQuestion, AssessmentSession, UserSkill
-from schemas import SubmitAssessmentResponse, AssessmentQuestionResult
-from utils.util import calculate_score, score_to_proficiency
+
+from db.models import (
+    AssessmentAnswer,
+    AssessmentQuestion,
+    AssessmentSession,
+    UserSkill,
+    RoadmapAssessmentResult   # <-- NEW IMPORT
+)
+
+from schemas import (
+    SubmitAssessmentResponse,
+    AssessmentQuestionResult
+)
+
+from utils.util import (
+    calculate_score,
+    score_to_proficiency
+)
 
 
 def submit_answers(db: Session, session_id: str, user_id: str, user_answers: list) -> SubmitAssessmentResponse:
@@ -14,15 +29,18 @@ def submit_answers(db: Session, session_id: str, user_id: str, user_answers: lis
     if session.status == "submitted":
         raise ValueError("Assessment already submitted")
 
+    # Fetch questions
     questions = db.query(AssessmentQuestion).filter_by(session_id=session_id).all()
     questions_map = {q.id: q for q in questions}
 
+    # Save answers and compute correctness
     answer_objects = []
     results = []
+
     for ans in user_answers:
         q = questions_map.get(ans["question_id"])
         if not q:
-            continue  
+            continue
         is_correct = ans["selected_answer"] == q.correct_answer
         answer_objects.append(
             AssessmentAnswer(
@@ -46,34 +64,59 @@ def submit_answers(db: Session, session_id: str, user_id: str, user_answers: lis
 
     db.bulk_save_objects(answer_objects)
 
+    # Calculate score & proficiency
     score = calculate_score([{"is_correct": r.is_correct} for r in results])
+    proficiency = score_to_proficiency(score)
+
+    # Update session
     session.score = score
     session.status = "submitted"
     session.submitted_at = datetime.utcnow()
     db.commit()
 
-    user_skill = db.query(UserSkill).filter_by(
-        user_id=user_id,
-        skill_id=session.skill_id
-    ).first()
+    # Save proficiency based on session type
+    if session.type == "skills":
+        user_skill = db.query(UserSkill).filter_by(user_id=user_id, skill_id=session.skill_id).first()
+        if user_skill:
+            user_skill.score = score
+            user_skill.proficiency = proficiency
+        else:
+            user_skill = UserSkill(
+                id=uuid4(),
+                user_id=user_id,
+                skill_id=session.skill_id,
+                score=score,
+                proficiency=proficiency,
+                isCV=True
+            )
+            db.add(user_skill)
 
-    if user_skill:
-        # Update existing skill
-        user_skill.score = score
-        user_skill.proficiency = score_to_proficiency(score)
+    else:  # roadmap / section / step
+        filter_kwargs = {"user_id": user_id, "type": session.type}
+        if session.type == "roadmap":
+            filter_kwargs["roadmap_id"] = session.roadmap_id
+        elif session.type == "section":
+            filter_kwargs["section_id"] = session.section_id
+        elif session.type == "step":
+            filter_kwargs["step_id"] = session.step_id
 
-    else:
-        # Create new skill if not found
-        user_skill = UserSkill(
-            id=uuid4(),
-            user_id=user_id,
-            skill_id=session.skill_id,
-            score=score,
-            proficiency=score_to_proficiency(score),
-            isCV=True,  # <-- required
-        )
-
-        db.add(user_skill)
+        roadmap_result = db.query(RoadmapAssessmentResult).filter_by(**filter_kwargs).first()
+        if roadmap_result:
+            roadmap_result.score = score
+            roadmap_result.proficiency = proficiency
+            roadmap_result.updated_at = datetime.utcnow()
+        else:
+            roadmap_result = RoadmapAssessmentResult(
+                id=uuid4(),
+                user_id=user_id,
+                roadmap_id=session.roadmap_id if session.type == "roadmap" else None,
+                section_id=session.section_id if session.type == "section" else None,
+                step_id=session.step_id if session.type == "step" else None,
+                type=session.type,
+                score=score,
+                proficiency=proficiency,
+            )
+            db.add(roadmap_result)
 
     db.commit()
 
@@ -83,7 +126,7 @@ def submit_answers(db: Session, session_id: str, user_id: str, user_answers: lis
         total_questions=len(results),
         results=results
     )
-
+    
 
 def get_results(db: Session, session_id: str, user_id: str) -> SubmitAssessmentResponse:
     session = db.query(AssessmentSession).filter_by(id=session_id, user_id=user_id).first()

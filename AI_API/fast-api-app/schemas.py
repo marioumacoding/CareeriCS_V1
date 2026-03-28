@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Any
 from uuid import UUID
 
 
@@ -376,3 +376,138 @@ class ReportSchema(BaseModel):
 # =====================================================
 class CVBuildRequest(BaseModel):
     cv_text: str
+
+
+# =====================================================
+# ROADMAP IMPORT/READ/PROGRESS SCHEMAS
+# =====================================================
+
+class RoadmapResourceSchema(BaseModel):
+    resourceType: str
+    title: str
+    url: str
+
+
+class RoadmapStepImportSchema(BaseModel):
+    title: str
+    description: Optional[str] = ""
+    resources: List[RoadmapResourceSchema] = Field(default_factory=list)
+
+
+class RoadmapSectionImportSchema(BaseModel):
+    title: str
+    description: Optional[str] = ""
+    steps: List[RoadmapStepImportSchema] = Field(default_factory=list)
+
+
+class RoadmapImportPayloadSchema(BaseModel):
+    title: str
+    description: Optional[str] = ""
+    sections: List[RoadmapSectionImportSchema] = Field(default_factory=list)
+
+
+class RoadmapImportRequestSchema(BaseModel):
+    roadmap: Optional[RoadmapImportPayloadSchema] = None
+    roadmaps: Optional[List[RoadmapImportPayloadSchema]] = None
+
+
+class RoadmapImportFromPathRequestSchema(BaseModel):
+    path: str
+    recursive: bool = False
+
+
+class RoadmapImportItemResultSchema(BaseModel):
+    title: str
+    status: str
+    sections_count: int = 0
+    steps_count: int = 0
+    message: Optional[str] = None
+
+
+class BulkRoadmapImportResponseSchema(BaseModel):
+    imported: int
+    updated: int
+    failed: int
+    results: List[RoadmapImportItemResultSchema]
+
+
+class RoadmapStepReadSchema(BaseModel):
+    id: UUID
+    title: str
+    description: Optional[str] = ""
+    order: int
+    resources: List[Dict[str, Any]] = Field(default_factory=list)
+    model_config = ConfigDict(from_attributes=True)
+
+
+class RoadmapSectionReadSchema(BaseModel):
+    id: UUID
+    title: str
+    description: Optional[str] = ""
+    order: int
+    steps: List[RoadmapStepReadSchema] = Field(default_factory=list)
+    model_config = ConfigDict(from_attributes=True)
+
+
+class RoadmapReadSchema(BaseModel):
+    id: UUID
+    title: str
+    description: Optional[str] = ""
+    sections: List[RoadmapSectionReadSchema] = Field(default_factory=list)
+    model_config = ConfigDict(from_attributes=True)
+
+
+class RoadmapListItemSchema(BaseModel):
+    id: UUID
+    title: str
+    description: Optional[str] = ""
+    sections_count: int
+    steps_count: int
+
+
+class StepProgressUpsertRequestSchema(BaseModel):
+    completion_status: str = Field(pattern="^(not_started|in_progress|completed)$")
+    score: Optional[int] = None
+    proficiency: Optional[str] = None
+
+
+class StepProgressReadSchema(BaseModel):
+    step_id: UUID
+    completion_status: str
+    completed_at: Optional[datetime] = None
+    score: Optional[int] = None
+    proficiency: Optional[str] = None
+
+
+class SectionProgressSummarySchema(BaseModel):
+    section_id: UUID
+    title: str
+    completion_status: str
+    completed_steps: int
+    total_steps: int
+    completion_percent: int
+    steps: List[StepProgressReadSchema] = Field(default_factory=list)
+
+
+class RoadmapProgressSummarySchema(BaseModel):
+    roadmap_id: UUID
+    title: str
+    completion_status: str
+    completed_sections: int
+    total_sections: int
+    completed_steps: int
+    total_steps: int
+    completion_percent: int
+    sections: List[SectionProgressSummarySchema] = Field(default_factory=list)
+
+
+class UserRoadmapProgressItemSchema(BaseModel):
+    roadmap_id: UUID
+    title: str
+    completion_status: str
+    completion_percent: int
+
+
+class UserRoadmapProgressListSchema(BaseModel):
+    user_id: UUID
+    roadmaps: List[UserRoadmapProgressItemSchema] = Field(default_factory=list)

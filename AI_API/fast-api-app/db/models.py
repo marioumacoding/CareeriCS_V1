@@ -12,7 +12,8 @@ from sqlalchemy import (
     JSON,
     DateTime,
     UniqueConstraint,
-    Float
+    Float,
+    Index
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import ARRAY, BYTEA, JSONB, UUID
@@ -415,10 +416,10 @@ class Roadmap(Base):
     __tablename__ = "roadmaps"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    title = Column(String, nullable=False)
+    title = Column(String, nullable=False, unique=True)
     description = Column(String, nullable=True)
 
-    section = relationship("RoadmapSection", back_populates="roadmap")
+    section = relationship("RoadmapSection", back_populates="roadmap", cascade="all, delete-orphan")
     assessment = relationship("RoadmapAssessmentResult", back_populates="roadmap")
 
 
@@ -435,8 +436,12 @@ class RoadmapSection(Base):
     order = Column(Integer, nullable=False)
 
     roadmap = relationship("Roadmap", back_populates="section")
-    steps = relationship("RoadmapStep", back_populates="section")
+    steps = relationship("RoadmapStep", back_populates="section", cascade="all, delete-orphan")
     assessment = relationship("RoadmapAssessmentResult", back_populates="section")
+
+    __table_args__ = (
+        UniqueConstraint("roadmap_id", "order", name="uq_roadmap_sections_roadmap_order"),
+    )
 
 
 # =========================
@@ -449,10 +454,15 @@ class RoadmapStep(Base):
     section_id = Column(UUID(as_uuid=True), ForeignKey("roadmap_sections.id"), nullable=False)
     title = Column(String, nullable=False)
     description = Column(String, nullable=True)
+    resources = Column(JSONB, nullable=True)
     order = Column(Integer, nullable=False)
 
     section = relationship("RoadmapSection", back_populates="steps")
     assessment = relationship("RoadmapAssessmentResult", back_populates="step")
+
+    __table_args__ = (
+        UniqueConstraint("section_id", "order", name="uq_roadmap_steps_section_order"),
+    )
 
 
 # =========================
@@ -470,8 +480,24 @@ class RoadmapAssessmentResult(Base):
     type = Column(String, nullable=False)
     proficiency = Column(String, nullable=True)
     score = Column(Integer, nullable=True)
+    completion_status = Column(String, nullable=False, default="not_started")
+    completed_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
     roadmap = relationship("Roadmap", back_populates="assessment")
     section = relationship("RoadmapSection", back_populates="assessment")
     step = relationship("RoadmapStep", back_populates="assessment")
     user = relationship("User", back_populates="assessment")
+
+    __table_args__ = (
+        Index(
+            "uq_roadmap_assessment_results_target",
+            "user_id",
+            "type",
+            "roadmap_id",
+            "section_id",
+            "step_id",
+            unique=True,
+        ),
+    )

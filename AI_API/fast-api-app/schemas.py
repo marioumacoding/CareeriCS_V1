@@ -465,6 +465,22 @@ class RoadmapListItemSchema(BaseModel):
     steps_count: int
 
 
+class UserRoadmapBookmarkReadSchema(BaseModel):
+    roadmap_id: UUID
+    created_at: datetime
+    model_config = ConfigDict(from_attributes=True)
+
+
+class UserRoadmapBookmarkListSchema(BaseModel):
+    user_id: UUID
+    bookmarks: List[UserRoadmapBookmarkReadSchema] = Field(default_factory=list)
+
+
+class UserRoadmapBookmarkToggleSchema(BaseModel):
+    roadmap_id: UUID
+    bookmarked: bool
+
+
 class StepProgressUpsertRequestSchema(BaseModel):
     completion_status: str = Field(pattern="^(not_started|in_progress|completed)$")
     score: Optional[int] = None

@@ -59,6 +59,7 @@ class User(Base):
     sessions = relationship("Session", back_populates="user", cascade="all, delete-orphan")
     reports = relationship("Report", back_populates="user",cascade="all, delete-orphan")
     assessment = relationship("RoadmapAssessmentResult", back_populates="user", cascade="all, delete-orphan")
+    bookmarks = relationship("UserRoadmapBookmark", back_populates="user", cascade="all, delete-orphan")
 
 
 # ###########################################################################################################################
@@ -421,6 +422,28 @@ class Roadmap(Base):
 
     section = relationship("RoadmapSection", back_populates="roadmap", cascade="all, delete-orphan")
     assessment = relationship("RoadmapAssessmentResult", back_populates="roadmap")
+    bookmarks = relationship("UserRoadmapBookmark", back_populates="roadmap", cascade="all, delete-orphan")
+
+
+# =========================
+# ROADMAP BOOKMARK
+# =========================
+class UserRoadmapBookmark(Base):
+    __tablename__ = "user_roadmap_bookmarks"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    roadmap_id = Column(UUID(as_uuid=True), ForeignKey("roadmaps.id", ondelete="CASCADE"), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    user = relationship("User", back_populates="bookmarks")
+    roadmap = relationship("Roadmap", back_populates="bookmarks")
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "roadmap_id", name="uq_user_roadmap_bookmarks_user_roadmap"),
+        Index("ix_user_roadmap_bookmarks_user_id", "user_id"),
+        Index("ix_user_roadmap_bookmarks_roadmap_id", "roadmap_id"),
+    )
 
 
 # =========================

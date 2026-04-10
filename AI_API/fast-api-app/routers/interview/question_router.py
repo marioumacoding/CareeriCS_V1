@@ -23,7 +23,10 @@ def get_questions(db: Session = Depends(get_db)):
 
 
 @router.get("/type/{question_type}", response_model=List[schemas.QuestionRead])
-def get_questions_by_type(question_type: str, db: Session = Depends(get_db)):
+def get_questions_by_type(
+    question_type: str,
+    db: Session = Depends(get_db),
+):
     return get_questions_by_type_service(db, question_type)
 
 

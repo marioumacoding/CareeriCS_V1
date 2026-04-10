@@ -49,6 +49,10 @@ def create_skills_bulk(db: Session, skills_data: List[SkillCreate]) -> List[Skil
     return created_skills
 
 
+def list_skills(db: Session) -> List[Skill]:
+    return db.query(Skill).order_by(Skill.skill_name.asc()).all()
+
+
 # ============================================================
 # Skill Mapping 
 # ============================================================

@@ -198,3 +198,70 @@ export interface CVProfile {
   awards: CVAward[];
   references: CVReference[];
 }
+
+// ── FastAPI Skills domain ───────────────────────────────
+
+export interface APISkill {
+  id: string;
+  skill_name: string;
+}
+
+// ── FastAPI Skill assessment domain ─────────────────────
+
+export interface APIStartAssessmentRequest {
+  skill_id: string;
+  num_questions: number;
+}
+
+export interface APIAssessmentQuestion {
+  id: string;
+  question_text: string;
+  options: string[];
+}
+
+export interface APIStartAssessmentResponse {
+  session_id: string;
+  questions: APIAssessmentQuestion[];
+}
+
+export interface APIAssessmentAnswerInput {
+  question_id: string;
+  selected_answer: string;
+}
+
+export interface APIAssessmentQuestionResult {
+  question_id: string;
+  selected_answer: string;
+  correct_answer: string;
+  explanation: string;
+  is_correct: boolean;
+}
+
+export interface APISubmitAssessmentResponse {
+  session_id: string;
+  score: number;
+  total_questions: number;
+  results: APIAssessmentQuestionResult[];
+}
+
+export interface APIAssessmentSessionSummary {
+  id: string;
+  user_id: string;
+  skill_id: string;
+  total_questions: number;
+  score: number;
+  status: string;
+  started_at: string;
+  submitted_at?: string | null;
+}
+
+// ── FastAPI Reports domain ──────────────────────────────
+
+export type APIReportType = "cv" | "interview_session" | "skill_assessment" | "other";
+
+export interface APIReport {
+  id: string;
+  filename: string;
+  created_at: string;
+  type: APIReportType;
+}

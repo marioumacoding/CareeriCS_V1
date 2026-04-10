@@ -1,105 +1,299 @@
 "use client";
-import React, { useState, useEffect } from 'react';
-import Interview from "@/components/ui/interview"; 
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import Interview from "@/components/ui/interview";
+import { useAuth } from "@/providers/auth-provider";
+import { skillAssessmentService } from "@/services";
+import type {
+  APIAssessmentQuestion,
+  APIAssessmentQuestionResult,
+  APISubmitAssessmentResponse,
+} from "@/types";
+
+const STORAGE_PREFIX = "skill-assessment:";
+
+type CachedAssessmentState = {
+  sessionId: string;
+  questions: APIAssessmentQuestion[];
+  userAnswers: Record<string, string>;
+  currentQuestion: number;
+  unlockedStepId: number;
+};
+
+function getProficiencyLevel(score: number): "Advanced" | "Intermediate" | "Beginner" {
+  if (score >= 80) return "Advanced";
+  if (score >= 50) return "Intermediate";
+  return "Beginner";
+}
 
 export default function AssessmentPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { user, isLoading: isAuthLoading } = useAuth();
+
+  const skillId = searchParams.get("skillId") || "";
+  const skillName = searchParams.get("skillName") || "Skill Assessment";
+  const resumeSessionId = searchParams.get("sessionId") || "";
+  const parsedNumQuestions = Number(searchParams.get("numQuestions") || "7");
+  const numQuestions = Number.isFinite(parsedNumQuestions) && parsedNumQuestions > 0
+    ? Math.min(parsedNumQuestions, 20)
+    : 7;
+
   const [currentQuestion, setCurrentQuestion] = useState(1);
-  const [expandedId, setExpandedId] = useState(1); // Dah lel sidebar expansion bas
-  const [selectedChoice, setSelectedChoice] = useState<number | null>(null);
+  const [expandedId, setExpandedId] = useState(1);
   const [unlockedStepId, setUnlockedStepId] = useState(1);
-  
-  const [isAnswered, setIsAnswered] = useState(false); 
+
+  const [sessionId, setSessionId] = useState("");
+  const [questions, setQuestions] = useState<APIAssessmentQuestion[]>([]);
+  const [userAnswers, setUserAnswers] = useState<Record<string, string>>({});
+
+  const [isInitializing, setIsInitializing] = useState(true);
   const [isCalculating, setIsCalculating] = useState(false);
   const [showResult, setShowResult] = useState(false);
-  const [isReviewing, setIsReviewing] = useState(false); 
-  const [score, setScore] = useState(0); 
-  const [userAnswers, setUserAnswers] = useState<Record<number, number>>({}); 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isReviewing, setIsReviewing] = useState(false);
+  const [resultsData, setResultsData] = useState<APISubmitAssessmentResponse | null>(null);
+  const [error, setError] = useState("");
 
-  const assessmentSteps = [
-    { id: 1, title: "", text: "Topic analysis", correct: 1 },
-    { id: 2, title: "", text: "Technical skills", correct: 2 },
-    { id: 3, title: "", text: "Problem solving", correct: 3 },
-    { id: 4, title: "", text: "Experience level", correct: 4 },
-    { id: 5, title: "", text: "Methodology", correct: 1 },
-    { id: 6, title: "", text: "Tools & Frameworks", correct: 2 },
-    { id: 7, title: "", text: "Final Assessment", correct: 3 },
-  ];
+  const initKeyRef = useRef("");
 
-  const currentQData = assessmentSteps.find(q => q.id === currentQuestion);
+  const currentQData = questions[currentQuestion - 1] || null;
+  const selectedChoice = currentQData ? userAnswers[currentQData.id] || null : null;
+  const isAnswered = Boolean(selectedChoice);
+  const allAnswered = questions.length > 0 && questions.every((q) => Boolean(userAnswers[q.id]));
+
+  const resultByQuestionId = useMemo(() => {
+    const map = new Map<string, APIAssessmentQuestionResult>();
+    for (const item of resultsData?.results || []) {
+      map.set(item.question_id, item);
+    }
+    return map;
+  }, [resultsData]);
+
+  const sidebarQuestions = questions.map((q, idx) => ({
+    id: idx + 1,
+    title: q.question_text,
+    text: q.question_text,
+  }));
+
+  const persistAssessmentState = (
+    nextSessionId: string,
+    nextQuestions: APIAssessmentQuestion[],
+    nextAnswers: Record<string, string>,
+    nextCurrentQuestion: number,
+    nextUnlockedStepId: number,
+  ) => {
+    const cacheKey = `${STORAGE_PREFIX}${nextSessionId}`;
+    const payload: CachedAssessmentState = {
+      sessionId: nextSessionId,
+      questions: nextQuestions,
+      userAnswers: nextAnswers,
+      currentQuestion: nextCurrentQuestion,
+      unlockedStepId: nextUnlockedStepId,
+    };
+    sessionStorage.setItem(cacheKey, JSON.stringify(payload));
+  };
+
+  const startNewSession = async () => {
+    if (!user?.id || !skillId) return;
+
+    setIsInitializing(true);
+    setError("");
+    setShowResult(false);
+    setIsReviewing(false);
+    setResultsData(null);
+
+    const response = await skillAssessmentService.startSession(user.id, {
+      skill_id: skillId,
+      num_questions: numQuestions,
+    });
+
+    if (!response.success || !response.data?.session_id || !response.data.questions?.length) {
+      setError(response.message || "Unable to start skill assessment session.");
+      setIsInitializing(false);
+      return;
+    }
+
+    const nextSessionId = response.data.session_id;
+    const nextQuestions = response.data.questions;
+
+    setSessionId(nextSessionId);
+    setQuestions(nextQuestions);
+    setUserAnswers({});
+    setCurrentQuestion(1);
+    setExpandedId(1);
+    setUnlockedStepId(1);
+
+    persistAssessmentState(nextSessionId, nextQuestions, {}, 1, 1);
+
+    const params = new URLSearchParams({
+      skillId,
+      skillName,
+      numQuestions: String(numQuestions),
+      sessionId: nextSessionId,
+    });
+    router.replace(`/skill-feature/questions?${params.toString()}`);
+
+    setIsInitializing(false);
+  };
 
   useEffect(() => {
-    if (isCalculating) {
-      const timer = setTimeout(() => {
-        setIsCalculating(false);
-        setShowResult(true); 
-      }, 4000);
-      return () => clearTimeout(timer);
+    if (isAuthLoading) {
+      return;
     }
-  }, [isCalculating]);
 
-  const handleChoiceClick = (choiceId: number) => {
-    if (isReviewing) return; 
-    setSelectedChoice(choiceId);
-    setIsAnswered(true);
-    setUserAnswers(prev => ({ ...prev, [currentQuestion]: choiceId }));
+    const initKey = `${user?.id || ""}:${skillId}:${resumeSessionId}:${numQuestions}`;
+    if (initKeyRef.current === initKey) return;
+    initKeyRef.current = initKey;
+
+    if (!user?.id) {
+      setIsInitializing(false);
+      setError("Please sign in to start the assessment.");
+      return;
+    }
+
+    if (!skillId) {
+      setIsInitializing(false);
+      setError("Missing skill identifier. Please select a skill first.");
+      return;
+    }
+
+    const initialize = async () => {
+      if (resumeSessionId) {
+        const wantsResume = window.confirm("We found an existing session. Do you want to resume it?");
+        if (wantsResume) {
+          const cached = sessionStorage.getItem(`${STORAGE_PREFIX}${resumeSessionId}`);
+          if (cached) {
+            try {
+              const parsed = JSON.parse(cached) as CachedAssessmentState;
+              if (parsed.sessionId && parsed.questions?.length) {
+                setSessionId(parsed.sessionId);
+                setQuestions(parsed.questions);
+                setUserAnswers(parsed.userAnswers || {});
+                setCurrentQuestion(parsed.currentQuestion || 1);
+                setExpandedId(parsed.currentQuestion || 1);
+                setUnlockedStepId(parsed.unlockedStepId || 1);
+                setIsInitializing(false);
+                return;
+              }
+            } catch {
+              // Ignore malformed cache and fall through to restart.
+            }
+          }
+
+          setError("Previous session cache is not available. Starting a new session.");
+        }
+      }
+
+      await startNewSession();
+    };
+
+    void initialize();
+  }, [isAuthLoading, numQuestions, resumeSessionId, skillId, skillName, user?.id]);
+
+  useEffect(() => {
+    if (!sessionId || !questions.length) return;
+    persistAssessmentState(sessionId, questions, userAnswers, currentQuestion, unlockedStepId);
+  }, [currentQuestion, questions, sessionId, unlockedStepId, userAnswers]);
+
+  const handleChoiceClick = (choiceValue: string) => {
+    if (!currentQData || isReviewing) return;
+
+    setUserAnswers((prev) => ({
+      ...prev,
+      [currentQData.id]: choiceValue,
+    }));
+
+    if (currentQuestion < questions.length) {
+      setUnlockedStepId((prev) => Math.max(prev, currentQuestion + 1));
+    }
   };
 
   const handleNext = () => {
-    if (currentQuestion < 7) {
+    if (currentQuestion < questions.length) {
       const nextQ = currentQuestion + 1;
       setCurrentQuestion(nextQ);
-      setExpandedId(nextQ); // El sidebar yemshi ma3 el content fl Next
+      setExpandedId(nextQ);
       if (nextQ > unlockedStepId) setUnlockedStepId(nextQ);
-      
-      const storedAnswer = userAnswers[nextQ];
-      setSelectedChoice(storedAnswer || null);
-      setIsAnswered(!!storedAnswer);
     }
   };
 
-  const handleFinish = () => {
-    if (isAnswered && currentQuestion === 7) {
-      let finalScore = 0;
-      assessmentSteps.forEach(q => {
-        if (userAnswers[q.id] === q.correct) finalScore++;
-      });
-      setScore(finalScore);
-      setIsCalculating(true);
+  const handleFinish = async () => {
+    if (!user?.id || !sessionId || !allAnswered || isSubmitting || !questions.length) {
+      return;
     }
+
+    setIsCalculating(true);
+    setIsSubmitting(true);
+    setError("");
+
+    const answersPayload = questions
+      .map((question) => ({
+        question_id: question.id,
+        selected_answer: userAnswers[question.id],
+      }))
+      .filter((answer) => Boolean(answer.selected_answer));
+
+    const submitResponse = await skillAssessmentService.submitAnswers(
+      user.id,
+      sessionId,
+      answersPayload,
+    );
+
+    if (!submitResponse.success || !submitResponse.data) {
+      setIsCalculating(false);
+      setIsSubmitting(false);
+      setError(submitResponse.message || "Unable to submit assessment answers.");
+      return;
+    }
+
+    const resultsResponse = await skillAssessmentService.getResults(user.id, sessionId);
+    const finalResults =
+      resultsResponse.success && resultsResponse.data
+        ? resultsResponse.data
+        : submitResponse.data;
+
+    setResultsData(finalResults);
+    setShowResult(true);
+    setIsReviewing(false);
+    setUnlockedStepId(questions.length);
+    setIsCalculating(false);
+    setIsSubmitting(false);
   };
 
   const handleViewDetails = () => {
     setIsReviewing(true);
     setShowResult(false);
-    setCurrentQuestion(1); 
+    setCurrentQuestion(1);
     setExpandedId(1);
-    setSelectedChoice(userAnswers[1]);
-    setIsAnswered(true);
+
+    if (!resultsData) return;
+    const answeredQuestionIds = new Set(resultsData.results.map((r) => r.question_id));
+    let unlocked = 1;
+    for (let i = 0; i < questions.length; i += 1) {
+      if (answeredQuestionIds.has(questions[i].id)) {
+        unlocked = i + 1;
+      }
+    }
+    setUnlockedStepId(Math.max(1, unlocked));
   };
 
-  const percentage = Math.round((score / assessmentSteps.length) * 100);
+  const percentage = Math.round(resultsData?.score || 0);
 
   return (
-    <Interview 
-      // Mapping text to title for sidebar header
-      questions={assessmentSteps.map(q => ({ ...q, title: q.text }))}
-      currentActiveId={expandedId} // Control sidebar expansion
-      unlockedStepId={unlockedStepId} 
+    <Interview
+      questions={sidebarQuestions}
+      currentActiveId={expandedId}
+      unlockedStepId={unlockedStepId}
       onQuestionClick={(id) => {
-        // ALWAYS expand the clicked question in sidebar
         setExpandedId(id);
-
-        // ONLY change the main quiz content if the question is unlocked
         if (id <= unlockedStepId) {
           setCurrentQuestion(id);
-          const stored = userAnswers[id];
-          setSelectedChoice(stored || null);
-          setIsAnswered(!!stored);
         }
-        // Law locked, el setExpandedId haykhalli el sidebar yeftha bas el content hayfdal sabet
       }}
       closeIconSrc="/auth/Close.svg"
-      title="Test_001" 
+      closeRoute="/features/skill"
+      title={skillName}
     >
       <div style={{
         width: "100%", height: "100vh", display: "flex", flexDirection: "column",
@@ -107,7 +301,14 @@ export default function AssessmentPage() {
         padding: "10px 100px", boxSizing: "border-box",
       }}>
         
-        {showResult ? (
+        {isInitializing ? (
+          <div style={{ textAlign: "center", color: "white" }}>
+            <h2 style={{ fontSize: "28px", fontFamily: "var(--font-nova-square)", marginBottom: "12px" }}>
+              {isAuthLoading ? "Checking your session..." : "Preparing your assessment..."}
+            </h2>
+            {error ? <p style={{ color: "#ffd3d3" }}>{error}</p> : null}
+          </div>
+        ) : showResult ? (
           /* --- RESULT SCREEN --- */
           <div style={{ display: "flex", width: "100%", maxWidth: "900px", justifyContent: "space-between", alignItems: "center", gap: "50px" }}>
             <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center" }}>
@@ -135,12 +336,17 @@ export default function AssessmentPage() {
             <div style={{ flex: 1, color: "white" }}>
               <h2 style={{ fontSize: "32px", fontFamily: "var(--font-nova-square)", marginBottom: "15px" }}>Your Proficiency Level</h2>
               <h1 style={{ fontSize: "56px", color: "#D4FF47", fontWeight: "500", marginBottom: "20px", fontFamily: "var(--font-nova-square)" }}>
-                {percentage >= 80 ? "Advanced" : percentage >= 50 ? "Intermediate" : "Beginner"}
+                {getProficiencyLevel(percentage)}
               </h1>
               <p style={{ fontSize: "18px", opacity: 0.8, lineHeight: "1.6", marginBottom: "40px" }}>
                 Assessment complete. You can now review each question to see the correct answers.
               </p>
-              <button onClick={() => window.location.reload()} style={{ width: "100%", maxWidth: "250px", backgroundColor: "#C1CBE6", border: "none", padding: "12px", borderRadius: "12px", fontWeight: "bold", fontSize: "16px", cursor: "pointer", color: "#111827" }}>
+              <button
+                onClick={() => {
+                  void startNewSession();
+                }}
+                style={{ width: "100%", maxWidth: "250px", backgroundColor: "#C1CBE6", border: "none", padding: "12px", borderRadius: "12px", fontWeight: "bold", fontSize: "16px", cursor: "pointer", color: "#111827" }}
+              >
                 Retake Assessment
               </button>
             </div>
@@ -156,27 +362,32 @@ export default function AssessmentPage() {
         ) : (
           <div style={{ width: "100%", maxWidth: "680px", display: "flex", flexDirection: "column", alignItems: "center" }}>
             <h3 style={{ color: "white", fontSize: "24px", marginBottom: "35px", textAlign: "center", fontFamily: 'var(--font-nova-square)' }}>
-              {currentQuestion}. {currentQData?.text}
+              {currentQuestion}. {currentQData?.question_text}
             </h3>
 
+            {error ? (
+              <p style={{ color: "#ffd3d3", marginTop: "0", marginBottom: "20px" }}>{error}</p>
+            ) : null}
+
             <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: "12px" }}>
-              {[1, 2, 3, 4].map((choice) => {
+              {(currentQData?.options || []).map((choice) => {
                 const isSelected = selectedChoice === choice;
-                const isCorrect = currentQData?.correct === choice;
+                const questionResult = currentQData ? resultByQuestionId.get(currentQData.id) : undefined;
+                const isCorrect = questionResult?.correct_answer === choice;
                 let bgColor = "white";
                 if (isReviewing) {
-                  if (isCorrect) bgColor = "#dff98c"; 
-                  else if (isSelected && !isCorrect) bgColor = "#fd8686"; 
+                  if (isCorrect) bgColor = "#dff98c";
+                  else if (isSelected && !isCorrect) bgColor = "#fd8686";
                 }
                 return (
                   <div key={choice} onClick={() => handleChoiceClick(choice)}
                     style={{
-                      backgroundColor: bgColor, borderRadius: "15px", padding: "16px 25px", 
+                      backgroundColor: bgColor, borderRadius: "15px", padding: "16px 25px",
                       display: "flex", justifyContent: "space-between", alignItems: "center",
-                      cursor: (isReviewing) ? "default" : "pointer", color: "#111827",
+                      cursor: isReviewing ? "default" : "pointer", color: "#111827",
                       transition: "0.2s ease",
                     }}>
-                    <span style={{ fontSize: "17px", fontWeight: "500" }}>choice {choice}</span>
+                    <span style={{ fontSize: "17px", fontWeight: "500" }}>{choice}</span>
                     <div style={{ width: "22px", height: "22px", borderRadius: "50%", border: "2px solid #111827", display: "flex", alignItems: "center", justifyContent: "center" }}>
                       {isReviewing && isCorrect ? (
                         <span style={{ fontSize: "12px", fontWeight: "bold" }}>✓</span>
@@ -198,9 +409,6 @@ export default function AssessmentPage() {
                   if (prevQ >= 1) {
                     setCurrentQuestion(prevQ);
                     setExpandedId(prevQ);
-                    const stored = userAnswers[prevQ];
-                    setSelectedChoice(stored || null);
-                    setIsAnswered(!!stored);
                   }
                 }}
                 disabled={currentQuestion === 1}
@@ -215,11 +423,11 @@ export default function AssessmentPage() {
                 <span style={{ color: "#111827", fontWeight: "bold", fontSize: "16px", fontFamily: 'var(--font-nova-square)' }}>Previous</span>
               </button>
 
-              {currentQuestion < 7 ? (
-                <button 
-                  onClick={handleNext} 
+              {currentQuestion < questions.length ? (
+                <button
+                  onClick={handleNext}
                   disabled={!isAnswered}
-                  style={{ 
+                  style={{
                     display: "flex", alignItems: "center", backgroundColor: "#E6FFB2",
                     border: "none", borderRadius: "50px", padding: "5px 5px 5px 25px",
                     cursor: !isAnswered ? "not-allowed" : "pointer",
@@ -231,7 +439,15 @@ export default function AssessmentPage() {
                 </button>
               ) : (
                 !isReviewing && (
-                  <button onClick={handleFinish} disabled={!isAnswered} style={{ width: "200px", backgroundColor: "#B8EF46", border: "none", padding: "10px 0", borderRadius: "12px", fontWeight: "800", fontSize: "16px", color: "#111827", opacity: isAnswered ? 1 : 0.4, cursor: isAnswered ? "pointer" : "not-allowed" }}>Finish</button>
+                  <button
+                    onClick={() => {
+                      void handleFinish();
+                    }}
+                    disabled={!allAnswered || isSubmitting}
+                    style={{ width: "200px", backgroundColor: "#B8EF46", border: "none", padding: "10px 0", borderRadius: "12px", fontWeight: "800", fontSize: "16px", color: "#111827", opacity: allAnswered && !isSubmitting ? 1 : 0.4, cursor: allAnswered && !isSubmitting ? "pointer" : "not-allowed" }}
+                  >
+                    {isSubmitting ? "Submitting..." : "Finish"}
+                  </button>
                 )
               )}
             </div>

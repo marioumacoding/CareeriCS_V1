@@ -327,6 +327,20 @@ class StartAssessmentResponse(BaseModel):
     questions: List[AssessmentQuestionResponse]
 
 
+class AssessmentSessionSummary(BaseModel):
+    id: UUID
+    user_id: UUID
+    skill_id: UUID
+    total_questions: int
+    score: int
+    status: str
+    started_at: datetime
+    submitted_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
 # =====================================================
 # SUBMIT ASSESSMENT
 # =====================================================

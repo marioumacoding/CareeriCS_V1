@@ -182,6 +182,17 @@ async def evaluate_answer_service_wrapper(
     _run_final_media_analysis(db, answer)
 
 
+    if existing_followup:
+        return {
+            "evaluation": feedback,
+            "grade": score,
+            "followup_recommended": True,
+            "followup": _serialize_followup(existing_followup),
+            "emotion_evaluation": answer.emotion_evaluation,
+            "tone_evaluation": answer.tone_evaluation,
+        }
+
+
     if is_followup_allowed and followup_required:
 
         followup_info = _handle_followup(db, answer.id, improvement)
@@ -255,10 +266,19 @@ def _handle_followup(
     db.commit()
     db.refresh(followup)
 
+    return _serialize_followup(followup)
+
+
+def _serialize_followup(followup: models.Followup):
+
+    audio_path = ""
+    if followup.fquestion_audio:
+        audio_path = f"/{settings.AUDIO_PATHS['followups']}/{followup.fquestion_audio}"
+
     return {
         "id": followup.id,
         "text": followup.fquestion_text,
-        "audio": f"/{settings.AUDIO_PATHS['followups']}/{audio_filename}"
+        "audio": audio_path,
     }
 
 

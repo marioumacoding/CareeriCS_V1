@@ -6,10 +6,11 @@ from sqlalchemy.orm import Session, joinedload
 from uuid import UUID
 import schemas
 
-from db.models import ReportTypeEnum, User, UserSkill
+from db.models import ReportTypeEnum, User, UserSkill, Report
 from utils.util import build_cv_pdf
 from services.reports.report_service import save_report
 from .cv_extractor_service import handle_cv_for_builder
+from sqlalchemy import func
 
 def generate_user_cv_response(
     db: Session,
@@ -75,11 +76,20 @@ def generate_user_cv_response(
     # Save the generated PDF using your service
     # -------------------------
     pdf_bytes = pdf_buffer.getvalue()  
+    version = (
+        db.query(func.count(Report.id))
+        .filter(
+            Report.user_id == str(user.id),
+            Report.type == ReportTypeEnum.CV
+        )
+        .scalar()
+    ) + 1
+
     save_report(
         db=db,
         user_id=str(user.id),
         file_bytes=pdf_bytes,
-        filename=safe_name + "_CV.pdf",
+        filename=f"{safe_name}_CV_V{str(version)}.pdf",
         report_type=ReportTypeEnum.CV
     )
 

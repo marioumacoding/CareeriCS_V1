@@ -158,8 +158,6 @@ export default function LastAnalysisPage() {
         currentActiveId={lastStep}
         unlockedStepId={lastStep}
         onQuestionClick={() => {}}
-        closeIconSrc="/interview/Close.svg"
-        closeRoute="/features/interview"
       >
         <div
           style={{
@@ -206,8 +204,6 @@ export default function LastAnalysisPage() {
       currentActiveId={lastStep}
       unlockedStepId={lastStep}
       onQuestionClick={() => {}}
-      closeIconSrc="/interview/Close.svg"
-      closeRoute="/features/interview"
     >
       <div
         style={{

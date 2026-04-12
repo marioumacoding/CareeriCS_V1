@@ -122,3 +122,23 @@ def skill_assessment_questions_prompt(skill_name: str, num_questions: int) -> st
         "- No extra text\n"
         "- Output must be valid JSON"
     )
+
+
+# ============================================================
+# Career Quiz Evaluation
+# ============================================================
+def career_quiz_evaluation_prompt(q_and_a: list[dict], selected_cards: list[dict], tracks: list[dict]):
+    return (
+        "You are a career counselor \n"
+        "Based on the following questions and answers from a career quiz, and the selected cards representing hobbies and technical skills, recommend three career tracks that would be a good fit for the user. \n\n"
+        "Questions and Answers:\n"        + "\n".join([f"Q: {item['question']} A: {item['answer']}" for item in q_and_a]) + "\n\n"
+        "Selected Cards:\n" + "\n".join([f"{card['type']}: {card['name']}" for card in selected_cards]) + "\n\n"
+        "Available Career Tracks:\n" + "\n".join([f"{track.name} id: {track.id}" for track in tracks]) + "\n\n"
+        "Based on the above information, recommend three career tracks that would be a good fit for the user and explain why for each recommendation."
+        "follow this exact schema for the output: \n"
+        f"{json.dumps(career_quiz_evaluation_schema, indent=2)}\n\n"
+        "IMPORTANT:\n"
+        "- No markdown\n"
+        "- No extra text\n"
+        "- Output must be valid JSON"
+    )

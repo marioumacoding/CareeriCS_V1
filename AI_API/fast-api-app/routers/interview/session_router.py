@@ -1,5 +1,5 @@
 from uuid import UUID
-from typing import List
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
@@ -57,7 +57,7 @@ def delete_session(
 @router.get("/{session_id}/report")
 def generate_session_report(
     session_id: UUID,
-    user_id: UUID,
+    user_id: Optional[UUID] = None,
     db: Session = Depends(get_db),
 ):
     return build_session_report_pdf(

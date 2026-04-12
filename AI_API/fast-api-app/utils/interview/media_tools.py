@@ -2,9 +2,34 @@ import os
 import uuid
 import tempfile
 import subprocess
+import shutil
 
 from fastapi import HTTPException, UploadFile
 from gtts import gTTS
+
+
+def _resolve_ffmpeg_executable() -> str:
+    env_path = os.environ.get("FFMPEG_PATH")
+    if env_path:
+        return env_path
+
+    system_ffmpeg = shutil.which("ffmpeg")
+    if system_ffmpeg:
+        return system_ffmpeg
+
+    try:
+        from imageio_ffmpeg import get_ffmpeg_exe  # type: ignore
+
+        bundled_ffmpeg = get_ffmpeg_exe()
+        if bundled_ffmpeg:
+            return bundled_ffmpeg
+    except Exception:
+        pass
+
+    raise RuntimeError(
+        "ffmpeg executable not found. Install ffmpeg and ensure it is on PATH, "
+        "set FFMPEG_PATH, or install imageio-ffmpeg."
+    )
 
 
 # ---------------------------------------------
@@ -55,7 +80,7 @@ def delete_files(*paths: str) -> None:
 def convert_webm_to_wav(input_path: str) -> str:
     fd, output_path = tempfile.mkstemp(suffix=".wav")
     os.close(fd)
-    ffmpeg_cmd = os.environ.get("FFMPEG_PATH", "ffmpeg")
+    ffmpeg_cmd = _resolve_ffmpeg_executable()
     try:
         result = subprocess.run(
             [ffmpeg_cmd, "-y", "-i", input_path, output_path],
@@ -64,9 +89,7 @@ def convert_webm_to_wav(input_path: str) -> str:
             text=True,
         )
     except FileNotFoundError as e:
-        raise RuntimeError(
-            "ffmpeg executable not found. Install ffmpeg and ensure it's on your PATH, or set the FFMPEG_PATH environment variable"
-        ) from e
+        raise RuntimeError("Resolved ffmpeg executable could not be launched") from e
 
     if result.returncode != 0:
         raise RuntimeError(result.stderr.strip() or "ffmpeg failed converting to wav")
@@ -76,7 +99,7 @@ def convert_webm_to_wav(input_path: str) -> str:
 def convert_webm_to_mp4(input_path: str) -> str:
     fd, output_path = tempfile.mkstemp(suffix=".mp4")
     os.close(fd)
-    ffmpeg_cmd = os.environ.get("FFMPEG_PATH", "ffmpeg")
+    ffmpeg_cmd = _resolve_ffmpeg_executable()
     try:
         result = subprocess.run(
             [ffmpeg_cmd, "-y", "-i", input_path, output_path],
@@ -85,9 +108,7 @@ def convert_webm_to_mp4(input_path: str) -> str:
             text=True,
         )
     except FileNotFoundError as e:
-        raise RuntimeError(
-            "ffmpeg executable not found. Install ffmpeg and ensure it's on your PATH, or set the FFMPEG_PATH environment variable"
-        ) from e
+        raise RuntimeError("Resolved ffmpeg executable could not be launched") from e
 
     if result.returncode != 0:
         raise RuntimeError(result.stderr.strip() or "ffmpeg failed converting to mp4")

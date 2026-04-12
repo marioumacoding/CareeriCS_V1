@@ -80,3 +80,12 @@ skill_assessment_questions_schema = {
     "explanation": "",
     "difficulty": "easy || medium || hard"
 }
+
+
+# ============================================================
+# Career Quiz Evaluation
+# ============================================================
+career_quiz_evaluation_schema = {
+    "track_id": "UUID",
+    "score": "integer"
+}

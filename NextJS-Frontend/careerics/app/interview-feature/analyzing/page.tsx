@@ -6,6 +6,16 @@ import { interviewService } from "@/services/interview.service";
 import type { APIFollowup } from "@/types";
 import { useInterviewFlow } from "@/hooks";
 
+const DEBUG_INTERVIEW_FLOW = process.env.NODE_ENV !== "production";
+
+function logAnalyzingFlow(event: string, payload: Record<string, unknown>) {
+  if (!DEBUG_INTERVIEW_FLOW) {
+    return;
+  }
+
+  console.debug("[InterviewFlow][Analyzing]", event, payload);
+}
+
 export default function AnalyzingPage() {
   const router = useRouter();
 
@@ -14,8 +24,12 @@ export default function AnalyzingPage() {
     sessionId,
     questionId,
     answerId,
+    followupMode,
     currentQ,
     questions,
+    isQuestionsLoading,
+    getQuestionByStep,
+    getNextMainQuestion,
     buildRecordingUrl,
   } = useInterviewFlow();
 
@@ -43,6 +57,11 @@ export default function AnalyzingPage() {
 
     let alive = true;
 
+    logAnalyzingFlow("evaluate:start", {
+      followupMode,
+      hasAnswerId: Boolean(answerId),
+    });
+
     const evaluate = async () => {
       setIsEvaluating(true);
       setErrorMessage("");
@@ -64,46 +83,60 @@ export default function AnalyzingPage() {
         return;
       }
 
+      const followupRecommended = Boolean(response.data.followup_recommended);
+      const evaluationFollowup = response.data.followup;
       const isFollowupRequired =
-        Boolean(response.data.followup_recommended) ||
-        Boolean(response.data.followup);
+        followupRecommended || Boolean(evaluationFollowup);
 
-      if (isFollowupRequired) {
-        if (!answerId) {
-          setErrorMessage(
-            "Follow-up is required but answer context is missing."
-          );
-          setIsFinished(false);
-          setIsEvaluating(false);
-          return;
-        }
+      logAnalyzingFlow("evaluate:result", {
+        followupRecommended,
+        hasInlineFollowup: Boolean(evaluationFollowup),
+        isFollowupRequired,
+      });
 
-        const followupResponse =
-          await interviewService.getFollowupByAnswerId(answerId);
-
-        if (!alive) return;
-
-        if (!followupResponse.success || !followupResponse.data) {
-          setErrorMessage(
-            followupResponse.message ||
-            "Could not load follow-up question."
-          );
-          setIsFinished(false);
-          setIsEvaluating(false);
-          return;
-        }
-
-        setFollowup(followupResponse.data);
-      }
-
-      /**
-       * FIX #3 — Missing timeout duration
-       */
-      setTimeout(() => {
-        if (!alive) return;
+      if (followupMode) {
         setIsFinished(true);
         setIsEvaluating(false);
-      }, 2000); // 2 seconds delay
+        return;
+      }
+
+      if (isFollowupRequired) {
+        if (evaluationFollowup?.id && evaluationFollowup.text) {
+          setFollowup(evaluationFollowup);
+        } else {
+          if (answerId) {
+            const followupResponse =
+              await interviewService.getFollowupByAnswerId(answerId);
+
+            if (!alive) return;
+
+            if (!followupResponse.success || !followupResponse.data) {
+              if (followupRecommended) {
+                setErrorMessage(
+                  followupResponse.message ||
+                    "Could not load follow-up question."
+                );
+                setIsFinished(false);
+                setIsEvaluating(false);
+                return;
+              }
+            } else {
+              setFollowup(followupResponse.data);
+            }
+          } else if (followupRecommended) {
+            setErrorMessage(
+              "Follow-up is required but answer context is missing."
+            );
+            setIsFinished(false);
+            setIsEvaluating(false);
+            return;
+          }
+        }
+      }
+
+      if (!alive) return;
+      setIsFinished(true);
+      setIsEvaluating(false);
     };
 
     evaluate();
@@ -111,27 +144,81 @@ export default function AnalyzingPage() {
     return () => {
       alive = false;
     };
-  }, [sessionId, questionId, answerId, missingContext]);
+  }, [
+    sessionId,
+    questionId,
+    answerId,
+    missingContext,
+    followupMode,
+  ]);
 
   /**
    * Navigation logic
    */
   const goToNextMainQuestion = () => {
-    if (currentQ < questions.length) {
-      const nextQuestion = questions[currentQ];
+    logAnalyzingFlow("next:attempt", {
+      q: currentQ,
+      currentQ,
+      questionsLength: questions.length,
+      isQuestionsLoading,
+      followupMode,
+    });
+
+    if (isQuestionsLoading) {
+      setErrorMessage("Questions are still loading. Please wait.");
+      return;
+    }
+
+    if (!questions.length) {
+      setErrorMessage("No questions are loaded yet. Please try again.");
+      return;
+    }
+
+    const nextQuestion = getNextMainQuestion(currentQ);
+
+    if (nextQuestion) {
+      const nextQuestionId = nextQuestion.id;
+
+      logAnalyzingFlow("next:resolved", {
+        q: currentQ,
+        currentQ,
+        nextQuestionId,
+        questionsLength: questions.length,
+      });
 
       router.push(
         buildRecordingUrl({
           type: interviewType,
           sessionId,
-          q: String(currentQ + 1),
+          q: String(nextQuestionId),
           questionId: nextQuestion?.questionId || null,
           followup: null,
           followupId: null,
+          followupMode: false,
         })
       );
     } else {
-      router.push("/features/interview");
+      if (currentQ < questions.length) {
+        logAnalyzingFlow("next:inconsistent", {
+          q: currentQ,
+          currentQ,
+          questionsLength: questions.length,
+        });
+        setErrorMessage(
+          "Could not determine the next question yet. Please try again in a moment."
+        );
+        return;
+      }
+
+      logAnalyzingFlow("next:exit", {
+        q: currentQ,
+        currentQ,
+        questionsLength: questions.length,
+      });
+
+      router.push(
+        `/interview-feature/last-analysis?type=${interviewType}&sessionId=${sessionId}&q=${currentQ}`
+      );
     }
   };
 
@@ -150,6 +237,7 @@ export default function AnalyzingPage() {
           followup: followup.text,
           followupId: followup.id,
           questionId,
+          followupMode: true,
         }),
       );
       return;
@@ -159,6 +247,27 @@ export default function AnalyzingPage() {
   };
 
   const handleNext = () => {
+    logAnalyzingFlow("next:click", {
+      q: currentQ,
+      currentQ,
+      questionsLength: questions.length,
+      isQuestionsLoading,
+      isFinished,
+      isEvaluating,
+      followupMode,
+      hasFollowup: Boolean(followup),
+    });
+
+    if (isQuestionsLoading) {
+      setErrorMessage("Questions are still loading. Please wait.");
+      return;
+    }
+
+    if (followupMode) {
+      goToNextMainQuestion();
+      return;
+    }
+
     if (followup) {
       void handleConsent(true);
       return;
@@ -169,11 +278,16 @@ export default function AnalyzingPage() {
 
   return (
     <InterviewLayout
+      title="Analysing your answer"
       questions={layoutQuestions}
       currentActiveId={currentQ}
       unlockedStepId={currentQ}   // ✅ required prop added
       onQuestionClick={(id: number) => {
-        const target = questions.find((q) => q.id === id);
+        if (followupMode) {
+          return;
+        }
+
+        const target = getQuestionByStep(id);
 
         router.push(
           buildRecordingUrl({
@@ -183,6 +297,7 @@ export default function AnalyzingPage() {
             questionId: target?.questionId || null,
             followup: null,
             followupId: null,
+            followupMode: false,
           })
         );
       }}
@@ -219,6 +334,12 @@ export default function AnalyzingPage() {
               Our Model is analyzing your answers,
               <br />
               Give us a moment
+            </>
+          ) : isFinished && followupMode ? (
+            <>
+              Follow-up evaluated.
+              <br />
+              Moving to the next main question.
             </>
           ) : isFinished && followup ? (
             <>
@@ -289,10 +410,10 @@ export default function AnalyzingPage() {
             opacity: isFinished ? 1 : 0.8,
           }}
         >
-          {followup ? "Answer Follow-up" : "Next Question"}
+          {followupMode ? "Next Question" : followup ? "Answer Follow-up" : "Next Question"}
         </button>
 
-        {isFinished && followup && (
+        {isFinished && followup && !followupMode && (
           <button
             onClick={() => void handleConsent(false)}
             style={{

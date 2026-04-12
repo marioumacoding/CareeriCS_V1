@@ -12,7 +12,8 @@ from sqlalchemy import (
     JSON,
     DateTime,
     UniqueConstraint,
-    Float
+    Float,
+    Index
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import ARRAY, BYTEA, JSONB, UUID
@@ -58,6 +59,7 @@ class User(Base):
     sessions = relationship("Session", back_populates="user", cascade="all, delete-orphan")
     reports = relationship("Report", back_populates="user",cascade="all, delete-orphan")
     assessment = relationship("RoadmapAssessmentResult", back_populates="user", cascade="all, delete-orphan")
+    career_sessions = relationship("CareerSession", back_populates="user", cascade="all, delete-orphan")
 
 
 # ###########################################################################################################################
@@ -408,6 +410,10 @@ class Report(Base):
     user = relationship("User", back_populates="reports")  
 
 
+# ###########################################################################################################################
+# ROADMAP
+# ###########################################################################################################################
+
 # =========================
 # ROADMAP
 # =========================
@@ -415,10 +421,10 @@ class Roadmap(Base):
     __tablename__ = "roadmaps"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    title = Column(String, nullable=False)
+    title = Column(String, nullable=False, unique=True)
     description = Column(String, nullable=True)
 
-    section = relationship("RoadmapSection", back_populates="roadmap")
+    section = relationship("RoadmapSection", back_populates="roadmap", cascade="all, delete-orphan")
     assessment = relationship("RoadmapAssessmentResult", back_populates="roadmap")
 
 
@@ -435,8 +441,12 @@ class RoadmapSection(Base):
     order = Column(Integer, nullable=False)
 
     roadmap = relationship("Roadmap", back_populates="section")
-    steps = relationship("RoadmapStep", back_populates="section")
+    steps = relationship("RoadmapStep", back_populates="section", cascade="all, delete-orphan")
     assessment = relationship("RoadmapAssessmentResult", back_populates="section")
+
+    __table_args__ = (
+        UniqueConstraint("roadmap_id", "order", name="uq_roadmap_sections_roadmap_order"),
+    )
 
 
 # =========================
@@ -449,10 +459,15 @@ class RoadmapStep(Base):
     section_id = Column(UUID(as_uuid=True), ForeignKey("roadmap_sections.id"), nullable=False)
     title = Column(String, nullable=False)
     description = Column(String, nullable=True)
+    resources = Column(JSONB, nullable=True)
     order = Column(Integer, nullable=False)
 
     section = relationship("RoadmapSection", back_populates="steps")
     assessment = relationship("RoadmapAssessmentResult", back_populates="step")
+
+    __table_args__ = (
+        UniqueConstraint("section_id", "order", name="uq_roadmap_steps_section_order"),
+    )
 
 
 # =========================
@@ -470,8 +485,151 @@ class RoadmapAssessmentResult(Base):
     type = Column(String, nullable=False)
     proficiency = Column(String, nullable=True)
     score = Column(Integer, nullable=True)
+    completion_status = Column(String, nullable=False, default="not_started")
+    completed_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
     roadmap = relationship("Roadmap", back_populates="assessment")
     section = relationship("RoadmapSection", back_populates="assessment")
     step = relationship("RoadmapStep", back_populates="assessment")
     user = relationship("User", back_populates="assessment")
+
+    __table_args__ = (
+        Index(
+            "uq_roadmap_assessment_results_target",
+            "user_id",
+            "type",
+            "roadmap_id",
+            "section_id",
+            "step_id",
+            unique=True,
+        ),
+    )
+
+
+# ###########################################################################################################################
+# CAREER QUIZ
+# ###########################################################################################################################
+
+# =========================
+# CAREER SESSION
+# =========================
+class CareerSession(Base):
+    __tablename__ = "career_sessions"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    status = Column(String, default="in_progress")  # in_progress, submitted
+    started_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    submitted_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    user = relationship("User", back_populates="career_sessions")
+    selected_cards = relationship("CareerSelectedCard", back_populates="session", cascade="all, delete-orphan")
+    track_results = relationship("CareerTrackResult", back_populates="session", cascade="all, delete-orphan")
+    answers = relationship("CareerAnswer", back_populates="session", cascade="all, delete-orphan")
+
+
+# =========================
+# CAREER TRACK
+# =========================
+class CareerTrack(Base):
+    __tablename__ = "career_tracks"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name = Column(String, nullable=False, unique=True)
+    description = Column(Text, nullable=True)
+
+    track_results = relationship("CareerTrackResult", back_populates="track", cascade="all, delete-orphan")
+
+
+# =========================
+# CAREER HOBBY
+# =========================
+class CareerHobby(Base):
+    __tablename__ = "career_hobbies"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name = Column(String, nullable=False, unique=True)
+    description = Column(Text, nullable=True)
+
+    questions = relationship("CareerQuestion", back_populates="hobby", cascade="all, delete-orphan")
+    selected_cards = relationship("CareerSelectedCard", back_populates="hobby", cascade="all, delete-orphan")
+
+
+# =========================
+# CAREER TECHNICAL SKILL
+# =========================
+class CareerTechnicalSkill(Base):
+    __tablename__ = "career_technical_skills"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name = Column(String, nullable=False, unique=True)
+    description = Column(Text, nullable=True)
+
+    questions = relationship("CareerQuestion", back_populates="technical_skill", cascade="all, delete-orphan")
+    selected_cards = relationship("CareerSelectedCard", back_populates="technical_skill", cascade="all, delete-orphan")
+
+
+# =========================
+# CAREER SELECTED CARD
+# =========================
+class CareerSelectedCard(Base):
+    __tablename__ = "career_selected_cards"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    session_id = Column(UUID(as_uuid=True), ForeignKey("career_sessions.id"), nullable=False)
+    card_type = Column(String, nullable=False)  # hobby, technical
+    hobby_id = Column(UUID(as_uuid=True), ForeignKey("career_hobbies.id"), nullable=True)
+    technical_skill_id = Column(UUID(as_uuid=True), ForeignKey("career_technical_skills.id"), nullable=True)
+
+    session = relationship("CareerSession", back_populates="selected_cards")
+    hobby = relationship("CareerHobby", back_populates="selected_cards")
+    technical_skill = relationship("CareerTechnicalSkill", back_populates="selected_cards")
+
+
+# =========================
+# CAREER QUESTION
+# =========================
+class CareerQuestion(Base):
+    __tablename__ = "career_questions"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    hobby_id = Column(UUID(as_uuid=True), ForeignKey("career_hobbies.id"), nullable=True)
+    technical_skill_id = Column(UUID(as_uuid=True), ForeignKey("career_technical_skills.id"), nullable=True)
+    text = Column(String, nullable=False)
+    type = Column(String, nullable=False)  # hobby, technical
+
+    hobby = relationship("CareerHobby", back_populates="questions")
+    technical_skill = relationship("CareerTechnicalSkill", back_populates="questions")
+    answers = relationship("CareerAnswer", back_populates="question", cascade="all, delete-orphan")
+
+
+# =========================
+# CAREER ANSWER
+# =========================
+class CareerAnswer(Base):
+    __tablename__ = "career_answers"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    session_id = Column(UUID(as_uuid=True), ForeignKey("career_sessions.id"), nullable=False)
+    question_id = Column(UUID(as_uuid=True), ForeignKey("career_questions.id"), nullable=False)
+    answer = Column(String, nullable=False)
+
+    session = relationship("CareerSession", back_populates="answers")
+    question = relationship("CareerQuestion", back_populates="answers")
+
+
+# =========================
+# CAREER TRACK RESULT
+# =========================
+class CareerTrackResult(Base):
+    __tablename__ = "career_track_results"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    session_id = Column(UUID(as_uuid=True), ForeignKey("career_sessions.id"), nullable=False)
+    track_id = Column(UUID(as_uuid=True), ForeignKey("career_tracks.id"), nullable=False)
+    score = Column(Integer, nullable=False)
+
+    session = relationship("CareerSession", back_populates="track_results")
+    track = relationship("CareerTrack", back_populates="track_results")

@@ -61,7 +61,9 @@ export const interviewService = {
     return fastapiApi.get<APIQuestion>(`/questions/${questionId}`);
   },
 
-  getQuestionsByType(questionType: string): Promise<ApiResponse<APIQuestion[]>> {
+  getQuestionsByType(
+    questionType: string,
+  ): Promise<ApiResponse<APIQuestion[]>> {
     return fastapiApi.get<APIQuestion[]>(`/questions/type/${questionType}`);
   },
 

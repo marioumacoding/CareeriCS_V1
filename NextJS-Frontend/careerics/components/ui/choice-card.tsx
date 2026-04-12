@@ -15,6 +15,8 @@ interface ChoiceCardProps {
   children?: ReactNode;
   isWideCard?: boolean;
   onClick?: () => void;
+  disabled?: boolean;
+  buttonLabel?: string;
   buttonVariant?: "primary" | "secondary" | "primary-inverted";
 }
 
@@ -27,6 +29,8 @@ export default function ChoiceCard({
   style,
   buttonVariant,
   onClick,
+  disabled = false,
+  buttonLabel = "Start",
 }: ChoiceCardProps) {
   const router = useRouter();
 
@@ -117,6 +121,7 @@ export default function ChoiceCard({
         type="button"
         variant={buttonVariant}
         onClick={handleButtonClick}
+        disabled={disabled}
         style={{
           flexGrow: 0,
           flexShrink: 0,
@@ -124,7 +129,7 @@ export default function ChoiceCard({
           marginTop: "auto"
         }}
       >
-        Start
+        {buttonLabel}
       </Button>
     </div>
   );

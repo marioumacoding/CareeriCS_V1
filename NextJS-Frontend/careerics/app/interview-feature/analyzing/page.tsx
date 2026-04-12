@@ -1,24 +1,40 @@
 "use client";
-import React, { useState, useEffect } from "react";
+
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import InterviewLayout from "@/components/ui/interview";
 import { interviewService } from "@/services/interview.service";
+import { buildInterviewAudioCandidates, normalizeInterviewAudioUrl } from "@/lib/interview-media";
 import type { APIFollowup } from "@/types";
 import { useInterviewFlow } from "@/hooks";
 
-const DEBUG_INTERVIEW_FLOW = process.env.NODE_ENV !== "production";
+const ANALYSIS_DELAY_MS = 2500;
 
-function logAnalyzingFlow(event: string, payload: Record<string, unknown>) {
-  if (!DEBUG_INTERVIEW_FLOW) {
-    return;
+function normalizeFollowupAudio(followup: APIFollowup | null | undefined): APIFollowup | null {
+  if (!followup) {
+    return null;
   }
 
-  console.debug("[InterviewFlow][Analyzing]", event, payload);
+  return {
+    ...followup,
+    audio: normalizeInterviewAudioUrl(followup.audio, "followups"),
+  };
+}
+
+function resetAnalysisUiState(
+  setIsFinished: React.Dispatch<React.SetStateAction<boolean>>,
+  setIsEvaluating: React.Dispatch<React.SetStateAction<boolean>>,
+  setErrorMessage: React.Dispatch<React.SetStateAction<string>>,
+  setFollowup: React.Dispatch<React.SetStateAction<APIFollowup | null>>,
+) {
+  setIsFinished(false);
+  setIsEvaluating(true);
+  setErrorMessage("");
+  setFollowup(null);
 }
 
 export default function AnalyzingPage() {
   const router = useRouter();
-
   const {
     interviewType,
     sessionId,
@@ -27,9 +43,6 @@ export default function AnalyzingPage() {
     followupMode,
     currentQ,
     questions,
-    isQuestionsLoading,
-    getQuestionByStep,
-    getNextMainQuestion,
     buildRecordingUrl,
   } = useInterviewFlow();
 
@@ -37,258 +50,329 @@ export default function AnalyzingPage() {
   const [isEvaluating, setIsEvaluating] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [followup, setFollowup] = useState<APIFollowup | null>(null);
+  const [isReplayingFollowup, setIsReplayingFollowup] = useState(false);
+  const [isFollowupAutoplayBlocked, setIsFollowupAutoplayBlocked] = useState(false);
+
+  const followupAudioElementRef = useRef<HTMLAudioElement | null>(null);
+  const followupCandidateIndexRef = useRef(0);
+
+  const followupAudioCandidates = useMemo(
+    () => buildInterviewAudioCandidates(followup?.audio || "", "followups"),
+    [followup?.audio],
+  );
 
   const missingContext = !sessionId || !questionId;
+  const isActionReady = missingContext || isFinished;
 
-  /**
-   * FIX #1 — Convert UIQuestion → Question
-   * Required because InterviewLayout expects `title`
-   */
-  const layoutQuestions = questions.map((q) => ({
-    ...q,
-    title: q.text,
-  }));
+  const layoutQuestions = useMemo(
+    () =>
+      questions.map((q) => ({
+        ...q,
+        title: q.text,
+      })),
+    [questions],
+  );
 
-  /**
-   * FIX #2 — Proper evaluation effect
-   */
-  useEffect(() => {
-    if (missingContext) return;
+  const safeCurrentQ = Math.min(Math.max(currentQ, 1), Math.max(layoutQuestions.length, 1));
 
-    let alive = true;
-
-    logAnalyzingFlow("evaluate:start", {
-      followupMode,
-      hasAnswerId: Boolean(answerId),
-    });
-
-    const evaluate = async () => {
-      setIsEvaluating(true);
-      setErrorMessage("");
-      setFollowup(null);
-
-      const response = await interviewService.evaluateAnswer(
-        sessionId,
-        questionId
-      );
-
-      if (!alive) return;
-
-      if (!response.success || !response.data) {
-        setErrorMessage(
-          response.message || "Evaluation failed. Please try again."
-        );
-        setIsFinished(false);
-        setIsEvaluating(false);
-        return;
+  const playFollowupAudio = useCallback(
+    async (startIndex = 0): Promise<boolean> => {
+      const player = followupAudioElementRef.current;
+      if (!player || !followupAudioCandidates.length) {
+        return false;
       }
 
-      const followupRecommended = Boolean(response.data.followup_recommended);
-      const evaluationFollowup = response.data.followup;
-      const isFollowupRequired =
-        followupRecommended || Boolean(evaluationFollowup);
+      const safeStartIndex = Math.max(0, Math.min(startIndex, followupAudioCandidates.length - 1));
 
-      logAnalyzingFlow("evaluate:result", {
-        followupRecommended,
-        hasInlineFollowup: Boolean(evaluationFollowup),
-        isFollowupRequired,
-      });
+      for (let index = safeStartIndex; index < followupAudioCandidates.length; index += 1) {
+        const candidate = followupAudioCandidates[index];
+        followupCandidateIndexRef.current = index;
 
-      if (followupMode) {
-        setIsFinished(true);
-        setIsEvaluating(false);
-        return;
-      }
+        if (player.src !== candidate) {
+          player.src = candidate;
+          player.load();
+        }
 
-      if (isFollowupRequired) {
-        if (evaluationFollowup?.id && evaluationFollowup.text) {
-          setFollowup(evaluationFollowup);
-        } else {
-          if (answerId) {
-            const followupResponse =
-              await interviewService.getFollowupByAnswerId(answerId);
+        player.currentTime = 0;
+        player.muted = false;
+        player.volume = 1;
 
-            if (!alive) return;
-
-            if (!followupResponse.success || !followupResponse.data) {
-              if (followupRecommended) {
-                setErrorMessage(
-                  followupResponse.message ||
-                    "Could not load follow-up question."
-                );
-                setIsFinished(false);
-                setIsEvaluating(false);
-                return;
-              }
-            } else {
-              setFollowup(followupResponse.data);
-            }
-          } else if (followupRecommended) {
-            setErrorMessage(
-              "Follow-up is required but answer context is missing."
-            );
-            setIsFinished(false);
-            setIsEvaluating(false);
-            return;
+        try {
+          await player.play();
+          setIsFollowupAutoplayBlocked(false);
+          return true;
+        } catch (error) {
+          const blocked = error instanceof DOMException && error.name === "NotAllowedError";
+          if (blocked) {
+            setIsFollowupAutoplayBlocked(true);
+            return false;
           }
         }
       }
 
-      if (!alive) return;
-      setIsFinished(true);
-      setIsEvaluating(false);
+      return false;
+    },
+    [followupAudioCandidates],
+  );
+
+  const speakFollowupFallback = useCallback((): boolean => {
+    if (
+      typeof window === "undefined" ||
+      !("speechSynthesis" in window) ||
+      !followup?.text?.trim()
+    ) {
+      return false;
+    }
+
+    try {
+      const utterance = new SpeechSynthesisUtterance(followup.text.trim());
+      utterance.lang = "en-US";
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(utterance);
+      return true;
+    } catch {
+      return false;
+    }
+  }, [followup?.text]);
+
+  useEffect(() => {
+    if (!isFinished || !followup) {
+      return;
+    }
+
+    followupCandidateIndexRef.current = 0;
+
+    if (!followupAudioCandidates.length) {
+      setIsFollowupAutoplayBlocked(false);
+      speakFollowupFallback();
+      return;
+    }
+
+    void playFollowupAudio(0);
+  }, [followup, followupAudioCandidates, isFinished, playFollowupAudio, speakFollowupFallback]);
+
+  useEffect(() => {
+    if (!isFollowupAutoplayBlocked || typeof window === "undefined") {
+      return;
+    }
+
+    let disposed = false;
+
+    const retryPlayback = () => {
+      if (disposed) {
+        return;
+      }
+
+      void playFollowupAudio(followupCandidateIndexRef.current);
     };
 
-    evaluate();
+    window.addEventListener("pointerdown", retryPlayback, { once: true });
+    window.addEventListener("keydown", retryPlayback, { once: true });
+
+    return () => {
+      disposed = true;
+      window.removeEventListener("pointerdown", retryPlayback);
+      window.removeEventListener("keydown", retryPlayback);
+    };
+  }, [isFollowupAutoplayBlocked, playFollowupAudio]);
+
+  useEffect(() => {
+    return () => {
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
+
+  const handleFollowupAudioError = () => {
+    const nextIndex = followupCandidateIndexRef.current + 1;
+    if (nextIndex < followupAudioCandidates.length) {
+      void playFollowupAudio(nextIndex);
+      return;
+    }
+
+    speakFollowupFallback();
+  };
+
+  const handleReplayFollowupAudio = async () => {
+    if (!followup || isReplayingFollowup) {
+      return;
+    }
+
+    setIsReplayingFollowup(true);
+
+    try {
+      const started = await playFollowupAudio(followupCandidateIndexRef.current);
+      if (!started) {
+        speakFollowupFallback();
+      }
+    } finally {
+      setIsReplayingFollowup(false);
+    }
+  };
+
+  useEffect(() => {
+    if (missingContext) {
+      return;
+    }
+
+    let alive = true;
+    const startedAt = Date.now();
+
+    resetAnalysisUiState(setIsFinished, setIsEvaluating, setErrorMessage, setFollowup);
+
+    const evaluate = async () => {
+      try {
+        const response = await interviewService.evaluateAnswer(sessionId, questionId);
+        if (!alive) {
+          return;
+        }
+
+        if (!response.success || !response.data) {
+          setErrorMessage(response.message || "Evaluation failed. Please try again.");
+          return;
+        }
+
+        if (followupMode) {
+          return;
+        }
+
+        const followupFromEvaluation = normalizeFollowupAudio(response.data.followup || null);
+        const isFollowupRequired =
+          Boolean(response.data.followup_recommended) || Boolean(followupFromEvaluation);
+
+        if (!isFollowupRequired) {
+          return;
+        }
+
+        if (followupFromEvaluation) {
+          setFollowup(followupFromEvaluation);
+          return;
+        }
+
+        let resolvedAnswerId = answerId;
+
+        if (!resolvedAnswerId) {
+          const answerLookupResponse = await interviewService.getAnswerByQuestionSession(
+            questionId,
+            sessionId,
+          );
+          if (!alive) {
+            return;
+          }
+
+          if (!answerLookupResponse.success || !answerLookupResponse.data?.id) {
+            setErrorMessage(
+              answerLookupResponse.message ||
+                "Follow-up is required but answer context is missing. Please submit your answer again.",
+            );
+            return;
+          }
+
+          resolvedAnswerId = answerLookupResponse.data.id;
+        }
+
+        const followupResponse = await interviewService.getFollowupByAnswerId(resolvedAnswerId);
+        if (!alive) {
+          return;
+        }
+
+        if (!followupResponse.success || !followupResponse.data) {
+          setErrorMessage(
+            followupResponse.message ||
+              "Could not load follow-up question audio. You can continue with text only.",
+          );
+          return;
+        }
+
+        setFollowup(normalizeFollowupAudio(followupResponse.data));
+      } finally {
+        const elapsed = Date.now() - startedAt;
+        const remainingDelay = Math.max(0, ANALYSIS_DELAY_MS - elapsed);
+
+        if (remainingDelay > 0) {
+          await new Promise((resolve) => {
+            window.setTimeout(resolve, remainingDelay);
+          });
+        }
+
+        if (!alive) {
+          return;
+        }
+
+        setIsEvaluating(false);
+        setIsFinished(true);
+      }
+    };
+
+    void evaluate();
 
     return () => {
       alive = false;
     };
-  }, [
-    sessionId,
-    questionId,
-    answerId,
-    missingContext,
-    followupMode,
-  ]);
+  }, [answerId, followupMode, missingContext, questionId, sessionId]);
 
-  /**
-   * Navigation logic
-   */
-  const goToNextMainQuestion = () => {
-    logAnalyzingFlow("next:attempt", {
-      q: currentQ,
-      currentQ,
-      questionsLength: questions.length,
-      isQuestionsLoading,
-      followupMode,
-    });
-
-    if (isQuestionsLoading) {
-      setErrorMessage("Questions are still loading. Please wait.");
-      return;
-    }
-
-    if (!questions.length) {
-      setErrorMessage("No questions are loaded yet. Please try again.");
-      return;
-    }
-
-    const nextQuestion = getNextMainQuestion(currentQ);
-
-    if (nextQuestion) {
-      const nextQuestionId = nextQuestion.id;
-
-      logAnalyzingFlow("next:resolved", {
-        q: currentQ,
-        currentQ,
-        nextQuestionId,
-        questionsLength: questions.length,
-      });
-
+  const goToNextMainStep = () => {
+    if (currentQ < questions.length) {
+      const nextQuestion = questions[currentQ];
       router.push(
         buildRecordingUrl({
           type: interviewType,
           sessionId,
-          q: String(nextQuestionId),
+          q: String(currentQ + 1),
           questionId: nextQuestion?.questionId || null,
           followup: null,
-          followupId: null,
+          followupAudio: null,
           followupMode: false,
-        })
+        }),
       );
-    } else {
-      if (currentQ < questions.length) {
-        logAnalyzingFlow("next:inconsistent", {
-          q: currentQ,
-          currentQ,
-          questionsLength: questions.length,
-        });
-        setErrorMessage(
-          "Could not determine the next question yet. Please try again in a moment."
-        );
-        return;
-      }
-
-      logAnalyzingFlow("next:exit", {
-        q: currentQ,
-        currentQ,
-        questionsLength: questions.length,
-      });
-
-      router.push(
-        `/interview-feature/last-analysis?type=${interviewType}&sessionId=${sessionId}&q=${currentQ}`
-      );
-    }
-  };
-
-  const handleConsent = async (accepted: boolean) => {
-    if (!followup) {
-      goToNextMainQuestion();
       return;
     }
 
-    if (accepted) {
+    const nextParams = new URLSearchParams({
+      type: interviewType,
+      sessionId,
+      q: String(currentQ),
+    });
+    router.push(`/interview-feature/last-analysis?${nextParams.toString()}`);
+  };
+
+  const handleNext = (options?: { skipFollowup?: boolean }) => {
+    if (missingContext) {
+      router.push("/features/interview");
+      return;
+    }
+
+    if (followup && !options?.skipFollowup) {
       router.push(
         buildRecordingUrl({
           type: interviewType,
           sessionId,
           q: String(currentQ),
           followup: followup.text,
-          followupId: followup.id,
-          questionId,
+          followupAudio: followup.audio || null,
+          questionId: null,
           followupMode: true,
         }),
       );
       return;
     }
 
-    goToNextMainQuestion();
+    goToNextMainStep();
   };
 
-  const handleNext = () => {
-    logAnalyzingFlow("next:click", {
-      q: currentQ,
-      currentQ,
-      questionsLength: questions.length,
-      isQuestionsLoading,
-      isFinished,
-      isEvaluating,
-      followupMode,
-      hasFollowup: Boolean(followup),
-    });
-
-    if (isQuestionsLoading) {
-      setErrorMessage("Questions are still loading. Please wait.");
-      return;
-    }
-
-    if (followupMode) {
-      goToNextMainQuestion();
-      return;
-    }
-
-    if (followup) {
-      void handleConsent(true);
-      return;
-    }
-
-    goToNextMainQuestion();
+  const handleSkipFollowup = () => {
+    handleNext({ skipFollowup: true });
   };
 
   return (
     <InterviewLayout
-      title="Analysing your answer"
+      title="Interview Analysis"
       questions={layoutQuestions}
-      currentActiveId={currentQ}
-      unlockedStepId={currentQ}   // ✅ required prop added
+      currentActiveId={safeCurrentQ}
+      unlockedStepId={safeCurrentQ}
       onQuestionClick={(id: number) => {
-        if (followupMode) {
-          return;
-        }
-
-        const target = getQuestionByStep(id);
-
+        const target = questions.find((q) => q.id === id);
         router.push(
           buildRecordingUrl({
             type: interviewType,
@@ -296,13 +380,11 @@ export default function AnalyzingPage() {
             q: String(id),
             questionId: target?.questionId || null,
             followup: null,
-            followupId: null,
+            followupAudio: null,
             followupMode: false,
-          })
+          }),
         );
       }}
-      closeIconSrc="/interview/Close.svg"
-      closeRoute="/features/interview"
     >
       <div
         style={{
@@ -315,6 +397,13 @@ export default function AnalyzingPage() {
           paddingBottom: "40px",
         }}
       >
+        <audio
+          ref={followupAudioElementRef}
+          preload="auto"
+          onError={handleFollowupAudioError}
+          style={{ display: "none" }}
+        />
+
         <h2
           style={{
             color: "white",
@@ -322,11 +411,11 @@ export default function AnalyzingPage() {
             fontFamily: "var(--font-nova-square)",
             fontWeight: 400,
             lineHeight: "1.6",
-            marginBottom: "50px",
+            marginBottom: "24px",
           }}
         >
           {missingContext ? (
-            <>Missing session or question context.</>
+            <>Missing session or question context. Please restart interview flow.</>
           ) : errorMessage ? (
             <>{errorMessage}</>
           ) : isEvaluating ? (
@@ -335,27 +424,23 @@ export default function AnalyzingPage() {
               <br />
               Give us a moment
             </>
-          ) : isFinished && followupMode ? (
-            <>
-              Follow-up evaluated.
-              <br />
-              Moving to the next main question.
-            </>
           ) : isFinished && followup ? (
             <>
-              We need a follow-up answer:
+              Optional follow-up question:
               <br />
               {followup.text}
             </>
           ) : isFinished ? (
             <>
-              Analysis finished.
+              Our Model has finished the analysis,
               <br />
               Ready for the next question?
             </>
           ) : (
             <>
               Evaluation is not complete yet.
+              <br />
+              Please try again
             </>
           )}
         </h2>
@@ -368,71 +453,76 @@ export default function AnalyzingPage() {
               width: "300px",
               height: "auto",
               filter: isFinished
-                ? "drop-shadow(0 0 20px rgba(212,255,71,0.4))"
-                : "drop-shadow(0 0 20px rgba(168,85,247,0.3))",
+                ? "drop-shadow(0 0 20px rgba(212, 255, 71, 0.4))"
+                : "drop-shadow(0 0 20px rgba(168, 85, 247, 0.3))",
               transition: "filter 0.5s ease",
             }}
           />
         </div>
 
-        {isFinished && followup && (
-          <div
-            style={{
-              marginBottom: "14px",
-              backgroundColor: "rgba(212, 255, 71, 0.2)",
-              border: "1px solid rgba(212, 255, 71, 0.7)",
-              color: "#d4ff47",
-              padding: "8px 16px",
-              borderRadius: "999px",
-              fontSize: "14px",
-              fontFamily: "var(--font-nova-square)",
-              letterSpacing: "0.2px",
-            }}
-          >
-            Follow-up optional
-          </div>
-        )}
-
-        <button
-          onClick={handleNext}
-          disabled={!isFinished}
-          style={{
-            backgroundColor: isFinished ? "#d4ff47" : "#BABABA",
-            color: "#1a1a1a",
-            padding: "12px 60px",
-            borderRadius: "14px",
-            border: "none",
-            fontSize: "18px",
-            fontFamily: "var(--font-nova-square)",
-            fontWeight: 600,
-            cursor: isFinished ? "pointer" : "wait",
-            transition: "all 0.5s ease",
-            opacity: isFinished ? 1 : 0.8,
-          }}
-        >
-          {followupMode ? "Next Question" : followup ? "Answer Follow-up" : "Next Question"}
-        </button>
-
-        {isFinished && followup && !followupMode && (
+        <div style={{ display: "flex", gap: "12px", alignItems: "center", justifyContent: "center" }}>
           <button
-            onClick={() => void handleConsent(false)}
+            onClick={() => handleNext()}
+            disabled={!isActionReady}
             style={{
-              marginTop: "12px",
-              backgroundColor: "#cbd5e1",
-              color: "#0f172a",
+              backgroundColor: isActionReady ? "#d4ff47" : "#BABABA",
+              color: "#1a1a1a",
               padding: "12px 60px",
               borderRadius: "14px",
               border: "none",
-              fontSize: "16px",
+              fontSize: "18px",
               fontFamily: "var(--font-nova-square)",
               fontWeight: 600,
-              cursor: "pointer",
-              opacity: 1,
+              cursor: isActionReady ? "pointer" : "wait",
+              transition: "all 0.5s ease",
+              opacity: isActionReady ? 1 : 0.8,
             }}
           >
-            Skip Follow-up
+            {missingContext ? "Restart Interview" : followup ? "Answer Follow-up" : "Next Question"}
           </button>
-        )}
+
+          {isFinished && followup ? (
+            <button
+              type="button"
+              onClick={handleSkipFollowup}
+              style={{
+                backgroundColor: "rgba(255, 255, 255, 0.14)",
+                color: "#ffffff",
+                border: "1px solid rgba(255, 255, 255, 0.25)",
+                borderRadius: "14px",
+                padding: "12px 20px",
+                fontSize: "15px",
+                fontFamily: "var(--font-nova-square)",
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              Skip Follow-up
+            </button>
+          ) : null}
+
+          {isFinished && followup ? (
+            <button
+              type="button"
+              onClick={() => void handleReplayFollowupAudio()}
+              disabled={isReplayingFollowup}
+              style={{
+                backgroundColor: "#d4ff47",
+                color: "#111827",
+                border: "none",
+                borderRadius: "999px",
+                padding: "10px 16px",
+                fontSize: "13px",
+                fontFamily: "var(--font-nova-square)",
+                fontWeight: 700,
+                cursor: isReplayingFollowup ? "not-allowed" : "pointer",
+                opacity: isReplayingFollowup ? 0.65 : 1,
+              }}
+            >
+              {isReplayingFollowup ? "Replaying..." : "Replay"}
+            </button>
+          ) : null}
+        </div>
       </div>
     </InterviewLayout>
   );

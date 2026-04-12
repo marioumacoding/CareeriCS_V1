@@ -92,6 +92,14 @@ export interface APISubmitAnswerResponse {
   answer_audio: string;
 }
 
+export interface APIAnswerRead {
+  id: string;
+  session_id: string;
+  question_id: string | null;
+  answer_text: string | null;
+  answer_audio: string | null;
+}
+
 export interface APIFollowup {
   id: string;
   text: string;

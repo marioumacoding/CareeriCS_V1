@@ -294,8 +294,6 @@ return (
       setSidebarExpandedId(id);
       if (id <= activeStepId) setExpandedStepId(id);
     }}
-    closeIconSrc="/auth/close.svg"
-    closeRoute="/features/cv"
   >
     <div style={{ width: "100%", height: "100vh", display: "flex", flexDirection: "column", alignItems: "center", position: "relative", overflow: "hidden" }}>
       

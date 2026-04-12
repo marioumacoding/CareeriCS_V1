@@ -126,7 +126,7 @@ export default function CVCrafting() {
     link.click();
   };
 
-  return (
+ return (
     <>
       {/* 1. The Main Content Layer */}
       <RootLayout
@@ -159,74 +159,50 @@ export default function CVCrafting() {
         />
 
         <ArchiveCard
-          title="CV History"
           items={archiveItems}
-          isLoading={isLoadingReports}
-          emptyLabel="No CV history yet."
-          onDownload={handleDownloadReport}
           style={{ gridArea: "1 / 5 / 6 / 7" }}
         />
 
-        <div
-          style={{
-            gridArea: "5 / 1 / 6 / 5",
-            display: "flex",
-            alignItems: "center",
-            gap: "10px",
-            marginTop: "-6px",
-          }}
-        >
-          {reportsError && <span style={{ color: "#ffb4b4" }}>{reportsError}</span>}
-        </div>
-
         {/* CV Extractor Row */}
         <div style={{ 
-          gridArea: "4 / 1 / 5 / 5", 
+          gridArea: "4 / 1 / 6 / 5", 
           backgroundColor: "#16203d", 
           borderRadius: "24px", 
           padding: "25px",
           display: "flex",
-          flexDirection: "column",
-          gap: "12px"
+          alignItems: "center",
+          justifyContent: "space-between" 
         }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "25px" }}>
-              <img src="/cv/cv.svg" alt="" style={{ width: "80px" }} />
-              <div style={{ height: "80px", width: "1.7px", backgroundColor: "white" }}></div>
-              <div>
-                <h3 style={{ color: "white", fontSize: "clamp(0.8rem,1.7vw,1.5rem)", margin: 0, fontFamily: 'var(--font-nova-square)', fontWeight: "200" }}>
-                  CV Extractor
-                </h3>
-                <p style={{ color: "white", fontSize: "15px", marginTop: "5px" }}>
-                  Update your data on our system to automate job application later on
-                </p>
-              </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "25px" }}>
+            <img src="/cv/cv.svg" alt="" style={{ width: "80px" }} />
+            <div style={{ height: "80px", width: "1.7px", backgroundColor: "white" }}></div>
+            <div>
+              <h3 style={{ color: "white", fontSize: "clamp(0.8rem,1.7vw,1.5rem)", margin: 0, fontFamily: 'var(--font-nova-square)', fontWeight: "200" }}>
+                CV Extractor
+              </h3>
+              <p style={{ color: "white", fontSize: "15px", marginTop: "5px" }}>
+                Update your data on our system to automate job application later on
+              </p>
             </div>
-
-            <Button 
-              variant="primary-inverted" 
-              onClick={() => setIsPopOpen(true)} 
-              disabled={isExtracting}
-              style={{
-                padding: "22px 35px",
-                borderRadius: "12px",
-                marginTop: "50px",
-                fontWeight: "400",
-                fontSize: "15px",
-                minWidth: "150px"
-              }}
-            >
-              {isExtracting ? "Uploading..." : "Upload CV"}
-            </Button>
           </div>
 
-          {extractorMessage && (
-            <div style={{ color: "white", fontSize: "14px", opacity: 0.9 }}>
-              {extractorMessage}
-            </div>
-          )}
+          <Button 
+            variant="primary-inverted" 
+            onClick={() => setIsPopOpen(true)} 
+            style={{
+              padding: "22px 35px",
+              borderRadius: "12px",
+              marginTop: "50px",
+              fontWeight: "400",
+              fontSize: "15px",
+              minWidth: "150px"
+            }}
+          >
+            Upload CV
+          </Button>
         </div>
       </RootLayout>
+
 
       {/* 2. The Popup Layer (Moved OUTSIDE of RootLayout) */}
       {isPopOpen && (

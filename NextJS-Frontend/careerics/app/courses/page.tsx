@@ -74,13 +74,21 @@ const CourseCard = ({ course }: { course: any }) => {
 export default function CourseLibraryPage() {
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Logic to calculate counts
   const totalTopics = PAGE_DATA.sections.length;
   const totalCourses = PAGE_DATA.sections.reduce((acc, sec) => acc + sec.items.length, 0);
   const completedCount = PAGE_DATA.sections.reduce((acc, sec) => acc + sec.items.filter(item => item.isDone).length, 0);
 
   return (
-    <div style={{ width: "100%", height: "100vh", padding: "40px 60px", color: "white", boxSizing: "border-box", display: "flex", flexDirection: "column", fontFamily: "var(--font-nova-square)" }}>
+ 
+    <div style={{ 
+      width: "100%", 
+      padding: "20px 40px", 
+      color: "white", 
+      boxSizing: "border-box", 
+      display: "flex", 
+      flexDirection: "column", 
+      fontFamily: "var(--font-nova-square)" 
+    }}>
       
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "25px" }}>
@@ -134,13 +142,11 @@ export default function CourseLibraryPage() {
 
       <hr style={{ border: "none", height: "1px", backgroundColor: "rgba(255,255,255,0.1)", marginBottom: "35px" }} />
 
-      {/* Course Sections List (Rendering PAGE_DATA Directly) */}
-      <div style={{ flex: 1, overflowY: "auto", scrollbarWidth: "none", display: "flex", flexDirection: "column", gap: "45px" }}>
-        <style>{`div::-webkit-scrollbar { display: none; }`}</style>
-        
+      {/* Course Sections List */}
+      <div style={{ display: "flex", flexDirection: "column", gap: "45px" }}>
         {PAGE_DATA.sections.map((section) => (
           <div key={section.category}>
-            <h3 style={{ fontSize: "20px", marginBottom: "25px", fontWeight: "400" }}>{section.category}</h3>
+            <h3 style={{ fontSize: "20px", marginBottom: "40px", fontWeight: "400" }}>{section.category}</h3>
             <div style={{ display: "flex", flexWrap: "wrap", gap: "25px" }}>
               {section.items.map((course) => (
                 <CourseCard key={course.id} course={course} />

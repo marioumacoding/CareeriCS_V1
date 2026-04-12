@@ -291,15 +291,14 @@ export default function AssessmentPage() {
           setCurrentQuestion(id);
         }
       }}
-      closeIconSrc="/auth/Close.svg"
-      closeRoute="/features/skill"
       title={skillName}
     >
       <div style={{
-        width: "100%", height: "100vh", display: "flex", flexDirection: "column",
+        width: "100%", height: "100%", display: "flex", flexDirection: "column",
         alignItems: "center", justifyContent: "center", position: "relative",
         padding: "10px 100px", boxSizing: "border-box",
-      }}>
+      }}
+      >
         
         {isInitializing ? (
           <div style={{ textAlign: "center", color: "white" }}>

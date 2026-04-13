@@ -65,13 +65,26 @@ def select_cards(db: Session, session_id: str, cards: list[dict]):
 
 # Get selected cards for a session
 def get_selected_cards(db: Session, session_id: str):
-    selected_cards = db.query(CareerSelectedCard).filter_by(session_id=session_id).all()
+    cards = (
+        db.query(CareerSelectedCard)
+        .filter(CareerSelectedCard.session_id == session_id)
+        .all()
+    )
+
     result = []
-    for card in selected_cards:
-        if card.hobby_id:
-            hobby = db.query(CareerHobby).filter_by(id=card.hobby_id).first()
-            result.append({"type": "hobby", "id": hobby.id, "name": hobby.name})
-        elif card.technical_skill_id:
-            skill = db.query(CareerTechnicalSkill).filter_by(id=card.technical_skill_id).first()
-            result.append({"type": "technical", "id": skill.id, "name": skill.name})
+
+    for c in cards:
+
+        if c.card_type == "technical":
+            result.append({
+                "type": "technical",
+                "name": c.technical_skill.name if c.technical_skill else None
+            })
+
+        elif c.card_type == "hobby":
+            result.append({
+                "type": "hobby",
+                "name": c.hobby.name if c.hobby else None
+            })
+
     return result

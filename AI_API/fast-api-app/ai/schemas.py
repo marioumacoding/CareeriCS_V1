@@ -85,7 +85,9 @@ skill_assessment_questions_schema = {
 # ============================================================
 # Career Quiz Evaluation
 # ============================================================
-career_quiz_evaluation_schema = {
-    "track_id": "UUID",
-    "score": "integer"
-}
+career_quiz_evaluation_schema = [
+    {
+        "track_id": "UUID",
+        "score": "integer (0-100)"
+    }
+]

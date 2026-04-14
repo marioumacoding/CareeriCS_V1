@@ -2,7 +2,7 @@
 
 import React, { useRef } from "react";
 import Image from "next/image";
-import ChoiceCard from "./choice-card";
+import ChoiceCard from "./choice-card-home";
 
 // --- 1. Helper: CircleScoreSVG ---
 const CircleScoreSVG = ({

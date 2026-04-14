@@ -49,48 +49,62 @@ export default function ChoiceCard({
         width: "100%",
         height: "100%",
         backgroundColor: "var(--dark-blue)",
-        borderRadius: "4vh",
+        borderRadius: "2vh",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        justifyContent:"space-between",
-        paddingTop:"5vh",
-        paddingBottom: "3vh",
-        paddingInline:"3vw",
+        padding: "3vh",
+        boxSizing: "border-box",
         overflow: "hidden",
+        gap: "1vh",
         ...style
       }}
     >
       <div
         style={{
           display: "flex",
-          width:"100%",
+          height: "40%",
           alignItems: "center",
           marginBottom: "auto",
-          justifyContent:"space-between",
+          width: "fit-content",
+          gap: "10px",
+          alignSelf: "flex-start",
         }}
       >
-        
-          <img
+        {/* Left — Image */}
+        <div
+          style={{
+            position: "relative",
+            width: "10vh",
+            height: "100%",
+          }}
+        >
+          <Image
             src={image || icon || ""}
             alt={title || "career icon"}
+            fill
             style={{
-              height:"12vh"
+              objectFit: "contain",
             }}
           />
+        </div>
 
+        {/* Center — Splitter */}
         <div
           style={{
             height: "80%",
             backgroundColor: "white",
             width: "0.1vh",
+            marginLeft: "auto",
+            marginRight: "auto",
           }}
         />
 
+        {/* Right — Title */}
         <p
           style={{
             color: "white",
-            fontSize: "1.4rem",
+            fontSize: "1rem",
             fontFamily: "var(--font-nova-square)",
             width: "min-content",
           }}
@@ -105,7 +119,7 @@ export default function ChoiceCard({
           flexShrink: 0,
           color: "white",
           textAlign: "center",
-          fontSize: "clamp(0.5rem,1vw,1.2rem)",
+          fontSize: "0.8rem",
           margin: 0,
         }}
       >
@@ -120,9 +134,9 @@ export default function ChoiceCard({
         style={{
           flexGrow: 0,
           flexShrink: 0,
-          paddingInline: "5vw",
+          width: "100%",
           marginTop: "auto",
-          paddingBlock:"2.5vh",
+          paddingBlock:"2.3vh"
         }}
       >
         {buttonLabel}

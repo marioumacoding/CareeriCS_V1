@@ -15,11 +15,11 @@ const Folder = ({ children }: FolderProps) => {
     "/features/courses": { title: "Courses Hub", subtitle: "Expand your knowledge", tabwidth: "20%" },
     "/features/roadmap": { title: "Roadmaps", subtitle: "Discover where you stand", tabwidth: "20%" },
     "/features/skill": { title: "Skill Assessment", subtitle: "Discover where you stand", tabwidth: "20%" },
-    "/features/cv": { title: "CV Crafting", subtitle: "Turn experience into impact", tabwidth: "20%" },
+    "/features/cv": { title: "CV Crafting", subtitle: "Turn experience into impact", tabwidth: "25%" },
     "/features/interview": {
       title: "Interview Preparation",
       subtitle: "Practice makes perfect",
-      tabwidth: "35vw",
+      tabwidth: "38%",
     },
     "/features/job": { title: "Job Search", subtitle: "Your next opportunity is waiting", tabwidth: "20%" },
   };

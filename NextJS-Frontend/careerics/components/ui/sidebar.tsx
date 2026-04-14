@@ -40,7 +40,7 @@ const Sidebar = () => {
   return (
     <aside
       style={{
-        width: "15vw",
+        width: "20vw",
         height: "100vh",
         backgroundColor: "var(--bg-color)",
         paddingTop: "3vh",

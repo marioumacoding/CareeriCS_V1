@@ -17,7 +17,7 @@ export default function TipCard({ icon, title, description, style }: TipCardProp
                 width: "100%",
                 height: "100%",
                 backgroundColor: "#1C427B",
-                borderRadius: "2vh",
+                borderRadius: "4vh",
                 display: "flex",
                 gap: "2vh",
                 paddingInline: "2vw",
@@ -28,7 +28,7 @@ export default function TipCard({ icon, title, description, style }: TipCardProp
                 ...style
             }}
         >
-            <img src={icon} alt={title} style={{ height: "70%" }} />
+            <img src={icon} alt={title} style={{ height: "12vh" }} />
 
             <div
                 style={{

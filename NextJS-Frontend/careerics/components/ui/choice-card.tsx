@@ -62,17 +62,23 @@ export default function ChoiceCard({
     >
       <div
         style={{
-          display: "grid",
-          gridTemplateColumns: "10fr 1fr 10fr",
+          display: "flex",
           height: "40%",
-          justifyItems: "center",
           alignItems: "center",
-          flexGrow: 0,
-          flexShrink: 0,
           marginBottom: "auto",
+          width: "fit-content",
+          gap: "10px",
+          alignSelf: "flex-start",
         }}
       >
-        <div style={{ position: "relative", width: "70%", height: "100%" }}>
+        {/* Left — Image */}
+        <div
+          style={{
+            position: "relative",
+            width: "10vh",
+            height: "100%",
+          }}
+        >
           <Image
             src={image || icon || ""}
             alt={title || "career icon"}
@@ -83,21 +89,24 @@ export default function ChoiceCard({
           />
         </div>
 
+        {/* Center — Splitter */}
         <div
           style={{
             height: "80%",
             backgroundColor: "white",
             width: "0.1vh",
-            margin: 0,
+            marginLeft: "auto",
+            marginRight: "auto",
           }}
         />
 
+        {/* Right — Title */}
         <p
           style={{
-            margin: 0,
             color: "white",
-            fontSize: "clamp(0.8rem,1.7vw,1.5rem)",
+            fontSize: "1rem",
             fontFamily: "var(--font-nova-square)",
+            width: "min-content",
           }}
         >
           {title}
@@ -110,7 +119,7 @@ export default function ChoiceCard({
           flexShrink: 0,
           color: "white",
           textAlign: "center",
-          fontSize: "clamp(0.5rem,1vw,1.2rem)",
+          fontSize: "0.8rem",
           margin: 0,
         }}
       >
@@ -125,8 +134,9 @@ export default function ChoiceCard({
         style={{
           flexGrow: 0,
           flexShrink: 0,
-          paddingInline: "5vw",
-          marginTop: "auto"
+          width: "100%",
+          marginTop: "auto",
+          paddingBlock:"2.3vh"
         }}
       >
         {buttonLabel}

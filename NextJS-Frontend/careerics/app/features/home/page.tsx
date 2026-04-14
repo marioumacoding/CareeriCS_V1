@@ -1,12 +1,11 @@
 "use client";
-import { CareersCard, RecentActivityCard, JourneyProgressCard, NextPhaseCard } from "@/components/ui/dashboardCards";
+import { CareersCard, RecentActivityCard, JourneyProgressCard, NextPhaseCard, CurrentPhaseCard } from "@/components/ui/dashboardCards";
 
 export default function HomePage() {
   const careerData = [
-    { title: "Frontend", desc: "Build fast, responsive, interactive interfaces." },
-    { title: "UI/UX", desc: "Design intuitive and user-focused experiences." },
-    { title: "Backend", desc: "Power applications with secure, scalable logic." },
-    { title: "full stack", desc: "Power applications with secure, scalable logic." },
+    { title: "Frontend Development", desc: "Build fast, responsive, interactive interfaces." },
+    { title: "UI/UX Design", desc: "Design intuitive and user-focused experiences." },
+    { title: "Backend Development", desc: "Power applications with secure, scalable logic." },
   ];
 
   const activities = [
@@ -17,30 +16,36 @@ export default function HomePage() {
   ];
 
   return (
-    <div style={{ width: "100%", height: "100vh", padding: "20px", boxSizing: "border-box" }}>
-      <div style={{
+
+    <div
+      style={{
+        position: "relative",
+        width: "100%",
+        height: "100%",
+        padding: "40px",
         display: "grid",
-        gridTemplateColumns: "1.3fr 1.3fr 1.3fr 0.7fr 0.9fr", 
-        gridTemplateRows: "1.4fr 1.4fr 0.7fr 0.9fr", 
-        gridColumnGap: "10px",
-        gridRowGap: "6px",
-        height: "88%", 
-        marginTop: "-60px",
-        width: "100%"
-      }}>
-        <div style={{ gridArea: "1 / 1 / 3 / 4" }}>
-          <CareersCard careers={careerData} />
-        </div>
-        <div style={{ gridArea: "1 / 4 / 3 / 6" }}>
-          <RecentActivityCard activities={activities} />
-        </div>
-        <div style={{ gridArea: "3 / 1 / 5 / 2" }}>
-          <JourneyProgressCard percentage={75} />
-        </div>
-        <div style={{ gridArea: "3 / 2 / 5 / 6" }}>
-          <NextPhaseCard />
-        </div>
-      </div>
+        gridTemplateColumns: "1.3fr 1.3fr 1.3fr 0.7fr 0.9fr",
+        gridTemplateRows: "1.4fr 1.4fr 0.7fr 0.9fr",
+        gridColumnGap: "25px",
+        gridRowGap: "20px",
+        
+      }}
+    >
+
+      <CareersCard careers={careerData} style={{ gridArea: "1 / 1 / 3 / 4" }} />
+
+      <RecentActivityCard activities={activities} style={{ gridArea: "1 / 4 / 3 / 6" }} />
+
+      <JourneyProgressCard percentage={10} style={{ gridArea: "3 / 1 / 5 / 2" }} />
+
+      <CurrentPhaseCard percentage={2} style={{ gridArea: "3 / 2 / 5 / 2" }} />
+      
+      <NextPhaseCard 
+      style={{ gridArea: "3 / 3 / 5 / 6" }} 
+      desc="bla bla bla bla bla bla bla bla bla blaaa bla bla bla"
+      phaseNumber="4"
+      />
+
     </div>
   );
 }

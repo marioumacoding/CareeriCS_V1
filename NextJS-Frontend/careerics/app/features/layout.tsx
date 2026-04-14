@@ -28,13 +28,8 @@ export default function RootLayout({
 
           <div style={{
             position: "relative",
-            height: "80%",
-            margin: "0 auto",
-            display: "grid",
-            paddingTop: "1vh",
-            paddingBottom: "1vh",
-            paddingLeft: "5vw",
-            paddingRight: "5vw",  
+            height: "100%",
+            margin: "0 auto", 
             ...style,
           }}
           >

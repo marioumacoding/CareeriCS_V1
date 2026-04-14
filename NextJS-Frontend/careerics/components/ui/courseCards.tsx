@@ -4,30 +4,30 @@ import React, { useRef } from 'react';
 // --- Card 1: Courses you are currently taking (Checkmark Logic Only) ---
 export const CurrentCoursesCard = ({ courses, selected, onSelect, style }: any) => {
   const scrollRef = useRef<HTMLDivElement>(null);
-  
+
   const handleScroll = () => {
     if (scrollRef.current) scrollRef.current.scrollBy({ left: 250, behavior: 'smooth' });
   };
 
   return (
-    <div style={{ 
-      backgroundColor: "#1C427B", borderRadius: "20px", padding: "20px 30px", color: "white",
-      display: "flex", flexDirection: "column", justifyContent: "center", position: "relative", ...style 
+    <div style={{
+      backgroundColor: "#1C427B", borderRadius: "4vh", padding: "20px 30px", color: "white",
+      display: "flex", flexDirection: "column", justifyContent: "center", position: "relative", ...style
     }}>
       <h3 style={{ fontSize: "18px", marginBottom: "15px", fontFamily: 'var(--font-nova-square)', fontWeight: "200" }}>
         Courses you are currently taking
       </h3>
       <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
-        <div 
-          ref={scrollRef} 
-          style={{ 
-            display: "flex", gap: "15px", overflowX: "auto", 
-            scrollbarWidth: "none", msOverflowStyle: "none" 
+        <div
+          ref={scrollRef}
+          style={{
+            display: "flex", gap: "15px", overflowX: "auto",
+            scrollbarWidth: "none", msOverflowStyle: "none"
           }}
         >
           {courses.map((course: any) => {
             const isCompleted = course.completed === true;
-            
+
             return (
               <div
                 key={course.title}
@@ -40,16 +40,18 @@ export const CurrentCoursesCard = ({ courses, selected, onSelect, style }: any) 
                 }}
               >
                 <div style={{ fontWeight: "bold", fontSize: "14px" }}>{course.title}</div>
-                <div style={{ fontSize: "10px", opacity: 0.7 }}>by {course.provider}</div>
-                
+                <div style={{ fontSize: "10px", fontWeight: "bold" }}>by {course.provider}</div>
+
                 {/* Status Indicator Circle - Only shows ✓ if completed */}
-                <div style={{ 
-                  position: "absolute", right: "15px", top: "50%", transform: "translateY(-50%)", 
-                  width: "22px", height: "22px", borderRadius: "50%", 
-                  border: "2px solid black", display: "flex", alignItems: "center", 
-                  justifyContent: "center", fontSize: "14px", fontWeight: "bold",
-                  backgroundColor: "transparent", color: "black"
-                }}>
+                <div
+                  style={{
+                    position: "absolute", right: "15px", top: "50%", transform: "translateY(-50%)",
+                    width: "22px", height: "22px", borderRadius: "50%",
+                    border: "2px solid black", display: "flex", alignItems: "center",
+                    justifyContent: "center", fontSize: "14px", fontWeight: "bold",
+                    backgroundColor: "transparent", color: "black"
+
+                  }}>
                   {isCompleted ? "✓" : ""}
                 </div>
               </div>
@@ -65,24 +67,40 @@ export const CurrentCoursesCard = ({ courses, selected, onSelect, style }: any) 
 // --- Card 2: More fields to discover ---
 export const FieldsDiscoverCard = ({ fields, selected, onSelect, style }: any) => {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const handleScroll = () => {
-    if (scrollRef.current) scrollRef.current.scrollBy({ top: 120, behavior: 'smooth' });
-  };
+  
+      const scrollDown = () => {
+          if (scrollRef.current) {
+              scrollRef.current.scrollBy({
+                  top: 200,
+                  behavior: "smooth",
+              });
+          }
+      };
+  
+      const scrollUp = () => {
+          if (scrollRef.current) {
+              scrollRef.current.scrollBy({
+                  top: -200,
+                  behavior: "smooth",
+              });
+          }
+      };
+  
 
   return (
-    <div style={{ 
-      backgroundColor: "#142143", borderRadius: "20px", padding: "20px", color: "white", 
-      display: "flex", flexDirection: "column", position: "relative", overflow: "hidden", ...style 
+    <div style={{
+      backgroundColor: "#142143", borderRadius: "4vh", padding: "20px", color: "white",
+      display: "flex", flexDirection: "column", position: "relative", overflow: "hidden", ...style
     }}>
       <h3 style={{ fontSize: "20px", marginBottom: "15px", fontFamily: 'var(--font-nova-square)', fontWeight: "100" }}>
         More fields to discover
       </h3>
-      
-      <div 
-        ref={scrollRef} 
-        style={{ 
-          display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px", 
-          overflowY: "auto", scrollbarWidth: "none", flexGrow: 1, paddingBottom: "40px" 
+
+      <div
+        ref={scrollRef}
+        style={{
+          display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px",
+          overflowY: "auto", scrollbarWidth: "none", flexGrow: 1, paddingBottom: "40px"
         }}
       >
         {fields.map((field: string) => (
@@ -91,9 +109,9 @@ export const FieldsDiscoverCard = ({ fields, selected, onSelect, style }: any) =
             onClick={() => onSelect(field)}
             style={{
               padding: "15px 5px", borderRadius: "12px", border: "none",
-              backgroundColor: selected === field ? "#f9f9f7" : "#1C427B",
-              color: selected === field ? "black" : "white", 
-              fontSize: "11px", fontWeight: "500", cursor: "pointer", transition: "0.2s"
+              backgroundColor: selected === field ? "#E6FFB2" : "#1C427B",
+              color: selected === field ? "black" : "white",
+              fontSize: "0.7rem", fontWeight: "bold", cursor: "pointer", transition: "0.2s", fontFamily: "var(--font-jura)"
             }}
           >
             {field}
@@ -101,15 +119,47 @@ export const FieldsDiscoverCard = ({ fields, selected, onSelect, style }: any) =
         ))}
       </div>
 
-      <div 
-        onClick={handleScroll} 
-        style={{ 
-          position: "absolute", bottom: "10px", left: "50%", transform: "translateX(-50%) rotate(90deg)",
-          cursor: "pointer", color: "#c1cbe6", fontSize: "20px", zIndex: 10
-        }}
-      >
-        ❯
-      </div>
+        <div
+                style={{
+                    display: "flex",
+                    marginTop: "auto",
+                    width: "fit-content",
+                    marginLeft: "auto"
+                }} >
+
+                <div
+                    onClick={scrollUp}
+                    style={{
+                        cursor: "pointer",
+                        transform: "rotate(-270deg)",
+                        marginRight: "auto",
+                    }}
+                >
+                    <img
+                        src="/auth/Back Arrow.svg"
+                        alt="Scroll"
+                        width={30}
+                        height={30}
+                    />
+                </div>
+
+                <div
+                    onClick={scrollDown}
+                    style={{
+                        display: "flex",
+                        justifyContent: "center",
+                        cursor: "pointer",
+                        transform: "rotate(270deg)",
+                    }}
+                >
+                    <img
+                        src="/auth/Back Arrow.svg"
+                        alt="Scroll"
+                        width={30}
+                        height={30}
+                    />
+                </div>
+            </div>
     </div>
   );
 };
@@ -117,45 +167,94 @@ export const FieldsDiscoverCard = ({ fields, selected, onSelect, style }: any) =
 // --- Card 3: Completed Courses ---
 export const CompletedCoursesCard = ({ courses, style }: any) => {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const handleScroll = () => {
-    if (scrollRef.current) scrollRef.current.scrollBy({ top: 100, behavior: 'smooth' });
+
+  const scrollDown = () => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollBy({
+        top: 200,
+        behavior: "smooth",
+      });
+    }
+  };
+
+  const scrollUp = () => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollBy({
+        top: -200,
+        behavior: "smooth",
+      });
+    }
   };
 
   return (
-    <div style={{ 
-      backgroundColor: "#142143", borderRadius: "20px", padding: "20px", color: "white", 
-      display: "flex", flexDirection: "column", gap: "10px", position: "relative", overflow: "hidden", ...style 
+    <div style={{
+      backgroundColor: "#142143", borderRadius: "4vh", padding: "20px", color: "white",
+      display: "flex", flexDirection: "column", gap: "10px", position: "relative", overflow: "hidden", ...style
     }}>
       <h3 style={{ fontSize: "20px", textAlign: "left", marginBottom: "5px", fontFamily: 'var(--font-nova-square)', fontWeight: "200" }}>
         Completed Courses
       </h3>
-      
-      <div 
-        ref={scrollRef} 
-        style={{ 
-          display: "flex", flexDirection: "column", gap: "10px", 
-          overflowY: "auto", scrollbarWidth: "none", flexGrow: 1, paddingBottom: "40px" 
+
+      <div
+        ref={scrollRef}
+        style={{
+          display: "flex", flexDirection: "column", gap: "10px",
+          overflowY: "auto", scrollbarWidth: "none", flexGrow: 1, paddingBottom: "40px"
         }}
       >
         {courses.map((course: any, idx: number) => (
           <div key={idx} style={{ backgroundColor: "#c1cbe6", borderRadius: "12px", padding: "12px 15px", display: "flex", justifyContent: "space-between", alignItems: "center", color: "black" }}>
-            <div>
+            <div
+              style={{ fontFamily: "var(--font-nova-square)" }}
+            >
               <div style={{ fontWeight: "bold", fontSize: "12px" }}>{course.title}</div>
-              <div style={{ fontSize: "10px", opacity: 0.7 }}>by {course.provider}</div>
+              <div style={{ fontSize: "0.6rem" }}>by {course.provider}</div>
             </div>
-            <div style={{ fontSize: "14px", cursor: "pointer" }}>↺</div>
+            <div style={{ fontWeight: "bold", fontSize: "0.9rem", cursor: "pointer", transform: "rotate(-90deg)" }}>↺</div>
           </div>
         ))}
       </div>
 
-      <div 
-        onClick={handleScroll} 
-        style={{ 
-          position: "absolute", bottom: "10px", left: "90%", transform: "translateX(-50%) rotate(90deg)",
-          cursor: "pointer", color: "#c1cbe6", fontSize: "20px", zIndex: 10
-        }}
-      >
-        ❯
+      <div
+        style={{
+          display: "flex",
+          marginTop: "auto",
+          width: "fit-content",
+          marginLeft: "auto"
+        }} >
+
+        <div
+          onClick={scrollUp}
+          style={{
+            cursor: "pointer",
+            transform: "rotate(-270deg)",
+            marginRight: "auto",
+          }}
+        >
+          <img
+            src="/auth/Back Arrow.svg"
+            alt="Scroll"
+            width={30}
+            height={30}
+          />
+        </div>
+
+        <div
+          onClick={scrollDown}
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            cursor: "pointer",
+            transform: "rotate(270deg)",
+          }}
+        >
+          <img
+            src="/auth/Back Arrow.svg"
+            alt="Scroll"
+            width={30}
+            height={30}
+          />
+        </div>
       </div>
     </div>
   );

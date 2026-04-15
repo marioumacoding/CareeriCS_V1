@@ -120,7 +120,7 @@ const Sidebar = () => {
           display: "flex",
           alignItems: "center",
           gap: "1rem",
-          marginTop: "auto",
+          marginTop: "2vh",
           marginBottom: "2vh",
           height: "10vh",
           borderTop: "3px solid #fff",

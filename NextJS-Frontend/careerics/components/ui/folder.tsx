@@ -14,7 +14,7 @@ const Folder = ({ children }: FolderProps) => {
     "/features/career": { title: "Career Exploration", subtitle: "Find your path", tabwidth: "33%" },
     "/features/courses": { title: "Courses Hub", subtitle: "Expand your knowledge", tabwidth: "25%" },
     "/features/roadmap": { title: "Roadmaps", subtitle: "Discover where you stand", tabwidth: "20%" },
-    "/features/skill": { title: "Skill Assessment", subtitle: "Discover where you stand", tabwidth: "20%" },
+    "/features/skill": { title: "Skill Assessment", subtitle: "Discover where you stand", tabwidth: "30%" },
     "/features/cv": { title: "CV Crafting", subtitle: "Turn experience into impact", tabwidth: "25%" },
     "/features/interview": {
       title: "Interview Preparation",

@@ -14,7 +14,7 @@ export default function CareerDiscoveryPage() {
   },
   {
     title: "Frontend Development",
-    desc: "Develop responsive interfaces and interactive features users see and use daily.",
+    desc: "Develop responsive interfaces and interactive features users see and use.",
     image: "/Landing/Rectangle.svg",
   },
   {
@@ -96,7 +96,7 @@ export default function CareerDiscoveryPage() {
             <div>
               <h2
                 style={{
-                  fontSize: "1.5rem",
+                  fontSize: "1.2rem",
                   marginBottom: "1.5vh",
                   fontFamily: "var(--font-nova-square)",
                 }}
@@ -106,7 +106,7 @@ export default function CareerDiscoveryPage() {
 
               <p
                 style={{
-                  fontSize: "1rem",
+                  fontSize: "0.9rem",
                   opacity: 0.8,
                 }}
               >

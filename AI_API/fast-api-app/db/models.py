@@ -60,7 +60,6 @@ class User(Base):
     reports = relationship("Report", back_populates="user",cascade="all, delete-orphan")
     assessment = relationship("RoadmapAssessmentResult", back_populates="user", cascade="all, delete-orphan")
     career_sessions = relationship("CareerSession", back_populates="user", cascade="all, delete-orphan")
-    job_applications = relationship("JobApplication", back_populates="user", cascade="all, delete-orphan")
 
 
 # ###########################################################################################################################
@@ -677,7 +676,7 @@ class JobPost(Base):
         nullable=False
     )
 
-    applications = relationship("JobApplication", back_populates="job_post", cascade="all, delete-orphan")
+    user_interactions = relationship("JobUserInteraction", back_populates="job_post", cascade="all, delete-orphan")
 
     __table_args__ = (
         Index("idx_job_post_title_company", "job_title", "company_name"),
@@ -686,16 +685,18 @@ class JobPost(Base):
 
 
 # =========================
-# JOB APPLICATIONS
+# JOB USER INTERACTIONS
 # =========================
-class JobApplication(Base):
-    __tablename__ = "job_applications"
+class JobUserInteraction(Base):
+    __tablename__ = "job_user_interactions"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     job_post_id = Column(UUID(as_uuid=True), ForeignKey("job_posts.id"), nullable=False)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    application_status = Column(String, nullable=False, default="pending")
-    applied_at = Column(
+    viewed_at = Column(DateTime(timezone=True), nullable=True)
+    is_saved = Column(Boolean, nullable=False, default=False)
+    saved_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(
         DateTime(timezone=True),
         server_default=func.now(),
         nullable=False
@@ -707,10 +708,11 @@ class JobApplication(Base):
         nullable=False
     )
 
-    job_post = relationship("JobPost", back_populates="applications")
+    job_post = relationship("JobPost", back_populates="user_interactions")
     user = relationship("User")
 
     __table_args__ = (
-        UniqueConstraint("job_post_id", "user_id", name="uq_job_application_user_job"),
-        Index("idx_job_application_status", "application_status"),
+        UniqueConstraint("job_post_id", "user_id", name="uq_job_user_interaction_user_job"),
+        Index("idx_job_user_interactions_user_saved", "user_id", "is_saved"),
+        Index("idx_job_user_interactions_user_viewed_at", "user_id", "viewed_at"),
     )

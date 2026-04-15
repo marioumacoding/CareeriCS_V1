@@ -5,16 +5,30 @@ from typing import List
 from uuid import UUID
 
 from dependencies import get_db
-from schemas import JobPostResponse, JobApplicationCreate, JobApplicationResponse
+from schemas import (
+    JobPostResponse,
+    JobInteractionResponse,
+    UserJobsListResponse,
+)
 from services.job_service import (
     bulk_insert_jobs,
     fetch_jobs_paginated,
     fetch_job_post_by_id,
     search_jobs,
-    apply_to_job,
+    mark_job_as_recently_viewed,
+    set_job_saved_state,
+    fetch_user_saved_jobs,
+    fetch_user_recently_viewed_jobs,
 )
 
 router = APIRouter(prefix="/jobs", tags=["Jobs"])
+
+
+def _parse_user_uuid(user_id: str) -> UUID:
+    try:
+        return UUID(user_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid user ID format")
 
 
 @router.post("/bulk-import", status_code=status.HTTP_201_CREATED)
@@ -83,28 +97,6 @@ def list_jobs(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/{job_id}", response_model=JobPostResponse)
-def get_job_details(
-    job_id: UUID,
-    db: Session = Depends(get_db)
-):
-    """
-    Get details of a specific job post by ID.
-    """
-    try:
-        job = fetch_job_post_by_id(db, job_id)
-        if not job:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Job post with ID {job_id} not found"
-            )
-        return job
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
 @router.get("/search/query", response_model=dict)
 def search_jobs_endpoint(
     query: str | None = Query(None, min_length=1),
@@ -140,31 +132,133 @@ def search_jobs_endpoint(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/apply/{job_id}", response_model=JobApplicationResponse, status_code=status.HTTP_201_CREATED)
-def apply_to_job_endpoint(
+@router.post("/{job_id}/view", response_model=JobInteractionResponse)
+def mark_job_as_viewed_endpoint(
     job_id: UUID,
-    user_id: str = Query(..., description="User ID applying to the job"),
+    user_id: str = Query(..., description="User ID who viewed the job"),
     db: Session = Depends(get_db)
 ):
     """
-    Apply to a job posting.
-    
-    Query Parameters:
-    - user_id (required): UUID of the user applying to the job
-    
-    Path Parameters:
-    - job_id: UUID of the job post to apply to
+    Mark a job as recently viewed for the user.
     """
     try:
-        try:
-            user_uuid = UUID(user_id)
-        except ValueError:
-            raise HTTPException(status_code=400, detail="Invalid user ID format")
-        
-        application = apply_to_job(db, user_uuid, job_id)
-        return application
+        user_uuid = _parse_user_uuid(user_id)
+        interaction = mark_job_as_recently_viewed(db, user_uuid, job_id)
+        return interaction
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/{job_id}/save", response_model=JobInteractionResponse)
+def save_job_endpoint(
+    job_id: UUID,
+    user_id: str = Query(..., description="User ID saving the job"),
+    db: Session = Depends(get_db)
+):
+    """
+    Save a job for the user.
+    """
+    try:
+        user_uuid = _parse_user_uuid(user_id)
+        interaction = set_job_saved_state(db, user_uuid, job_id, is_saved=True)
+        return interaction
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/{job_id}/save", response_model=JobInteractionResponse)
+def unsave_job_endpoint(
+    job_id: UUID,
+    user_id: str = Query(..., description="User ID unsaving the job"),
+    db: Session = Depends(get_db)
+):
+    """
+    Remove a saved job for the user.
+    """
+    try:
+        user_uuid = _parse_user_uuid(user_id)
+        interaction = set_job_saved_state(db, user_uuid, job_id, is_saved=False)
+        return interaction
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/user/{user_id}/saved", response_model=UserJobsListResponse)
+def list_user_saved_jobs(
+    user_id: UUID,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
+    db: Session = Depends(get_db)
+):
+    """
+    List saved jobs for a user.
+    """
+    try:
+        jobs, total_count = fetch_user_saved_jobs(db, user_id=user_id, skip=skip, limit=limit)
+        return {
+            "total": total_count,
+            "skip": skip,
+            "limit": limit,
+            "jobs": jsonable_encoder(jobs),
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/user/{user_id}/recently-viewed", response_model=UserJobsListResponse)
+def list_user_recently_viewed_jobs(
+    user_id: UUID,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
+    db: Session = Depends(get_db)
+):
+    """
+    List recently viewed jobs for a user.
+    """
+    try:
+        jobs, total_count = fetch_user_recently_viewed_jobs(db, user_id=user_id, skip=skip, limit=limit)
+        return {
+            "total": total_count,
+            "skip": skip,
+            "limit": limit,
+            "jobs": jsonable_encoder(jobs),
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/{job_id}", response_model=JobPostResponse)
+def get_job_details(
+    job_id: UUID,
+    db: Session = Depends(get_db)
+):
+    """
+    Get details of a specific job post by ID.
+    """
+    try:
+        job = fetch_job_post_by_id(db, job_id)
+        if not job:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Job post with ID {job_id} not found"
+            )
+        return job
     except HTTPException:
         raise
     except Exception as e:

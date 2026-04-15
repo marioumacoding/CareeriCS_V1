@@ -642,15 +642,21 @@ class JobPostResponse(JobPostBase):
     model_config = ConfigDict(from_attributes=True)
 
 
-class JobApplicationCreate(BaseModel):
-    job_post_id: UUID
-
-
-class JobApplicationResponse(BaseModel):
+class JobInteractionResponse(BaseModel):
     id: UUID
     job_post_id: UUID
     user_id: UUID
-    application_status: str
-    applied_at: datetime
+    viewed_at: Optional[datetime] = None
+    is_saved: bool
+    saved_at: Optional[datetime] = None
+    created_at: datetime
     updated_at: datetime
     model_config = ConfigDict(from_attributes=True)
+
+
+class UserJobsListResponse(BaseModel):
+    total: int
+    skip: int
+    limit: int
+    jobs: List[JobPostResponse]
+

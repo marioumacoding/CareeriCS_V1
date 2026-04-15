@@ -1,43 +1,11 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import or_, func, text
+from sqlalchemy import and_, or_, func, text
 from sqlalchemy.exc import IntegrityError
 from typing import Any, Dict, List, Optional, Tuple
 from datetime import datetime, UTC
 from uuid import UUID
 
-from db.models import JobPost, JobApplication, User
-from schemas import JobPostResponse, JobApplicationResponse
-
-
-def _ensure_job_applications_updated_at_column(db: Session) -> None:
-    """
-    Backward-compatible safety check for environments where job_applications
-    was created before the updated_at column existed.
-    """
-    exists = db.execute(
-        text(
-            """
-            SELECT 1
-            FROM information_schema.columns
-            WHERE table_name = 'job_applications'
-              AND column_name = 'updated_at'
-            LIMIT 1
-            """
-        )
-    ).first()
-
-    if exists:
-        return
-
-    db.execute(
-        text(
-            """
-            ALTER TABLE job_applications
-            ADD COLUMN updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-            """
-        )
-    )
-    db.commit()
+from db.models import JobPost, JobUserInteraction, User
 
 
 def normalize_job_data(job_data: dict) -> dict:
@@ -243,50 +211,139 @@ def search_jobs(
     return jobs, total_count
 
 
-def apply_to_job(db: Session, user_id: UUID, job_post_id: UUID) -> JobApplication:
-    """
-    Apply to a job posting.
-    
-    Creates a new job application record for the user.
-    Raises ValueError if user is already applied to this job.
-    """
-    # Keep endpoint functional even if the DB schema is slightly behind model definitions.
-    _ensure_job_applications_updated_at_column(db)
-
-    # Validate user exists to avoid foreign key errors turning into 500 responses.
+def _validate_user_and_job(db: Session, user_id: UUID, job_post_id: UUID) -> None:
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise ValueError(f"User with ID {user_id} not found")
 
-    # Check if user already applied to this job
-    existing_application = db.query(JobApplication).filter(
-        JobApplication.job_post_id == job_post_id,
-        JobApplication.user_id == user_id
-    ).first()
-    
-    if existing_application:
-        raise ValueError("User has already applied to this job")
-    
-    # Check if job post exists
     job_post = db.query(JobPost).filter(JobPost.id == job_post_id).first()
     if not job_post:
         raise ValueError(f"Job post with ID {job_post_id} not found")
-    
-    # Create new application
-    application = JobApplication(
-        job_post_id=job_post_id,
-        user_id=user_id,
-        application_status="pending"
-    )
-    
-    db.add(application)
+
+
+def mark_job_as_recently_viewed(db: Session, user_id: UUID, job_post_id: UUID) -> JobUserInteraction:
+    """
+    Mark a job as recently viewed for a user.
+    Uses one interaction row per (user, job) and updates viewed_at every view.
+    """
+    _validate_user_and_job(db, user_id, job_post_id)
+
+    interaction = db.query(JobUserInteraction).filter(
+        JobUserInteraction.user_id == user_id,
+        JobUserInteraction.job_post_id == job_post_id,
+    ).first()
+
+    now = datetime.now(UTC)
+    if not interaction:
+        interaction = JobUserInteraction(
+            user_id=user_id,
+            job_post_id=job_post_id,
+            viewed_at=now,
+        )
+        db.add(interaction)
+    else:
+        interaction.viewed_at = now
+        db.add(interaction)
+
     try:
         db.commit()
     except IntegrityError:
         db.rollback()
-        raise ValueError("Invalid job or user reference for application")
+        raise ValueError("Invalid job or user reference for interaction")
 
-    db.refresh(application)
-    
-    return application
+    db.refresh(interaction)
+    return interaction
+
+
+def set_job_saved_state(db: Session, user_id: UUID, job_post_id: UUID, is_saved: bool) -> JobUserInteraction:
+    """
+    Save or unsave a job for a user.
+    """
+    _validate_user_and_job(db, user_id, job_post_id)
+
+    interaction = db.query(JobUserInteraction).filter(
+        JobUserInteraction.user_id == user_id,
+        JobUserInteraction.job_post_id == job_post_id,
+    ).first()
+
+    now = datetime.now(UTC)
+    if not interaction:
+        interaction = JobUserInteraction(
+            user_id=user_id,
+            job_post_id=job_post_id,
+            is_saved=is_saved,
+            saved_at=now if is_saved else None,
+        )
+        db.add(interaction)
+    else:
+        interaction.is_saved = is_saved
+        interaction.saved_at = now if is_saved else None
+        db.add(interaction)
+
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise ValueError("Invalid job or user reference for interaction")
+
+    db.refresh(interaction)
+    return interaction
+
+
+def fetch_user_saved_jobs(
+    db: Session,
+    user_id: UUID,
+    skip: int = 0,
+    limit: int = 20,
+) -> Tuple[List[JobPost], int]:
+    """
+    Fetch saved jobs for a user ordered by last save time.
+    """
+    limit = min(limit, 100)
+
+    user_exists = db.query(User.id).filter(User.id == user_id).first()
+    if not user_exists:
+        raise ValueError(f"User with ID {user_id} not found")
+
+    query_obj = db.query(JobPost).join(
+        JobUserInteraction,
+        JobUserInteraction.job_post_id == JobPost.id,
+    ).filter(
+        JobUserInteraction.user_id == user_id,
+        JobUserInteraction.is_saved.is_(True),
+    )
+
+    total_count = query_obj.count()
+    jobs = query_obj.order_by(JobUserInteraction.saved_at.desc().nullslast()).offset(skip).limit(limit).all()
+
+    return jobs, total_count
+
+
+def fetch_user_recently_viewed_jobs(
+    db: Session,
+    user_id: UUID,
+    skip: int = 0,
+    limit: int = 20,
+) -> Tuple[List[JobPost], int]:
+    """
+    Fetch recently viewed jobs for a user ordered by latest view time.
+    """
+    limit = min(limit, 100)
+
+    user_exists = db.query(User.id).filter(User.id == user_id).first()
+    if not user_exists:
+        raise ValueError(f"User with ID {user_id} not found")
+
+    query_obj = db.query(JobPost).join(
+        JobUserInteraction,
+        JobUserInteraction.job_post_id == JobPost.id,
+    ).filter(
+        JobUserInteraction.user_id == user_id,
+        JobUserInteraction.viewed_at.is_not(None),
+    )
+
+    total_count = query_obj.count()
+    jobs = query_obj.order_by(JobUserInteraction.viewed_at.desc()).offset(skip).limit(limit).all()
+
+    return jobs, total_count
 

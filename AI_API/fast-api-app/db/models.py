@@ -716,3 +716,81 @@ class JobUserInteraction(Base):
         Index("idx_job_user_interactions_user_saved", "user_id", "is_saved"),
         Index("idx_job_user_interactions_user_viewed_at", "user_id", "viewed_at"),
     )
+
+
+# ###########################################################################################################################
+# COURSES
+# ###########################################################################################################################
+
+# =========================
+# COURSES
+# =========================
+class Course(Base):
+    __tablename__ = "courses"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    track = Column(String, nullable=False, index=True)
+    title = Column(String, nullable=False, index=True)
+    instructor = Column(String, nullable=True)
+    rating = Column(Float, nullable=True)
+    reviews = Column(String, nullable=True)
+    duration = Column(String, nullable=True)
+    level = Column(String, nullable=True, index=True)
+    language = Column(String, nullable=True)
+    price = Column(String, nullable=True)
+    original_price = Column(String, nullable=True)
+    course_url = Column(String, nullable=False, unique=True)
+    source = Column(String, nullable=True)
+
+    created_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+        index=True
+    )
+    updated_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False
+    )
+
+    user_interactions = relationship("CourseUserInteraction", back_populates="course", cascade="all, delete-orphan")
+
+    __table_args__ = (
+        Index("idx_course_track_level", "track", "level"),
+        Index("idx_course_created_at", "created_at"),
+    )
+
+
+# =========================
+# COURSE USER INTERACTIONS
+# =========================
+class CourseUserInteraction(Base):
+    __tablename__ = "course_user_interactions"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    course_id = Column(UUID(as_uuid=True), ForeignKey("courses.id"), nullable=False)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    is_saved = Column(Boolean, nullable=False, default=False)
+    saved_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False
+    )
+    updated_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False
+    )
+
+    course = relationship("Course", back_populates="user_interactions")
+    user = relationship("User")
+
+    __table_args__ = (
+        UniqueConstraint("course_id", "user_id", name="uq_course_user_interaction_user_course"),
+        Index("idx_course_user_interactions_user_saved", "user_id", "is_saved"),
+        Index("idx_course_user_interactions_saved_at", "saved_at"),
+    )

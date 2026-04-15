@@ -660,3 +660,51 @@ class UserJobsListResponse(BaseModel):
     limit: int
     jobs: List[JobPostResponse]
 
+
+# =====================================================
+# COURSE SCHEMAS
+# =====================================================
+
+class CourseBase(BaseModel):
+    track: str
+    title: str
+    instructor: Optional[str] = None
+    rating: Optional[float] = None
+    reviews: Optional[str] = None
+    duration: Optional[str] = None
+    level: Optional[str] = None
+    language: Optional[str] = None
+    price: Optional[str] = None
+    original_price: Optional[str] = None
+    course_url: str
+    source: Optional[str] = None
+
+
+class CourseCreate(CourseBase):
+    pass
+
+
+class CourseResponse(CourseBase):
+    id: UUID
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    model_config = ConfigDict(from_attributes=True)
+
+
+class CourseSaveInteractionResponse(BaseModel):
+    id: UUID
+    course_id: UUID
+    user_id: UUID
+    is_saved: bool
+    saved_at: Optional[datetime] = None
+    created_at: datetime
+    updated_at: datetime
+    model_config = ConfigDict(from_attributes=True)
+
+
+class UserCoursesListResponse(BaseModel):
+    total: int
+    skip: int
+    limit: int
+    courses: List[CourseResponse]
+

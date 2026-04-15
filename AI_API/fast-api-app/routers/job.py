@@ -107,7 +107,8 @@ def get_job_details(
 
 @router.get("/search/query", response_model=dict)
 def search_jobs_endpoint(
-    query: str = Query(..., min_length=1),
+    query: str | None = Query(None, min_length=1),
+    title: str | None = Query(None, min_length=1, description="Alias for query when searching by title"),
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db)
@@ -121,14 +122,20 @@ def search_jobs_endpoint(
     - limit: Number of records to return (default: 20, max: 100)
     """
     try:
-        jobs, total_count = search_jobs(db, query=query, skip=skip, limit=limit)
+        search_term = (query or title or "").strip()
+        if not search_term:
+            raise HTTPException(status_code=400, detail="Either 'query' or 'title' is required")
+
+        jobs, total_count = search_jobs(db, query=search_term, skip=skip, limit=limit)
         return {
-            "query": query,
+            "query": search_term,
             "total": total_count,
             "skip": skip,
             "limit": limit,
             "jobs": jsonable_encoder(jobs)
         }
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

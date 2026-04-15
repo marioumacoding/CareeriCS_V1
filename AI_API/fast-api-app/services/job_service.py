@@ -1,12 +1,43 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import or_, func
+from sqlalchemy import or_, func, text
 from sqlalchemy.exc import IntegrityError
 from typing import Any, Dict, List, Optional, Tuple
 from datetime import datetime, UTC
 from uuid import UUID
 
-from db.models import JobPost, JobApplication
+from db.models import JobPost, JobApplication, User
 from schemas import JobPostResponse, JobApplicationResponse
+
+
+def _ensure_job_applications_updated_at_column(db: Session) -> None:
+    """
+    Backward-compatible safety check for environments where job_applications
+    was created before the updated_at column existed.
+    """
+    exists = db.execute(
+        text(
+            """
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_name = 'job_applications'
+              AND column_name = 'updated_at'
+            LIMIT 1
+            """
+        )
+    ).first()
+
+    if exists:
+        return
+
+    db.execute(
+        text(
+            """
+            ALTER TABLE job_applications
+            ADD COLUMN updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            """
+        )
+    )
+    db.commit()
 
 
 def normalize_job_data(job_data: dict) -> dict:
@@ -219,6 +250,14 @@ def apply_to_job(db: Session, user_id: UUID, job_post_id: UUID) -> JobApplicatio
     Creates a new job application record for the user.
     Raises ValueError if user is already applied to this job.
     """
+    # Keep endpoint functional even if the DB schema is slightly behind model definitions.
+    _ensure_job_applications_updated_at_column(db)
+
+    # Validate user exists to avoid foreign key errors turning into 500 responses.
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise ValueError(f"User with ID {user_id} not found")
+
     # Check if user already applied to this job
     existing_application = db.query(JobApplication).filter(
         JobApplication.job_post_id == job_post_id,
@@ -241,7 +280,12 @@ def apply_to_job(db: Session, user_id: UUID, job_post_id: UUID) -> JobApplicatio
     )
     
     db.add(application)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise ValueError("Invalid job or user reference for application")
+
     db.refresh(application)
     
     return application

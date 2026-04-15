@@ -606,3 +606,51 @@ class CareerSelectedCardRead(BaseModel):
 
 class CareerEvaluationRead(BaseModel):
     track_scores: List[Dict[str, Any]]
+
+
+# =====================================================
+# JOB SCHEMAS
+# =====================================================
+
+class JobPostBase(BaseModel):
+    job_title: str
+    company_name: str
+    location: Optional[str] = None
+    job_url: str
+    source: Optional[str] = None
+    posted_date: Optional[datetime] = None
+    description: Optional[str] = None
+    requirements_raw: Optional[str] = None
+    requirements_list: Optional[List[str]] = Field(default_factory=list)
+    experience: Optional[str] = None
+    career_level: Optional[str] = None
+    education_level: Optional[str] = None
+    salary: Optional[str] = None
+    categories: Optional[List[str]] = Field(default_factory=list)
+    skills: Optional[List[str]] = Field(default_factory=list)
+
+
+class JobPostCreate(JobPostBase):
+    scraped_at: Optional[datetime] = None
+
+
+class JobPostResponse(JobPostBase):
+    id: UUID
+    scraped_at: Optional[datetime] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    model_config = ConfigDict(from_attributes=True)
+
+
+class JobApplicationCreate(BaseModel):
+    job_post_id: UUID
+
+
+class JobApplicationResponse(BaseModel):
+    id: UUID
+    job_post_id: UUID
+    user_id: UUID
+    application_status: str
+    applied_at: datetime
+    updated_at: datetime
+    model_config = ConfigDict(from_attributes=True)

@@ -1,38 +1,43 @@
 "use client";
 import React, { useState } from "react";
-import { useRouter } from "next/navigation"; 
-import ChoiceCard from "@/components/ui/choice-card";
+import { useRouter } from "next/navigation";
+import ChoiceCard from "@/components/ui/choice-card-home";
 
 export default function CareerDiscoveryPage() {
-  const router = useRouter(); 
+  const router = useRouter();
 
   const careerPaths = [
-    {
-      title: "Backend",
-      desc: "Power applications with secure, scalable logic.",
-      image: "/Landing/Rectangle.svg",
-    },
-    {
-      title: "Backend",
-      desc: "Power applications with secure, scalable logic.",
-      image: "/Landing/Rectangle.svg",
-    },
-    {
-      title: "Backend",
-      desc: "Power applications with secure, scalable logic.",
-      image: "/Landing/Rectangle.svg",
-    },
-    {
-      title: "Backend",
-      desc: "Power applications with secure, scalable logic.",
-      image: "/Landing/Rectangle.svg",
-    },
-    {
-      title: "Backend",
-      desc: "Power applications with secure, scalable logic.",
-      image: "/Landing/Rectangle.svg",
-    },
-  ];
+  {
+    title: "Backend Development",
+    desc: "Build APIs, databases, and server systems that handle logic, data, and security.",
+    image: "/Landing/Rectangle.svg",
+  },
+  {
+    title: "Frontend Development",
+    desc: "Develop responsive interfaces and interactive features users see and use daily.",
+    image: "/Landing/Rectangle.svg",
+  },
+  {
+    title: "UI/UX Design",
+    desc: "Design user-friendly layouts and experiences that improve usability and navigation.",
+    image: "/Landing/Rectangle.svg",
+  },
+  {
+    title: "Data Science",
+    desc: "Analyze large datasets to discover patterns, insights, and support decisions.",
+    image: "/Landing/Rectangle.svg",
+  },
+  {
+    title: "Machine Learning",
+    desc: "Create models that learn from data to automate tasks and make predictions.",
+    image: "/Landing/Rectangle.svg",
+  },
+  {
+    title: "Cybersecurity",
+    desc: "Secure systems, networks, and data by detecting threats and preventing attacks.",
+    image: "/Landing/Rectangle.svg",
+  },
+];
 
   const [startIndex, setStartIndex] = useState(0);
 
@@ -58,29 +63,28 @@ export default function CareerDiscoveryPage() {
         display: "flex",
         flexDirection: "column",
         position: "relative",
-        padding: "2vh 2vw",
+        padding: "40px",
         boxSizing: "border-box",
       }}
     >
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(4, 1fr)",
-          gridTemplateRows: "1.6fr repeat(4, 1fr)",
-          gridColumnGap: "1.5vw",
-          gridRowGap: "1vh",
+          gridTemplateColumns: "repeat(6, 1fr)",
+          gridTemplateRows: "1.6fr repeat(6, 1fr)",
+          gridRowGap: "20px",
           flex: 1,
           height: "100%",
         }}
       >
         {/* Quiz Banner */}
-        <div style={{ gridArea: "1 / 1 / 2 / 5" }}>
+        <div style={{ gridArea: "1 / 1 / 3 / 7" }}>
           <div
             onClick={() => router.push("/quiz-features/hobbies")}
             style={{
               backgroundColor: "#142143",
-              borderRadius: "2vh",
-              padding: "3vh 3vw",
+              borderRadius: "4vh",
+              padding: "3vh",
               color: "white",
               display: "flex",
               justifyContent: "space-between",
@@ -92,7 +96,7 @@ export default function CareerDiscoveryPage() {
             <div>
               <h2
                 style={{
-                  fontSize: "3.5vh",
+                  fontSize: "1.5rem",
                   marginBottom: "1.5vh",
                   fontFamily: "var(--font-nova-square)",
                 }}
@@ -102,13 +106,12 @@ export default function CareerDiscoveryPage() {
 
               <p
                 style={{
-                  fontSize: "2vh",
+                  fontSize: "1rem",
                   opacity: 0.8,
-                  maxWidth: "50vw",
                 }}
               >
-                Choose your favorite hobbies and activities, then answer a few personalized questions. 
-Just like that you’ll get your best fit career choices
+                Choose your favorite hobbies and activities, then answer a few personalized questions.<br/>
+                Just like that you’ll get your best fit career choices
               </p>
             </div>
 
@@ -119,9 +122,9 @@ Just like that you’ll get your best fit career choices
         {/* Career Paths */}
         <div
           style={{
-            gridArea: "2 / 1 / 6 / 5",
+            gridArea: "3 / 1 / 8 / 7",
             backgroundColor: "#1C427B",
-            borderRadius: "3vh",
+            borderRadius: "4vh",
             padding: "3vh 2vw",
             display: "flex",
             flexDirection: "column",
@@ -165,7 +168,7 @@ Just like that you’ll get your best fit career choices
               style={{
                 display: "grid",
                 gridTemplateColumns: "repeat(4, 1fr)",
-                gap: "1.5vw",
+                gap: "1vh",
                 flex: 1,
                 height: "100%",
               }}
@@ -176,12 +179,13 @@ Just like that you’ll get your best fit career choices
                   title={path.title}
                   description={path.desc}
                   image={path.image}
+                  buttonVariant="primary-inverted"
                 />
               ))}
             </div>
 
             {/* Right Arrow */}
-            {startIndex + 4 < careerPaths.length && (
+            {startIndex + 3 < careerPaths.length && (
               <div
                 onClick={handleNext}
                 style={{

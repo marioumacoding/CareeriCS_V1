@@ -3,13 +3,14 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button"; 
 
 export default function HobbiesGrid() {
-  // 1. State lel step (0 = Hobbies, 1 = Activities)
   const [step, setStep] = useState(0);
 
   const [hobbies, setHobbies] = useState<string[]>([
-    "Hobby 1", "Hobby 2", "Hobby 3", "Hobby 4",
-    "Hobby 5", "Hobby 6", "Hobby 7", "Hobby 8",
-    "Hobby 9", "Hobby 10", "Hobby 11", "Hobby 12"
+    "Hoby 1", "Hob 2", "Hobbbbbby 3", "Hobby 4",
+    "Hobby 5", "Hobbyy 6", "Hobby 7", "Hobby 8",
+    "Hobby 5", "Hobbyy 6", "Hobby 7", "Hobby 8",
+    "Hobby 5", "Hobbyy 6", "Hobby 7", "Hobby 8",
+    "Hobby 9", "Hobbyyy 10", "Hobbbby 11",
   ]);
 
   const [activities, setActivities] = useState<string[]>([
@@ -59,7 +60,6 @@ export default function HobbiesGrid() {
       boxSizing: "border-box"
     }}>
       
-      {/* Dynamic Title */}
       <h1 style={{
         color: "white", 
         fontSize: "4.5vh",
@@ -70,19 +70,20 @@ export default function HobbiesGrid() {
         {title}
       </h1>
 
-      {/*  Gray Container  */}
+      {/* Gray Container */}
       <div style={{
         backgroundColor: "#B0B0B0", 
         borderRadius: "5vh", 
-        width: "70%",        
+        width: "70%",         
         maxWidth: "1200vw",  
         minHeight: "60vh",   
-        padding: "6vh 4vw", 
+        padding: "6vh 2vw",
         display: "flex", 
         flexWrap: "wrap",
-        gap: "1vw", 
-        justifyContent: "center",
-        alignItems: "center",
+        gap: "3vh 2vw", 
+        justifyContent: "center", 
+        alignItems: "center",       
+        alignContent: "flex-start",   
         boxSizing: "border-box",
       }}>
         {currentItems.map((item, idx) => {
@@ -92,17 +93,20 @@ export default function HobbiesGrid() {
               key={idx}
               onClick={() => toggleItem(item)}
               style={{
-                padding: "2.5vh 3vw", 
+                padding: "1vh 3vw", 
                 borderRadius: "1.5vh",
-                fontSize: "2.5vh",   
+                fontSize: "3vh",   
                 fontWeight: "800", 
                 cursor: "pointer",
                 transition: "all 0.2s ease",
                 backgroundColor: isSelected ? "#E6FFB2" : "#1C427B",
                 color: isSelected ? "#000" : "white",
-                minWidth: "12vw", 
+                width: "fit-content", 
+                whiteSpace: "nowrap",
                 textAlign: "center",
-                userSelect: "none"
+                userSelect: "none",
+                flexGrow: 1, 
+                maxWidth: "25vw" 
               }}
             >
               {item}
@@ -113,23 +117,24 @@ export default function HobbiesGrid() {
         <div 
           onClick={handleAddMore}
           style={{
-            padding: "2vh 3vw", 
+            padding: "2vh 2.5vw", 
             borderRadius: "1.5vh",
             fontSize: "2.2vh", 
             fontWeight: "600", 
             backgroundColor: "#6B7280", 
             color: "white",
-            minWidth: "10vw", 
+            width: "fit-content", 
+            whiteSpace: "nowrap",
             textAlign: "center",
             cursor: "pointer",
-            userSelect: "none"
+            userSelect: "none",
+            flexGrow: 0 
           }}
         >
           + More
         </div>
       </div>
 
-     {/* 3. Next Button Section - Same Style */}
       <div style={{ 
         width: "20%",            
         display: "flex", 

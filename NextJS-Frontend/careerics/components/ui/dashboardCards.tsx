@@ -1,6 +1,7 @@
 "use client";
 import React, { useRef } from 'react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 
 // --- 1. Helper: CircleScoreSVG (Dah elly hay-khaly el shakl shabah el Past Tests) ---
 const CircleScoreSVG = ({ score, size = 30 }: { score: number, size?: number }) => {
@@ -41,9 +42,18 @@ const CircleScoreSVG = ({ score, size = 30 }: { score: number, size?: number }) 
 
 // --- Card 1: CareersCard (Keep as is) ---
 export const CareersCard = ({ careers, style }: any) => {
+  const router = useRouter();
   const scrollRef = useRef<HTMLDivElement>(null);
   const scrollRight = () => {
     if (scrollRef.current) scrollRef.current.scrollBy({ left: 200, behavior: 'smooth' });
+  };
+
+  const handleContinue = (career: any) => {
+    if (!career?.href) {
+      return;
+    }
+
+    router.push(career.href);
   };
 
   return (
@@ -62,7 +72,24 @@ export const CareersCard = ({ careers, style }: any) => {
               <div style={{ position: 'relative', width: '70px', height: '45px' }}><Image src="/landing/Rectangle.svg" alt="Icon" fill style={{ objectFit: 'contain' }} /></div>
               <div style={{ fontSize: "25px", textAlign: "center", fontWeight: '400', wordWrap: 'break-word' }}>{career.title}</div>
               <p style={{ fontSize: "12px", opacity: 0.7, margin: "0", lineHeight: "1", maxWidth: "100%" }}>{career.desc}</p>
-              <button style={{ backgroundColor: "#E6FFB2", color: "black", border: "none", padding: "6px 0", borderRadius: "6px", cursor: "pointer", fontSize: "11px", fontWeight: "bold", width: "85%" }}>Continue</button>
+              <button
+                onClick={() => handleContinue(career)}
+                disabled={!career?.href}
+                style={{
+                  backgroundColor: "#E6FFB2",
+                  color: "black",
+                  border: "none",
+                  padding: "6px 0",
+                  borderRadius: "6px",
+                  cursor: career?.href ? "pointer" : "default",
+                  fontSize: "11px",
+                  fontWeight: "bold",
+                  width: "85%",
+                  opacity: career?.href ? 1 : 0.65,
+                }}
+              >
+                {career?.buttonLabel || "Continue"}
+              </button>
             </div>
           ))}
         </div>

@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Body, Depends, HTTPException
+from fastapi import APIRouter, Body, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from dependencies import get_db
@@ -60,9 +60,13 @@ async def get_user_roadmaps_progress_endpoint(user_id: UUID, db: Session = Depen
 
 
 @router.get("/current/{user_id}", response_model=CurrentRoadmapLearningSchema)
-async def get_current_roadmap_learning_endpoint(user_id: UUID, db: Session = Depends(get_db)):
+async def get_current_roadmap_learning_endpoint(
+    user_id: UUID,
+    roadmap_id: UUID | None = Query(default=None),
+    db: Session = Depends(get_db),
+):
     try:
-        return get_current_roadmap_learning_service(db, user_id)
+        return get_current_roadmap_learning_service(db, user_id, roadmap_id)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except Exception as exc:

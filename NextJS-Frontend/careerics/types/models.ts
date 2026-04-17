@@ -310,6 +310,18 @@ export interface UserRoadmapProgressItem {
 export interface UserRoadmapProgressList {
   user_id: string;
   roadmaps: UserRoadmapProgressItem[];
+}
+
+export interface CurrentRoadmapLearning {
+  roadmap_id: string;
+  roadmap_title: string;
+  section_id?: string | null;
+  section_title?: string | null;
+  step_id?: string | null;
+  step_title?: string | null;
+  progress_percent: number;
+}
+
 // ── FastAPI Skills domain ───────────────────────────────
 
 export interface APISkill {
@@ -375,4 +387,69 @@ export interface APIReport {
   filename: string;
   created_at: string;
   type: APIReportType;
+}
+
+// ── FastAPI Career quiz domain ──────────────────────────
+
+export type APICareerCardType = "hobby" | "technical";
+
+export interface APICareerSessionCreate {
+  user_id: string;
+  status?: string;
+}
+
+export interface APICareerSessionRead {
+  id: string;
+  user_id: string;
+  status: string;
+  started_at?: string | null;
+  submitted_at?: string | null;
+}
+
+export interface APICareerCardRead {
+  id: string;
+  name: string;
+  description?: string | null;
+}
+
+export interface APICareerCardSelectionItem {
+  id: string;
+  type: APICareerCardType;
+}
+
+export interface APICareerSelectedCardRead {
+  type: APICareerCardType;
+  id: string;
+  name: string;
+}
+
+export interface APICareerQuestionResponse {
+  id: string;
+  hobby_id?: string | null;
+  technical_skill_id?: string | null;
+  text: string;
+  type: APICareerCardType;
+}
+
+export interface APICareerAnswerInput {
+  question_id: string;
+  answer: number;
+}
+
+export interface APICareerAnswerRead {
+  id: string;
+  session_id: string;
+  question_id: string;
+  answer: number;
+}
+
+export interface APICareerTrackScore {
+  track_id: string;
+  track_name: string;
+  track_description?: string | null;
+  score: number;
+}
+
+export interface APICareerEvaluationRead {
+  track_scores: APICareerTrackScore[];
 }

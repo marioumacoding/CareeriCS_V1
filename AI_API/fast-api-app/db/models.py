@@ -319,7 +319,8 @@ class AssessmentSession(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), nullable=False)
-    skill_id = Column(UUID(as_uuid=True), ForeignKey("skills.id"), nullable=False)
+    # Keep optional because section/step/roadmap assessments don't always have a direct skill FK.
+    skill_id = Column(UUID(as_uuid=True), ForeignKey("skills.id"), nullable=True)
     roadmap_id = Column(UUID(as_uuid=True), ForeignKey("roadmaps.id"), nullable=True)
     section_id = Column(UUID(as_uuid=True), ForeignKey("roadmap_sections.id"), nullable=True)
     step_id = Column(UUID(as_uuid=True), ForeignKey("roadmap_steps.id"), nullable=True)

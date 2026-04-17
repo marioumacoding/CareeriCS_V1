@@ -543,18 +543,31 @@ class UserRoadmapProgressListSchema(BaseModel):
     roadmaps: List[UserRoadmapProgressItemSchema] = Field(default_factory=list)
 
 
+class CurrentRoadmapLearningSchema(BaseModel):
+    roadmap_id: UUID
+    roadmap_title: str
+    section_id: Optional[UUID] = None
+    section_title: Optional[str] = None
+    step_id: Optional[UUID] = None
+    step_title: Optional[str] = None
+    progress_percent: int
+
+
 # =====================================================
 # CAREER QUIZ SCHEMAS
 # =====================================================
 class CareerSessionBase(BaseModel):
     user_id: UUID
-    status: str
+    status: str = "in_progress"
 
-class CareerSessionCreate(CareerSessionBase):
-    pass
+class CareerSessionCreate(BaseModel):
+    user_id: UUID
+    status: Optional[str] = "in_progress"
 
 class CareerSessionRead(CareerSessionBase):
     id: UUID
+    started_at: Optional[datetime] = None
+    submitted_at: Optional[datetime] = None
     model_config = ConfigDict(from_attributes=True)
 
 class CareerSessionStatusUpdate(BaseModel):
@@ -562,7 +575,7 @@ class CareerSessionStatusUpdate(BaseModel):
 
 class CareerAnswerBase(BaseModel):
     question_id: UUID
-    answer: str
+    answer: int = Field(ge=1, le=5)
 
 class CareerAnswerCreate(BaseModel):
     answers: List[CareerAnswerBase]
@@ -571,7 +584,7 @@ class CareerAnswerRead(BaseModel):
     id: UUID
     session_id: UUID
     question_id: UUID
-    answer: str
+    answer: int
 
     class Config:
         from_attributes = True
@@ -589,7 +602,7 @@ class CareerQuestionResponse(BaseModel):
 
 # Questions for a single card
 class CardQuestions(BaseModel):
-    card_id: str
+    card_id: UUID
     questions: List[str]
 
 # Payload for multiple cards
@@ -608,20 +621,26 @@ class CareerCardRead(CareerCardBase):
     model_config = ConfigDict(from_attributes=True)
 
 class CareerCardSelectionItem(BaseModel):
-    id: str
+    id: UUID
     type: Literal["hobby", "technical"]
 
 class CareerCardSelectionMultiple(BaseModel):
     cards: List[CareerCardSelectionItem]
 
 class CareerSelectedCardRead(BaseModel):
-    type: str
+    type: Literal["hobby", "technical"]
     id: UUID
     name: str
     model_config = ConfigDict(from_attributes=True)
 
+class CareerTrackScoreRead(BaseModel):
+    track_id: UUID
+    track_name: str
+    track_description: Optional[str] = None
+    score: int = Field(ge=0, le=100)
+
 class CareerEvaluationRead(BaseModel):
-    track_scores: List[Dict[str, Any]]
+    track_scores: List[CareerTrackScoreRead]
 
 
 # =====================================================

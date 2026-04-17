@@ -310,7 +310,7 @@ class SAQuestionOut(SAQuestionBase):
 class StartAssessmentRequest(BaseModel):
     target_id: UUID
     num_questions: int = Field(gt=4, le=20)  # max 20 questions
-    session_type: str
+    session_type: Literal["skills", "roadmap", "section", "step"]
 
 
 class AssessmentQuestionResponse(BaseModel):
@@ -330,7 +330,11 @@ class StartAssessmentResponse(BaseModel):
 class AssessmentSessionSummary(BaseModel):
     id: UUID
     user_id: UUID
-    skill_id: UUID
+    type: str
+    skill_id: Optional[UUID] = None
+    roadmap_id: Optional[UUID] = None
+    section_id: Optional[UUID] = None
+    step_id: Optional[UUID] = None
     total_questions: int
     score: int
     status: str

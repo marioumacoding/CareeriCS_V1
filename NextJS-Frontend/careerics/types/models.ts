@@ -331,9 +331,12 @@ export interface APISkill {
 
 // ── FastAPI Skill assessment domain ─────────────────────
 
+export type APIAssessmentSessionType = "skills" | "roadmap" | "section" | "step";
+
 export interface APIStartAssessmentRequest {
-  skill_id: string;
+  target_id: string;
   num_questions: number;
+  session_type: APIAssessmentSessionType;
 }
 
 export interface APIAssessmentQuestion {
@@ -370,7 +373,11 @@ export interface APISubmitAssessmentResponse {
 export interface APIAssessmentSessionSummary {
   id: string;
   user_id: string;
-  skill_id: string;
+  type: APIAssessmentSessionType | string;
+  skill_id?: string | null;
+  roadmap_id?: string | null;
+  section_id?: string | null;
+  step_id?: string | null;
   total_questions: number;
   score: number;
   status: string;

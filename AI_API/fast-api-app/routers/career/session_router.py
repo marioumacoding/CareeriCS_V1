@@ -23,7 +23,7 @@ def create_career_session(
     payload: schemas.CareerSessionCreate,
     db: Session = Depends(get_db)
 ):
-    return create_session(db, payload.user_id)
+    return create_session(db, payload.user_id, payload.status)
 
 @router.get("/user/{user_id}", response_model=List[schemas.CareerSessionRead])
 def get_career_sessions_by_user(

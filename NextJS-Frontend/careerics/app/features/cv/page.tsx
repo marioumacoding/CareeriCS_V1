@@ -1,34 +1,132 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import RootLayout from "@/app/features/layout";
 import ArchiveCard from "@/components/ui/archive-card";
 import { Button } from "@/components/ui/button"; 
 import ChoiceCard from "@/components/ui/choice-card";
 import CVPop from "@/components/ui/cvPopup"; 
-import { useRouter } from 'next/navigation';
+import { cvService, reportsService } from "@/services";
+import { useAuth } from "@/providers/auth-provider";
+import type { APIReport } from "@/types";
+
+function formatReportDate(dateIso: string): string {
+  const parsedDate = new Date(dateIso);
+  if (Number.isNaN(parsedDate.getTime())) {
+    return "Unknown";
+  }
+
+  return parsedDate.toLocaleDateString();
+}
 
 export default function CVCrafting() {
-  const router = useRouter();
+  const { user, isLoading: isAuthLoading } = useAuth();
   
   // State to manage the popup visibility
   const [isPopOpen, setIsPopOpen] = useState(false);
+  const [reports, setReports] = useState<APIReport[]>([]);
+  const [isLoadingReports, setIsLoadingReports] = useState(false);
+  const [reportsError, setReportsError] = useState<string | null>(null);
+  const [extractorMessage, setExtractorMessage] = useState<string | null>(null);
+  const [isExtracting, setIsExtracting] = useState(false);
 
-  const archive = [
-    { id: "CV-006", date: "12/3/2026" },
-    { id: "CV-005", date: "10/3/2026" },
-    { id: "CV-004", date: "8/3/2026" },
-    { id: "CV-003", date: "5/3/2026" },
-    { id: "CV-002", date: "5/3/2026" },
-    { id: "CV-001", date: "5/3/2026" },
-  ];
+  const refreshReports = async (): Promise<APIReport[]> => {
+    if (!user?.id) {
+      setReports([]);
+      return [];
+    }
 
-  const handleFileSelection = (file: File) => {
-    console.log("Selected file:", file.name);
-    // Add your file upload logic here
-    setIsPopOpen(false);
+    setIsLoadingReports(true);
+    setReportsError(null);
+
+    const response = await reportsService.listUserReports(user.id, "cv");
+    if (!response.success) {
+      setReportsError(response.message ?? "Failed to load CV history.");
+      setReports([]);
+      setIsLoadingReports(false);
+      return [];
+    }
+
+    const fetchedReports = response.data ?? [];
+    setReports(fetchedReports);
+    setIsLoadingReports(false);
+    return fetchedReports;
   };
 
-  return (
+  useEffect(() => {
+    const refreshTimer = setTimeout(() => {
+      void refreshReports();
+    }, 0);
+
+    return () => clearTimeout(refreshTimer);
+    // refreshReports intentionally depends on latest user id per render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+
+  const handleFileSelection = async (file: File) => {
+    if (isAuthLoading) {
+      setExtractorMessage("Checking your session. Please try again in a moment.");
+      return;
+    }
+
+    if (!user?.id) {
+      setExtractorMessage("Please sign in first to extract your CV.");
+      return;
+    }
+
+    setIsExtracting(true);
+    setExtractorMessage("Uploading CV for extraction...");
+
+    try {
+      const response = await cvService.extractCV(user.id, file);
+
+      if (!response.success) {
+        setExtractorMessage(response.message ?? "Failed to extract CV.");
+        return;
+      }
+
+      setExtractorMessage("CV extracted successfully. Your profile data has been saved.");
+      const refreshedReports = await refreshReports();
+
+      const newest = [...refreshedReports].sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      )[0];
+
+      if (newest) {
+        setExtractorMessage(
+          `CV extracted and history refreshed. Latest report: ${newest.filename}`,
+        );
+      }
+    } catch (error) {
+      const message = error instanceof Error
+        ? error.message
+        : "Failed to extract CV. Please try again.";
+      setExtractorMessage(message);
+    } finally {
+      setIsExtracting(false);
+    }
+  };
+
+  const archiveItems = useMemo(
+    () => reports.map((report) => ({
+      id: report.id,
+      label: report.filename,
+      date: formatReportDate(report.created_at),
+    })),
+    [reports],
+  );
+
+  const lastVersionLabel = reports[0]?.filename ?? "No extracted version";
+
+  const handleDownloadReport = (item: { id: string }) => {
+    const downloadUrl = reportsService.getReportDownloadUrl(item.id);
+    const link = document.createElement("a");
+    link.href = downloadUrl;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.click();
+  };
+
+ return (
     <>
       {/* 1. The Main Content Layer */}
       <RootLayout
@@ -61,7 +159,7 @@ export default function CVCrafting() {
         />
 
         <ArchiveCard
-          items={archive}
+          items={archiveItems}
           style={{ gridArea: "1 / 5 / 6 / 7" }}
         />
 
@@ -105,11 +203,12 @@ export default function CVCrafting() {
         </div>
       </RootLayout>
 
+
       {/* 2. The Popup Layer (Moved OUTSIDE of RootLayout) */}
       {isPopOpen && (
         <CVPop 
           onClose={() => setIsPopOpen(false)} 
-          lastVersion={archive[0].id} 
+          lastVersion={lastVersionLabel} 
           onFileSelect={handleFileSelection}
         />
       )}

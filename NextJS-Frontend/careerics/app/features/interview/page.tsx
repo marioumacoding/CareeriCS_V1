@@ -1,14 +1,121 @@
 "use client";
-import { useState } from 'react'; // Added useState
+
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import RootLayout from "@/app/features/layout";
 import ArchiveCard from "@/components/ui/archive-card";
 import ChoiceCard from "@/components/ui/choice-card";
 import TipCard from "@/components/ui/tipcard";
-import CustomizeInterviewPopup from "@/components/ui/popup"; // Custom component
+import { interviewService } from "@/services/interview.service";
+import { useAuth } from "@/providers/auth-provider";
+
+const INTERVIEW_TYPE = "hr";
+
+function buildRecordingRoute(sessionId: string | null): string {
+  const params = new URLSearchParams({
+    type: INTERVIEW_TYPE,
+    q: "1",
+  });
+
+  if (sessionId) {
+    params.set("sessionId", sessionId);
+  }
+
+  return `/interview-feature/recording?${params.toString()}`;
+}
 
 export default function Interview() {
-  // State to control popup visibility
-  const [isPopupOpen, setIsPopupOpen] = useState(false);
+  const router = useRouter();
+  const { user, isLoading } = useAuth();
+
+  const [preparedSessionId, setPreparedSessionId] = useState("");
+  const [isPreparingSession, setIsPreparingSession] = useState(false);
+  const [isStartingInterview, setIsStartingInterview] = useState(false);
+
+  const pendingSessionCreationRef = useRef<Promise<string | null> | null>(null);
+  const hasAutoPreparedRef = useRef(false);
+
+  const createInterviewSession = useCallback(async (sessionName: string): Promise<string | null> => {
+    if (!user?.id) {
+      return null;
+    }
+
+    if (pendingSessionCreationRef.current) {
+      return pendingSessionCreationRef.current;
+    }
+
+    const request = (async () => {
+      setIsPreparingSession(true);
+
+      const response = await interviewService.createSession({
+        name: `${sessionName} Mock Interview`,
+        type: INTERVIEW_TYPE,
+        status: "in_progress",
+        user_id: user.id,
+      });
+
+      if (!response.success || !response.data?.id) {
+        return null;
+      }
+
+      setPreparedSessionId(response.data.id);
+      return response.data.id;
+    })()
+      .finally(() => {
+        pendingSessionCreationRef.current = null;
+        setIsPreparingSession(false);
+      });
+
+    pendingSessionCreationRef.current = request;
+    return request;
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (hasAutoPreparedRef.current || isLoading || !user?.id || preparedSessionId) {
+      return;
+    }
+
+    hasAutoPreparedRef.current = true;
+    void createInterviewSession("HR");
+  }, [createInterviewSession, isLoading, preparedSessionId, user?.id]);
+
+  const handleStartInterview = useCallback(async (sessionName: string) => {
+    if (isStartingInterview) {
+      return;
+    }
+
+    setIsStartingInterview(true);
+
+    try {
+      if (!isLoading && !user?.id) {
+        router.push("/auth/login");
+        return;
+      }
+
+      let sessionId = preparedSessionId || null;
+      if (!sessionId) {
+        sessionId = await createInterviewSession(sessionName);
+      }
+
+      router.push(buildRecordingRoute(sessionId));
+    } finally {
+      setIsStartingInterview(false);
+    }
+  }, [createInterviewSession, isLoading, isStartingInterview, preparedSessionId, router, user?.id]);
+
+  const startButtonLabel = useMemo(() => {
+    if (isStartingInterview) {
+      return "Starting...";
+    }
+
+    if (isLoading || (isPreparingSession && !preparedSessionId)) {
+      return "Preparing...";
+    }
+
+    return "Start";
+  }, [isLoading, isPreparingSession, isStartingInterview, preparedSessionId]);
+
+  const isStartDisabled = isLoading || isStartingInterview || (isPreparingSession && !preparedSessionId);
 
   const archive = [
     { id: "Tech-001", date: "5/3/2026" },
@@ -32,17 +139,24 @@ export default function Interview() {
         title="Behavioral Mock Interview"
         description="Practice answering the most common interview questions and improve how you present yourself and your skills."
         buttonVariant="primary-inverted"
-        route="/interview-feature/recording?type=hr"
+        onClick={() => {
+          void handleStartInterview("Behavioral");
+        }}
+        disabled={isStartDisabled}
+        buttonLabel={startButtonLabel}
         icon="/interview/HR Interview Icon.png"
         style={{ gridArea: "1 / 1 / 3 / 2" }}
       />
 
       <ChoiceCard
         title="Technical Mock Interview"
-        description="Test your technical knowledge and problem solving skills with questions designed to mirror real interviews."
+        description="This route currently uses the same HR question bank to keep frontend and backend fully aligned."
         buttonVariant="primary-inverted"
-        // Instead of a route, we use onClick to open the popup
-        onClick={() => setIsPopupOpen(true)} 
+        onClick={() => {
+          void handleStartInterview("Technical");
+        }}
+        disabled={isStartDisabled}
+        buttonLabel={startButtonLabel}
         icon="/interview/Tech Interview Icon.png"
         style={{ gridArea: "1 / 2 / 3 / 3" }}
       />
@@ -58,11 +172,6 @@ export default function Interview() {
         icon="/interview/Interview Tip.svg"
         style={{ gridArea: "3 / 1 / 4 / 4" }}
       />
-
-      {/* Popup Logic */}
-      {isPopupOpen && (
-        <CustomizeInterviewPopup onClose={() => setIsPopupOpen(false)} />
-      )}
     </RootLayout>
   );
 }

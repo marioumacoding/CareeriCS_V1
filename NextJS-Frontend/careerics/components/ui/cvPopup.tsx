@@ -1,10 +1,10 @@
 "use client";
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 
 interface CVPopProps {
   onClose: () => void;
   lastVersion: string;
-  onFileSelect?: (file: File) => void;
+  onFileSelect?: (file: File) => Promise<void> | void;
 }
 
 export default function CVPop({ 
@@ -13,6 +13,7 @@ export default function CVPop({
   onFileSelect 
 }: CVPopProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedFileName, setSelectedFileName] = useState("");
 
   const handleButtonClick = () => {
     // Triggers the hidden file input
@@ -21,9 +22,16 @@ export default function CVPop({
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file && onFileSelect) {
-      onFileSelect(file);
-      onClose(); // Close popup after selection
+    // Allow picking the same file again in a subsequent attempt.
+    event.target.value = "";
+
+    if (!file) {
+      return;
+    }
+    setSelectedFileName(file.name);
+
+    if (onFileSelect) {
+      void onFileSelect(file);
     }
   };
 
@@ -94,7 +102,7 @@ export default function CVPop({
               ref={fileInputRef} 
               onChange={handleFileChange} 
               style={{ display: "none" }} 
-              accept=".pdf,.doc,.docx"
+              accept=".pdf,.docx"
             />
 
             <img 
@@ -121,6 +129,22 @@ export default function CVPop({
             >
               Open Files
             </button>
+
+            {selectedFileName ? (
+              <p
+                style={{
+                  margin: 0,
+                  color: "#24340c",
+                  opacity: 0.85,
+                  maxWidth: "100%",
+                  textAlign: "center",
+                  wordBreak: "break-word",
+                  fontSize: "14px",
+                }}
+              >
+                {selectedFileName}
+              </p>
+            ) : null}
           </div>
         </div>
       </div>

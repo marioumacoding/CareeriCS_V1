@@ -5,16 +5,25 @@ import React, { CSSProperties, useRef } from "react";
 interface InterviewItem {
     id: string;
     date: string;
+    label?: string;
 }
 
 interface ArchiveCardProps {
     items: InterviewItem[];
     style?: CSSProperties;
+    title?: string;
+    isLoading?: boolean;
+    emptyLabel?: string;
+    onDownload?: (item: InterviewItem) => void;
 }
 
 export default function ArchiveCard({
     items,
     style,
+    title = "Interviews Archive",
+    isLoading = false,
+    emptyLabel = "No history yet.",
+    onDownload,
 }: ArchiveCardProps) {
 
     const scrollableRef = useRef<HTMLDivElement>(null);
@@ -53,7 +62,7 @@ export default function ArchiveCard({
                     maxHeight: "5%",
                 }}
             >
-                Interviews Archive
+                {title}
             </p>
             <div
                 ref={scrollableRef}
@@ -65,48 +74,64 @@ export default function ArchiveCard({
                     height: "65%",
                 }}
             >
-
-                <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-                    {items.map((item) => (
-                        <div
-                            key={item.id}
-                            style={{
-                                backgroundColor: "#A7B1C6",
-                                borderRadius: "1vh",
-                                padding: "1vh",
-                                display: "flex",
-                                justifyContent: "space-between",
-                                alignItems: "center",
-                                color: "#0F172A",
-                            }}
-                        >
-                            <div>
-                                <div style={{ fontWeight: 600, fontSize: "clamp(0.5rem,1vw,1.2rem)" }}>{item.id}</div>
-                                <div style={{ fontSize: "clamp(0.5rem,1vw,1.2rem)" }}>
-                                    created on {item.date}
-                                </div>
-                            </div>
-
-                            <button
+                {isLoading ? (
+                    <div style={{ color: "white", opacity: 0.8, padding: "1rem" }}>
+                        Loading history...
+                    </div>
+                ) : items.length === 0 ? (
+                    <div style={{ color: "white", opacity: 0.8, padding: "1rem" }}>
+                        {emptyLabel}
+                    </div>
+                ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                        {items.map((item) => (
+                            <div
+                                key={item.id}
                                 style={{
-                                    background: "none",
-                                    border: "none",
-                                    cursor: "pointer",
-                                    fontSize: "1.2rem",
+                                    backgroundColor: "#A7B1C6",
+                                    borderRadius: "1vh",
+                                    padding: "1vh",
+                                    display: "flex",
+                                    justifyContent: "space-between",
+                                    alignItems: "center",
+                                    color: "#0F172A",
                                 }}
                             >
-                                <img
-                                src={"/interview/download.svg"}
-                                style={{
-                                    maxHeight:"4vh",
-                                    marginBlock: "auto",
-                                    position:"relative"
-                                }}
-                                />
-                            </button>
-                        </div>
-                    ))}
-                </div>
+                                <div>
+                                    <div style={{ fontWeight: 600, fontSize: "clamp(0.5rem,1vw,1.2rem)" }}>
+                                        {item.label ?? item.id}
+                                    </div>
+                                    <div style={{ fontSize: "clamp(0.5rem,1vw,1.2rem)" }}>
+                                        created on {item.date}
+                                    </div>
+                                </div>
+
+                                <button
+                                    onClick={() => onDownload?.(item)}
+                                    style={{
+                                        background: "none",
+                                        border: "none",
+                                        cursor: onDownload ? "pointer" : "default",
+                                        fontSize: "1.2rem",
+                                        opacity: onDownload ? 1 : 0.55,
+                                    }}
+                                    disabled={!onDownload}
+                                    aria-label={`Download ${item.id}`}
+                                >
+                                    <img
+                                        src={"/interview/download.svg"}
+                                        alt=""
+                                        style={{
+                                            maxHeight: "4vh",
+                                            marginBlock: "auto",
+                                            position: "relative",
+                                        }}
+                                    />
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                )}
                 
             </div>
 

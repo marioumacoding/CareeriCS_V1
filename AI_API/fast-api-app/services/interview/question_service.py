@@ -1,4 +1,5 @@
 from sqlalchemy.orm import Session as DBSession
+from sqlalchemy import func
 from typing import List
 from fastapi import HTTPException
 import db.models as models
@@ -6,6 +7,37 @@ import schemas
 from utils.util import _generate_tts
 from core.config import settings
 from uuid import UUID
+import logging
+
+
+logger = logging.getLogger(__name__)
+
+
+def _normalize_question_audio_path(audio_value: str | None) -> str | None:
+    if not audio_value:
+        return audio_value
+
+    if audio_value.startswith("/audio/"):
+        return audio_value
+
+    if audio_value.startswith("audio/"):
+        return f"/{audio_value}"
+
+    return f"/{settings.AUDIO_PATHS['questions']}/{audio_value}"
+
+
+def _apply_question_audio_path(question: models.Question) -> models.Question:
+    question.question_audio = _normalize_question_audio_path(question.question_audio)
+    return question
+
+
+def _generate_question_audio(question_text: str) -> str | None:
+    try:
+        return _generate_tts(question_text, settings.AUDIO_PATHS["questions"])
+    except Exception as exc:
+        # Audio is optional at runtime because the UI has text fallback.
+        logger.warning("Failed to generate question audio: %s", exc)
+        return None
 
 
 # -----------------------------
@@ -18,7 +50,7 @@ def create_question_service(
 
     audio_filename = (
         payload.question_audio
-        or _generate_tts(payload.question_text, settings.AUDIO_PATHS["questions"])
+        or _generate_question_audio(payload.question_text)
     )
 
     question = models.Question(
@@ -31,14 +63,15 @@ def create_question_service(
     db.commit()
     db.refresh(question)
 
-    return question
+    return _apply_question_audio_path(question)
 
 
 # -----------------------------
 # Get All Questions
 # -----------------------------
 def get_questions_service(db: DBSession) -> List[models.Question]:
-    return db.query(models.Question).all()
+    questions = db.query(models.Question).all()
+    return [_apply_question_audio_path(q) for q in questions]
 
 
 # -----------------------------
@@ -51,7 +84,7 @@ def get_questions_by_type_service(
 
     questions = (
         db.query(models.Question)
-        .filter(models.Question.type == question_type)
+        .filter(func.lower(models.Question.type) == question_type.lower())
         .all()
     )
 
@@ -61,7 +94,7 @@ def get_questions_by_type_service(
             detail="No questions found for this type"
         )
 
-    return questions
+    return [_apply_question_audio_path(q) for q in questions]
 
 
 # -----------------------------
@@ -79,7 +112,7 @@ def get_question_service(
             detail="Question not found"
         )
 
-    return question
+    return _apply_question_audio_path(question)
 
 
 # -----------------------------
@@ -95,7 +128,7 @@ def create_mass_questions_service(
     for q in payload:
         audio_filename = (
             q.question_audio
-            or _generate_tts(q.question_text, settings.AUDIO_PATHS["questions"])
+            or _generate_question_audio(q.question_text)
         )
 
         question = models.Question(
@@ -112,4 +145,4 @@ def create_mass_questions_service(
     for q in created_questions:
         db.refresh(q)
 
-    return created_questions
+    return [_apply_question_audio_path(q) for q in created_questions]

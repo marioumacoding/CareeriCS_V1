@@ -1,8 +1,56 @@
 import os
+import shutil
+import tempfile
 from openai import OpenAI
 from dotenv import load_dotenv
 from transformers import pipeline
 from huggingface_hub import InferenceClient
+
+load_dotenv()
+
+
+def _bootstrap_ffmpeg_path() -> None:
+    ffmpeg_path = os.getenv("FFMPEG_PATH", "").strip()
+
+    if not ffmpeg_path:
+        ffmpeg_path = shutil.which("ffmpeg") or ""
+
+    if not ffmpeg_path:
+        try:
+            from imageio_ffmpeg import get_ffmpeg_exe  # type: ignore
+
+            ffmpeg_path = get_ffmpeg_exe() or ""
+        except Exception:
+            ffmpeg_path = ""
+
+    if not ffmpeg_path:
+        return
+
+    ffmpeg_dir = os.path.dirname(ffmpeg_path)
+
+    # Some bundled binaries are not named "ffmpeg.exe" (e.g., ffmpeg-win-x86_64-v7.1.exe).
+    # Transformers invokes "ffmpeg" by command name, so we provide a command alias.
+    if shutil.which("ffmpeg") is None:
+        alias_dir = os.path.join(tempfile.gettempdir(), "careerics_ffmpeg_bin")
+        os.makedirs(alias_dir, exist_ok=True)
+        alias_path = os.path.join(alias_dir, "ffmpeg.exe")
+
+        if not os.path.exists(alias_path):
+            shutil.copy2(ffmpeg_path, alias_path)
+
+        ffmpeg_dir = alias_dir
+
+    current_path = os.environ.get("PATH", "")
+
+    if ffmpeg_dir and ffmpeg_dir not in current_path.split(os.pathsep):
+        os.environ["PATH"] = f"{ffmpeg_dir}{os.pathsep}{current_path}" if current_path else ffmpeg_dir
+
+    # Some libs read these env vars directly.
+    os.environ.setdefault("FFMPEG_BINARY", ffmpeg_path)
+    os.environ.setdefault("IMAGEIO_FFMPEG_EXE", ffmpeg_path)
+
+
+_bootstrap_ffmpeg_path()
 
 DS_TOKEN = os.getenv("DS_TOKEN")
 HF_TOKEN = os.getenv("HF_TOKEN")
@@ -24,7 +72,12 @@ whisper_client = InferenceClient(
 
 ser_client = pipeline(
     "audio-classification",
-    model="superb/hubert-large-superb-er"
+    model="superb/hubert-large-superb-er",
+    framework="pt",
 )
 
-sentiment_client = pipeline("sentiment-analysis")
+sentiment_client = pipeline(
+    "sentiment-analysis",
+    model="distilbert/distilbert-base-uncased-finetuned-sst-2-english",
+    framework="pt",
+)

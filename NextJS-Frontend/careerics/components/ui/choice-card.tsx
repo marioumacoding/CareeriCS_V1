@@ -3,35 +3,42 @@
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import React, { CSSProperties, ReactNode } from "react";
+import Image from "next/image";
 
 interface ChoiceCardProps {
   icon?: string;
+  image?: string;
   title?: string;
   description?: string;
   route?: string;
   style?: CSSProperties;
   children?: ReactNode;
   isWideCard?: boolean;
-  onClick?: () => void; // 1. Already here, good!
+  onClick?: () => void;
+  disabled?: boolean;
+  buttonLabel?: string;
   buttonVariant?: "primary" | "secondary" | "primary-inverted";
 }
 
 export default function ChoiceCard({
   icon,
+  image,
   title,
   description,
   route,
   style,
   buttonVariant,
-  onClick, // 2. ADDED: Destructure onClick here
+  onClick,
+  disabled = false,
+  buttonLabel = "Start",
 }: ChoiceCardProps) {
   const router = useRouter();
 
   const handleButtonClick = () => {
     if (onClick) {
-      onClick(); // Run popup logic
+      onClick();
     } else if (route) {
-      router.push(route); // Run navigation logic
+      router.push(route);
     }
   };
 
@@ -65,12 +72,16 @@ export default function ChoiceCard({
           marginBottom: "auto",
         }}
       >
-        <img
-          src={icon}
-          alt={title}
-          style={{
-            width: "70%",
-          }} />
+        <div style={{ position: "relative", width: "70%", height: "100%" }}>
+          <Image
+            src={image || icon || ""}
+            alt={title || "career icon"}
+            fill
+            style={{
+              objectFit: "contain",
+            }}
+          />
+        </div>
 
         <div
           style={{
@@ -109,8 +120,8 @@ export default function ChoiceCard({
       <Button
         type="button"
         variant={buttonVariant}
-        // 3. UPDATED: Call handleButtonClick instead of router.push directly
-        onClick={handleButtonClick} 
+        onClick={handleButtonClick}
+        disabled={disabled}
         style={{
           flexGrow: 0,
           flexShrink: 0,
@@ -118,7 +129,7 @@ export default function ChoiceCard({
           marginTop: "auto"
         }}
       >
-        Start
+        {buttonLabel}
       </Button>
     </div>
   );

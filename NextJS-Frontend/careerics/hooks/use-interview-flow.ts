@@ -3,13 +3,17 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { interviewService } from "@/services/interview.service";
+import { normalizeInterviewAudioUrl } from "@/lib/interview-media";
 
-export type InterviewType = "HR" | "TECH";
+const INTERVIEW_TEST_QUESTION_LIMIT = 3;
+
+export type InterviewType = "hr";
 
 export interface UIQuestion {
   id: number;
   text: string;
   questionId: string;
+  audioUrl: string;
 }
 
 interface RecordingOverrides {
@@ -18,6 +22,9 @@ interface RecordingOverrides {
   q?: string;
   questionId?: string | null;
   followup?: string | null;
+  followupAudio?: string | null;
+  followupId?: string | null;
+  followupMode?: boolean | null;
 }
 
 interface AnalyzingOverrides {
@@ -26,37 +33,22 @@ interface AnalyzingOverrides {
   q?: string;
   questionId?: string;
   answerId?: string;
+  followupMode?: boolean;
 }
-
-const CANONICAL_TYPE_ALIASES: Record<InterviewType, string[]> = {
-  HR: ["HR", "hr", "behavioral", "Behavioural"],
-  TECH: ["TECH", "tech", "technical", "Technical"],
-};
 
 function normalizeInterviewType(rawType: string | null | undefined): InterviewType {
-  if (!rawType) return "HR";
+  if (!rawType) return "hr";
   const normalized = rawType.trim().toLowerCase();
 
-  if (normalized === "tech" || normalized === "technical") {
-    return "TECH";
+  if (normalized === "hr") {
+    return "hr";
   }
 
-  if (normalized === "hr" || normalized === "behavioral" || normalized === "behavioural") {
-    return "HR";
-  }
-
-  return "HR";
+  return "hr";
 }
 
-async function getQuestionsByCanonicalType(interviewType: InterviewType) {
-  for (const alias of CANONICAL_TYPE_ALIASES[interviewType]) {
-    const response = await interviewService.getQuestionsByType(alias);
-    if (response.success && response.data?.length) {
-      return response;
-    }
-  }
-
-  return interviewService.getQuestionsByType(interviewType);
+async function getQuestionsByCanonicalType() {
+  return interviewService.getQuestionsByType("HR");
 }
 
 export function useInterviewFlow() {
@@ -70,6 +62,9 @@ export function useInterviewFlow() {
   const questionId = searchParams.get("questionId") || "";
   const answerId = searchParams.get("answerId") || "";
   const followupText = searchParams.get("followup") || "";
+  const followupAudio = searchParams.get("followupAudio") || "";
+  const followupId = searchParams.get("followupId") || "";
+  const followupMode = searchParams.get("followupMode") === "1";
 
   const currentQ = useMemo(() => {
     const parsed = Number(searchParams.get("q") || "1");
@@ -88,7 +83,7 @@ export function useInterviewFlow() {
       setIsQuestionsLoading(true);
       setQuestionsError("");
 
-      const response = await getQuestionsByCanonicalType(interviewType);
+      const response = await getQuestionsByCanonicalType();
       if (!alive) return;
 
       if (!response.success || !response.data?.length) {
@@ -102,9 +97,11 @@ export function useInterviewFlow() {
         id: index + 1,
         text: q.question_text,
         questionId: q.id,
+        audioUrl: normalizeInterviewAudioUrl(q.question_audio, "questions"),
       }));
 
-      setQuestions(mapped);
+      // Temporary test cap requested to speed up end-to-end validation.
+      setQuestions(mapped.slice(0, INTERVIEW_TEST_QUESTION_LIMIT));
       setIsQuestionsLoading(false);
     };
 
@@ -147,6 +144,30 @@ export function useInterviewFlow() {
         next.set("followup", overrides.followup);
       }
 
+      if (overrides.followupAudio === null) {
+        next.delete("followupAudio");
+      } else if (typeof overrides.followupAudio === "string") {
+        next.set("followupAudio", overrides.followupAudio);
+      }
+
+      if (overrides.followupId === null) {
+        next.delete("followupId");
+      } else if (typeof overrides.followupId === "string") {
+        next.set("followupId", overrides.followupId);
+      }
+
+      if (overrides.followupMode === null) {
+        next.delete("followupMode");
+      } else if (typeof overrides.followupMode === "boolean") {
+        if (overrides.followupMode) {
+          next.set("followupMode", "1");
+        } else {
+          next.delete("followupMode");
+        }
+      }
+
+      next.delete("answerId");
+
       return `/interview-feature/recording?${next.toString()}`;
     },
     [searchParams, interviewType],
@@ -165,9 +186,41 @@ export function useInterviewFlow() {
         params.set("answerId", overrides.answerId);
       }
 
+      const shouldUseFollowupMode =
+        typeof overrides.followupMode === "boolean"
+          ? overrides.followupMode
+          : followupMode;
+
+      if (shouldUseFollowupMode) {
+        params.set("followupMode", "1");
+      }
+
       return `/interview-feature/analyzing?${params.toString()}`;
     },
-    [interviewType, sessionId, currentQ, questionId],
+    [interviewType, sessionId, currentQ, questionId, followupMode],
+  );
+
+  const getQuestionByStep = useCallback(
+    (step: number) => {
+      if (!Number.isFinite(step) || step < 1) {
+        return null;
+      }
+
+      return questions.find((q) => q.id === Math.floor(step)) || null;
+    },
+    [questions],
+  );
+
+  const getNextMainQuestion = useCallback(
+    (fromStep: number = currentQ) => {
+      if (!Number.isFinite(fromStep) || fromStep < 1) {
+        return null;
+      }
+
+      const nextStep = Math.floor(fromStep) + 1;
+      return getQuestionByStep(nextStep);
+    },
+    [currentQ, getQuestionByStep],
   );
 
   return {
@@ -176,10 +229,15 @@ export function useInterviewFlow() {
     questionId,
     answerId,
     followupText,
+    followupAudio,
+    followupId,
+    followupMode,
     currentQ,
     questions,
     isQuestionsLoading,
     questionsError,
+    getQuestionByStep,
+    getNextMainQuestion,
     buildRecordingUrl,
     buildAnalyzingUrl,
   };

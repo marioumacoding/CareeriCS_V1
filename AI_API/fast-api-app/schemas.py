@@ -3,7 +3,7 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 from typing import Optional, List, Dict, Any
 from uuid import UUID
-
+from typing import List, Literal
 
 # ======================================================
 # USER
@@ -327,6 +327,20 @@ class StartAssessmentResponse(BaseModel):
     questions: List[AssessmentQuestionResponse]
 
 
+class AssessmentSessionSummary(BaseModel):
+    id: UUID
+    user_id: UUID
+    skill_id: UUID
+    total_questions: int
+    score: int
+    status: str
+    started_at: datetime
+    submitted_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
 # =====================================================
 # SUBMIT ASSESSMENT
 # =====================================================
@@ -527,3 +541,138 @@ class UserRoadmapProgressItemSchema(BaseModel):
 class UserRoadmapProgressListSchema(BaseModel):
     user_id: UUID
     roadmaps: List[UserRoadmapProgressItemSchema] = Field(default_factory=list)
+
+
+# =====================================================
+# CAREER QUIZ SCHEMAS
+# =====================================================
+class CareerSessionBase(BaseModel):
+    user_id: UUID
+    status: str
+
+class CareerSessionCreate(CareerSessionBase):
+    pass
+
+class CareerSessionRead(CareerSessionBase):
+    id: UUID
+    model_config = ConfigDict(from_attributes=True)
+
+class CareerSessionStatusUpdate(BaseModel):
+    status: str
+
+class CareerAnswerBase(BaseModel):
+    question_id: UUID
+    answer: str
+
+class CareerAnswerCreate(BaseModel):
+    answers: List[CareerAnswerBase]
+
+class CareerAnswerRead(BaseModel):
+    id: UUID
+    session_id: UUID
+    question_id: UUID
+    answer: str
+
+    class Config:
+        from_attributes = True
+
+# Single question response
+class CareerQuestionResponse(BaseModel):
+    id: UUID
+    hobby_id: Optional[UUID]
+    technical_skill_id: Optional[UUID]
+    text: str
+    type: str
+
+    class Config:
+        from_attributes = True
+
+# Questions for a single card
+class CardQuestions(BaseModel):
+    card_id: str
+    questions: List[str]
+
+# Payload for multiple cards
+class CareerQuestionsCreateMultiple(BaseModel):
+    cards: List[CardQuestions]
+
+class CareerCardBase(BaseModel):
+    name: str
+    description: Optional[str] = None
+
+class CareerCardCreate(CareerCardBase):
+    pass
+
+class CareerCardRead(CareerCardBase):
+    id: UUID
+    model_config = ConfigDict(from_attributes=True)
+
+class CareerCardSelectionItem(BaseModel):
+    id: str
+    type: Literal["hobby", "technical"]
+
+class CareerCardSelectionMultiple(BaseModel):
+    cards: List[CareerCardSelectionItem]
+
+class CareerSelectedCardRead(BaseModel):
+    type: str
+    id: UUID
+    name: str
+    model_config = ConfigDict(from_attributes=True)
+
+class CareerEvaluationRead(BaseModel):
+    track_scores: List[Dict[str, Any]]
+
+
+# =====================================================
+# JOB SCHEMAS
+# =====================================================
+
+class JobPostBase(BaseModel):
+    job_title: str
+    company_name: str
+    location: Optional[str] = None
+    job_url: str
+    source: Optional[str] = None
+    posted_date: Optional[datetime] = None
+    description: Optional[str] = None
+    requirements_raw: Optional[str] = None
+    requirements_list: Optional[List[str]] = Field(default_factory=list)
+    experience: Optional[str] = None
+    career_level: Optional[str] = None
+    education_level: Optional[str] = None
+    salary: Optional[str] = None
+    categories: Optional[List[str]] = Field(default_factory=list)
+    skills: Optional[List[str]] = Field(default_factory=list)
+
+
+class JobPostCreate(JobPostBase):
+    scraped_at: Optional[datetime] = None
+
+
+class JobPostResponse(JobPostBase):
+    id: UUID
+    scraped_at: Optional[datetime] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    model_config = ConfigDict(from_attributes=True)
+
+
+class JobInteractionResponse(BaseModel):
+    id: UUID
+    job_post_id: UUID
+    user_id: UUID
+    viewed_at: Optional[datetime] = None
+    is_saved: bool
+    saved_at: Optional[datetime] = None
+    created_at: datetime
+    updated_at: datetime
+    model_config = ConfigDict(from_attributes=True)
+
+
+class UserJobsListResponse(BaseModel):
+    total: int
+    skip: int
+    limit: int
+    jobs: List[JobPostResponse]
+

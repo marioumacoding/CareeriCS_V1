@@ -57,6 +57,7 @@ export const dotnetGraphql = new GraphQLClient({
 export const fastapiApi = new HttpClient({
   baseUrl: resolveFastApiBaseUrl(publicConfig.fastapiUrl, "/api/fastapi"),
   onRequest: withAuth,
+  timeout: 150000, // 150s timeout for ML calls
   next: { revalidate: 0 },
 });
 

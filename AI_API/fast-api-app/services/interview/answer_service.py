@@ -4,6 +4,7 @@ import db.models as models
 from core.config import settings
 from ai.completion import transcribe
 from uuid import UUID
+import logging
 
 from utils.util import (
     save_uploaded_file,
@@ -16,6 +17,9 @@ from utils.util import (
     emotion_evaluation,
     sentiment_analysis
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 # ============================================================
@@ -182,6 +186,17 @@ async def evaluate_answer_service_wrapper(
     _run_final_media_analysis(db, answer)
 
 
+    if existing_followup:
+        return {
+            "evaluation": feedback,
+            "grade": score,
+            "followup_recommended": True,
+            "followup": _serialize_followup(existing_followup),
+            "emotion_evaluation": answer.emotion_evaluation,
+            "tone_evaluation": answer.tone_evaluation,
+        }
+
+
     if is_followup_allowed and followup_required:
 
         followup_info = _handle_followup(db, answer.id, improvement)
@@ -235,10 +250,15 @@ def _handle_followup(
     followup_text: str
 ):
 
-    audio_filename = _generate_tts(
-        followup_text,
-        settings.AUDIO_PATHS["followups"]
-    )
+    audio_filename = None
+    try:
+        audio_filename = _generate_tts(
+            followup_text,
+            settings.AUDIO_PATHS["followups"]
+        )
+    except Exception as exc:
+        # Keep the follow-up text flow working even when TTS fails.
+        logger.warning("Failed to generate follow-up audio: %s", exc)
 
     followup = models.Followup(
         fquestion_text=followup_text,
@@ -255,10 +275,19 @@ def _handle_followup(
     db.commit()
     db.refresh(followup)
 
+    return _serialize_followup(followup)
+
+
+def _serialize_followup(followup: models.Followup):
+
+    audio_path = ""
+    if followup.fquestion_audio:
+        audio_path = f"/{settings.AUDIO_PATHS['followups']}/{followup.fquestion_audio}"
+
     return {
         "id": followup.id,
         "text": followup.fquestion_text,
-        "audio": f"/{settings.AUDIO_PATHS['followups']}/{audio_filename}"
+        "audio": audio_path,
     }
 
 
@@ -286,10 +315,5 @@ def _run_final_media_analysis(
     answer.emotion_evaluation = emotion_evaluation(emotions)
     answer.sentiment_evaluation = sentiments
     answer.tone_evaluation = tone_result
-
-    delete_files(answer.answer_video, answer.answer_audio)
-
-    answer.answer_audio = None
-    answer.answer_video = None
 
     db.commit()

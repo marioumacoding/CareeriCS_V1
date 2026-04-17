@@ -2,9 +2,15 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation"; 
 import ChoiceCard from "@/components/ui/choice-card";
+import { useAuth } from "@/providers/auth-provider";
+import { careerService } from "@/services";
 
 export default function CareerDiscoveryPage() {
   const router = useRouter(); 
+  const { user, isLoading: isAuthLoading } = useAuth();
+
+  const [isStartingQuiz, setIsStartingQuiz] = useState(false);
+  const [startError, setStartError] = useState<string | null>(null);
 
   const careerPaths = [
     {
@@ -50,6 +56,31 @@ export default function CareerDiscoveryPage() {
     }
   };
 
+  const handleStartQuiz = async () => {
+    if (isStartingQuiz || isAuthLoading) {
+      return;
+    }
+
+    if (!user?.id) {
+      setStartError("Please sign in first to start the career quiz.");
+      router.push("/auth/login?callbackUrl=/features/career");
+      return;
+    }
+
+    setStartError(null);
+    setIsStartingQuiz(true);
+
+    const response = await careerService.createSession({ user_id: user.id });
+
+    if (!response.success || !response.data?.id) {
+      setIsStartingQuiz(false);
+      setStartError(response.message || "Unable to start the quiz right now. Please try again.");
+      return;
+    }
+
+    router.push(`/quiz-features/hobbies?sessionId=${encodeURIComponent(response.data.id)}`);
+  };
+
   return (
     <div
       style={{
@@ -76,7 +107,9 @@ export default function CareerDiscoveryPage() {
         {/* Quiz Banner */}
         <div style={{ gridArea: "1 / 1 / 2 / 5" }}>
           <div
-            onClick={() => router.push("/quiz-features/hobbies")}
+            onClick={() => {
+              void handleStartQuiz();
+            }}
             style={{
               backgroundColor: "#142143",
               borderRadius: "2vh",
@@ -85,8 +118,9 @@ export default function CareerDiscoveryPage() {
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
-              cursor: "pointer",
+              cursor: isStartingQuiz || isAuthLoading ? "wait" : "pointer",
               height: "100%",
+              opacity: isStartingQuiz ? 0.8 : 1,
             }}
           >
             <div>
@@ -110,9 +144,17 @@ export default function CareerDiscoveryPage() {
                 Choose your favorite hobbies and activities, then answer a few personalized questions. 
 Just like that you’ll get your best fit career choices
               </p>
+
+              {startError ? (
+                <p style={{ marginTop: "1vh", color: "#FFD3D3", fontSize: "1.8vh" }}>
+                  {startError}
+                </p>
+              ) : null}
             </div>
 
-            <div style={{ fontSize: "4vh" }}>❯</div>
+            <div style={{ fontSize: "4vh" }}>
+              {isStartingQuiz ? "…" : "❯"}
+            </div>
           </div>
         </div>
 

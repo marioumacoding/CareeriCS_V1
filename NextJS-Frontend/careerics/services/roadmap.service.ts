@@ -60,8 +60,12 @@ export const roadmapService = {
     return fastapiApi.get<UserRoadmapProgressList>(`/roadmaps/progress/${userId}`);
   },
 
-  getCurrentRoadmapLearning(userId: string): Promise<ApiResponse<CurrentRoadmapLearning>> {
-    return fastapiApi.get<CurrentRoadmapLearning>(`/roadmaps/current/${userId}`);
+  getCurrentRoadmapLearning(
+    userId: string,
+    roadmapId?: string,
+  ): Promise<ApiResponse<CurrentRoadmapLearning>> {
+    const query = roadmapId ? `?roadmap_id=${encodeURIComponent(roadmapId)}` : "";
+    return fastapiApi.get<CurrentRoadmapLearning>(`/roadmaps/current/${userId}${query}`);
   },
 
   upsertStepProgress(

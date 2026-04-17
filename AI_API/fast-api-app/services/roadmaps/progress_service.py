@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from typing import Dict, List
 from uuid import UUID, uuid4
 
+from sqlalchemy import case
 from sqlalchemy.orm import Session
 
 from db.models import Roadmap, RoadmapAssessmentResult, RoadmapSection, RoadmapStep
@@ -328,29 +329,34 @@ def get_user_roadmaps_progress_service(db: Session, user_id: UUID) -> UserRoadma
     return UserRoadmapProgressListSchema(user_id=user_id, roadmaps=items)
 
 
-def get_current_roadmap_learning_service(db: Session, user_id: UUID) -> CurrentRoadmapLearningSchema:
-    current_step_row = (
-        db.query(RoadmapAssessmentResult)
-        .filter(
-            RoadmapAssessmentResult.user_id == user_id,
-            RoadmapAssessmentResult.type == "step",
-            RoadmapAssessmentResult.completion_status == "in_progress",
-        )
-        .order_by(RoadmapAssessmentResult.updated_at.desc())
-        .first()
+def get_current_roadmap_learning_service(
+    db: Session,
+    user_id: UUID,
+    roadmap_id: UUID | None = None,
+) -> CurrentRoadmapLearningSchema:
+    base_query = db.query(RoadmapAssessmentResult).filter(
+        RoadmapAssessmentResult.user_id == user_id,
+        RoadmapAssessmentResult.type == "step",
     )
 
-    if not current_step_row:
-        current_step_row = (
-            db.query(RoadmapAssessmentResult)
-            .filter(
-                RoadmapAssessmentResult.user_id == user_id,
-                RoadmapAssessmentResult.type == "step",
-                RoadmapAssessmentResult.completion_status == "completed",
-            )
-            .order_by(RoadmapAssessmentResult.updated_at.desc())
-            .first()
+    if roadmap_id:
+        base_query = base_query.filter(RoadmapAssessmentResult.roadmap_id == roadmap_id)
+
+    # Pick the most recently updated actionable step for the user.
+    # This avoids stale in_progress rows shadowing newer completed actions.
+    current_step_row = (
+        base_query
+        .filter(RoadmapAssessmentResult.completion_status.in_(["in_progress", "completed"]))
+        .order_by(
+            RoadmapAssessmentResult.updated_at.desc(),
+            case(
+                (RoadmapAssessmentResult.completion_status == "in_progress", 0),
+                (RoadmapAssessmentResult.completion_status == "completed", 1),
+                else_=2,
+            ),
         )
+        .first()
+    )
 
     if not current_step_row or not current_step_row.roadmap_id:
         raise ValueError("No current roadmap learning progress found for user")

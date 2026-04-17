@@ -99,7 +99,8 @@ function findRoadmapMatchByCareer(
     }
 
     let score = 0;
-    if (title.includes(target) || target.includes(title)) {
+    const hasBroadTextMatch = title.includes(target) || target.includes(title);
+    if (hasBroadTextMatch) {
       score += 70;
     }
 
@@ -134,7 +135,12 @@ function findRoadmapMatchByCareer(
 
     score += overlap * 10;
 
-    if (score <= 0) {
+    const minTokenOverlap = targetTokens.length >= 2 ? 2 : 1;
+    if (!hasBroadTextMatch && overlap < minTokenOverlap) {
+      continue;
+    }
+
+    if (score < 20) {
       continue;
     }
 
@@ -155,12 +161,17 @@ function resolveInitialSectionId(
   }
 
   const orderedSections = roadmap.sections.slice().sort((a, b) => a.order - b.order);
+  const orderedSectionsWithSteps = orderedSections.filter((section) => section.steps.length > 0);
+  const fallbackSection = orderedSectionsWithSteps[0] ?? orderedSections[0] ?? null;
 
-  if (!orderedSections.length) {
+  if (!fallbackSection) {
     return null;
   }
 
-  if (preferredSectionId && orderedSections.some((section) => section.id === preferredSectionId)) {
+  if (
+    preferredSectionId &&
+    orderedSections.some((section) => section.id === preferredSectionId)
+  ) {
     return preferredSectionId;
   }
 
@@ -175,7 +186,7 @@ function resolveInitialSectionId(
     return inProgressSection.section_id;
   }
 
-  return orderedSections[0].id;
+  return fallbackSection.id;
 }
 
 export default function JourneyPage() {
@@ -215,6 +226,7 @@ export default function JourneyPage() {
       let roadmapIdToLoad: string | null = null;
       let preferredSectionId: string | null = null;
       let fallbackProgressPercent = 0;
+      let requestedRoadmapLearning: CurrentRoadmapLearning | null = null;
 
       if (requestedCareer) {
         const byTitleResponse = await roadmapService.getRoadmapByTitle(requestedCareer);
@@ -277,6 +289,24 @@ export default function JourneyPage() {
         preferredSectionId = learning.section_id ?? null;
         fallbackProgressPercent = learning.progress_percent ?? 0;
         setCurrentLearning(learning);
+      } else {
+        const scopedLearningResponse = await roadmapService.getCurrentRoadmapLearning(
+          user.id,
+          roadmapIdToLoad,
+        );
+
+        if (cancelled) {
+          return;
+        }
+
+        if (scopedLearningResponse.success && scopedLearningResponse.data) {
+          requestedRoadmapLearning = scopedLearningResponse.data;
+          preferredSectionId = scopedLearningResponse.data.section_id ?? preferredSectionId;
+          fallbackProgressPercent = scopedLearningResponse.data.progress_percent ?? fallbackProgressPercent;
+          setCurrentLearning(scopedLearningResponse.data);
+        } else {
+          setCurrentLearning(null);
+        }
       }
 
       const [roadmapResponse, progressResponse] = await Promise.all([
@@ -319,7 +349,7 @@ export default function JourneyPage() {
         (section) => section.id === resolvedSectionId,
       )?.title;
 
-      if (requestedCareer) {
+      if (requestedCareer && !requestedRoadmapLearning) {
         setCurrentLearning({
           roadmap_id: loadedRoadmap.id,
           roadmap_title: loadedRoadmap.title,

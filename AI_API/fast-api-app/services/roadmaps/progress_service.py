@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from db.models import Roadmap, RoadmapAssessmentResult, RoadmapSection, RoadmapStep
 from schemas import (
+    CurrentRoadmapLearningSchema,
     RoadmapProgressSummarySchema,
     SectionProgressSummarySchema,
     StepProgressReadSchema,
@@ -325,3 +326,55 @@ def get_user_roadmaps_progress_service(db: Session, user_id: UUID) -> UserRoadma
         )
 
     return UserRoadmapProgressListSchema(user_id=user_id, roadmaps=items)
+
+
+def get_current_roadmap_learning_service(db: Session, user_id: UUID) -> CurrentRoadmapLearningSchema:
+    current_step_row = (
+        db.query(RoadmapAssessmentResult)
+        .filter(
+            RoadmapAssessmentResult.user_id == user_id,
+            RoadmapAssessmentResult.type == "step",
+            RoadmapAssessmentResult.completion_status == "in_progress",
+        )
+        .order_by(RoadmapAssessmentResult.updated_at.desc())
+        .first()
+    )
+
+    if not current_step_row:
+        current_step_row = (
+            db.query(RoadmapAssessmentResult)
+            .filter(
+                RoadmapAssessmentResult.user_id == user_id,
+                RoadmapAssessmentResult.type == "step",
+                RoadmapAssessmentResult.completion_status == "completed",
+            )
+            .order_by(RoadmapAssessmentResult.updated_at.desc())
+            .first()
+        )
+
+    if not current_step_row or not current_step_row.roadmap_id:
+        raise ValueError("No current roadmap learning progress found for user")
+
+    roadmap = db.query(Roadmap).filter(Roadmap.id == current_step_row.roadmap_id).first()
+    if not roadmap:
+        raise ValueError("Roadmap not found for current learning progress")
+
+    section = None
+    if current_step_row.section_id:
+        section = db.query(RoadmapSection).filter(RoadmapSection.id == current_step_row.section_id).first()
+
+    step = None
+    if current_step_row.step_id:
+        step = db.query(RoadmapStep).filter(RoadmapStep.id == current_step_row.step_id).first()
+
+    summary = get_roadmap_progress_service(db, roadmap.id, user_id)
+
+    return CurrentRoadmapLearningSchema(
+        roadmap_id=roadmap.id,
+        roadmap_title=roadmap.title,
+        section_id=section.id if section else current_step_row.section_id,
+        section_title=section.title if section else None,
+        step_id=step.id if step else current_step_row.step_id,
+        step_title=step.title if step else None,
+        progress_percent=summary.completion_percent,
+    )

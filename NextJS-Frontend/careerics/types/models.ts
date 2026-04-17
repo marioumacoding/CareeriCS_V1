@@ -207,6 +207,109 @@ export interface CVProfile {
   references: CVReference[];
 }
 
+// ── FastAPI Roadmap domain ─────────────────────────
+
+export type RoadmapCompletionStatus = "not_started" | "in_progress" | "completed";
+
+export interface RoadmapResource {
+  resourceType?: string;
+  title?: string;
+  url?: string;
+  [key: string]: unknown;
+}
+
+export interface RoadmapStepRead {
+  id: string;
+  title: string;
+  description?: string;
+  order: number;
+  resources: RoadmapResource[];
+}
+
+export interface RoadmapSectionRead {
+  id: string;
+  title: string;
+  description?: string;
+  order: number;
+  steps: RoadmapStepRead[];
+}
+
+export interface RoadmapRead {
+  id: string;
+  title: string;
+  description?: string;
+  sections: RoadmapSectionRead[];
+}
+
+export interface RoadmapListItem {
+  id: string;
+  title: string;
+  description?: string;
+  sections_count: number;
+  steps_count: number;
+}
+
+export interface UserRoadmapBookmark {
+  roadmap_id: string;
+  created_at: string;
+}
+
+export interface UserRoadmapBookmarkList {
+  user_id: string;
+  bookmarks: UserRoadmapBookmark[];
+}
+
+export interface UserRoadmapBookmarkToggle {
+  roadmap_id: string;
+  bookmarked: boolean;
+}
+
+export interface StepProgressUpsertRequest {
+  completion_status: RoadmapCompletionStatus;
+  score?: number | null;
+  proficiency?: string | null;
+}
+
+export interface StepProgressRead {
+  step_id: string;
+  completion_status: RoadmapCompletionStatus;
+  completed_at?: string | null;
+  score?: number | null;
+  proficiency?: string | null;
+}
+
+export interface SectionProgressSummary {
+  section_id: string;
+  title: string;
+  completion_status: RoadmapCompletionStatus;
+  completed_steps: number;
+  total_steps: number;
+  completion_percent: number;
+  steps: StepProgressRead[];
+}
+
+export interface RoadmapProgressSummary {
+  roadmap_id: string;
+  title: string;
+  completion_status: RoadmapCompletionStatus;
+  completed_sections: number;
+  total_sections: number;
+  completed_steps: number;
+  total_steps: number;
+  completion_percent: number;
+  sections: SectionProgressSummary[];
+}
+
+export interface UserRoadmapProgressItem {
+  roadmap_id: string;
+  title: string;
+  completion_status: RoadmapCompletionStatus;
+  completion_percent: number;
+}
+
+export interface UserRoadmapProgressList {
+  user_id: string;
+  roadmaps: UserRoadmapProgressItem[];
 // ── FastAPI Skills domain ───────────────────────────────
 
 export interface APISkill {

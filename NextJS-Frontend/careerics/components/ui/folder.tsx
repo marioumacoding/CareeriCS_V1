@@ -13,7 +13,7 @@ const Folder = ({ children }: FolderProps) => {
     "/features/home": { title: "Home", subtitle: "Welcome to CareeriCS", tabwidth: "20%" },
     "/features/career": { title: "Career Exploration", subtitle: "Find your path", tabwidth: "20%" },
     "/features/courses": { title: "Courses Hub", subtitle: "Expand your knowledge", tabwidth: "20%" },
-    "/features/roadmap": { title: "Roadmaps", subtitle: "Discover where you stand", tabwidth: "20%" },
+    "/features/roadmap": { title: "Roadmaps", subtitle: "Clarity in every step", tabwidth: "20%" },
     "/features/skill": { title: "Skill Assessment", subtitle: "Discover where you stand", tabwidth: "20%" },
     "/features/cv": { title: "CV Crafting", subtitle: "Turn experience into impact", tabwidth: "20%" },
     "/features/interview": {

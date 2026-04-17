@@ -6,3 +6,4 @@ export { roadmapService } from "./roadmap.service";
 export { reportsService } from "./reports.service";
 export { skillAssessmentService } from "./skillAssessment.service";
 export { skillsService } from "./skills.service";
+export { careerService } from "./career.service";

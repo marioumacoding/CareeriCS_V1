@@ -14,6 +14,7 @@
 
 import { fastapiApi } from "@/lib/api";
 import type {
+  CurrentRoadmapLearning,
   ApiResponse,
   RoadmapListItem,
   RoadmapProgressSummary,
@@ -57,6 +58,10 @@ export const roadmapService = {
 
   getUserRoadmapsProgress(userId: string): Promise<ApiResponse<UserRoadmapProgressList>> {
     return fastapiApi.get<UserRoadmapProgressList>(`/roadmaps/progress/${userId}`);
+  },
+
+  getCurrentRoadmapLearning(userId: string): Promise<ApiResponse<CurrentRoadmapLearning>> {
+    return fastapiApi.get<CurrentRoadmapLearning>(`/roadmaps/current/${userId}`);
   },
 
   upsertStepProgress(

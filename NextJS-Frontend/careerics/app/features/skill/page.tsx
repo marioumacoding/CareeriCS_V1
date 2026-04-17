@@ -7,6 +7,8 @@ import SkillConfirmPopup from "@/components/ui/skillConfirmPopup";
 import { useAuth } from "@/providers/auth-provider";
 import { skillAssessmentService, skillsService } from "@/services";
 import type { APIAssessmentSessionSummary, APISkill } from "@/types";
+import { Button } from "@/components/ui/button";
+import SkillFilters from "@/components/ui/SkillFilters";
 
 export default function SkillAssessment() {
   const router = useRouter();
@@ -144,82 +146,121 @@ export default function SkillAssessment() {
   };
 
 
-  return (
-    <div style={{ width: "100%", height: "100vh", padding: "20px", boxSizing: "border-box" }}>
+return (
+    <div style={{ 
+      width: "100vw", 
+      height: "100vh", 
+      padding: "2vh 2vw", 
+      boxSizing: "border-box", 
+      backgroundColor: "#000", 
+      overflow: "hidden" 
+    }}>
       <RootLayout
         style={{
           display: "grid",
-          gridTemplateColumns: "0.8fr 0.8fr 1.7fr 1.7fr",
-          gridTemplateRows: "min-content min-content 1fr 1fr",
-          gridColumnGap: "15px",
-          gridRowGap: "15px",
+          gridTemplateColumns: "repeat(5, 1fr)",
+          gridTemplateRows: "repeat(6, 1fr)",
+          columnGap: "1.5vw",
+          rowGap: "1vh",
           height: "100%",
           width: "100%",
+          borderRadius: "3vh",
+          padding: "1vh 2vw",
+          boxSizing: "border-box",
+          marginTop: "0", 
+          zIndex: 1
         }}
       >
-        {/* Learning Card - Selection hayghayar shaklo hwa bas */}
-        <LearningSkillsCard 
-          skills={learningSkills}
-          selected={selectedLearningName}
-          onSelect={(skillName: string) => {
-            const selected = learningSkillObjects.find((skill) => skill.skill_name === skillName);
-            if (selected) {
-              handleSkillClick(selected.id);
-            }
-          }}
-          style={{
-            gridArea: "1 / 1 / 2 / 5",
-            padding: "20px 30px",
-            minHeight: "fit-content",
-            transition: "all 0.3s ease"
-          }}
-        />
-
-        {/* Past Tests - Dlw2ty hay-render el list kamla static mesh hay-tt'asar bel select */}
-        <PastTestsCard 
-          tests={allPastTests} 
-          style={{ 
-            gridArea: "3 / 1 / 5 / 3", 
-            height: "100%",
-            transition: "transform 0.3s ease",
-          }}
-        />
-
-        <MoreSkillsCard 
-          skills={moreSkills}
-          selected={selectedMoreName} 
-          onSelect={(skillName: string) => {
-            const selected = moreSkillObjects.find((skill) => skill.skill_name === skillName);
-            if (selected) {
-              handleSkillClick(selected.id);
-            }
-          }}
-          style={{ 
-            gridArea: "3 / 3 / 5 / 5", 
-            height: "100%",
-          }}
-        />
-
-        <div
-          style={{
-            gridArea: "2 / 1 / 3 / 5",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "flex-end",
-            gap: "10px",
-            paddingRight: "4px",
-          }}
-        >
-          {error ? (
-            <p style={{ color: "#ffd3d3", fontSize: "13px", margin: 0 }}>{error}</p>
-          ) : null}
-          {isLoading ? (
-            <p style={{ color: "#c1cbe6", fontSize: "13px", margin: 0 }}>Loading skills...</p>
-          ) : null}
+        {/* 1. Track & Skill Type Card (div1) */}
+        <div style={{ 
+          gridArea: "2/ 1 / 2 / 3", 
+          backgroundColor: "#1C427B", 
+          borderRadius: "2vh", 
+          padding: "3vh 2vw",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          alignSelf: "stretch",
+          boxSizing: "border-box"
+        }}>
+          {/* Your new component replaces the inline logic */}
+          <SkillFilters />
         </div>
+
+    {/* 2. Learning Card (div2) */}
+          <div style={{ 
+            gridArea: "1 / 3 / 3 / 6", 
+            alignSelf: "stretch",
+            display: "flex",
+            paddingTop: "2vh",
+            
+          }}>
+            <LearningSkillsCard 
+              skills={learningSkills}
+              selected={selectedLearningName}
+              onSelect={(skillName: string) => {
+                const selected = learningSkillObjects.find((skill) => skill.skill_name === skillName);
+                if (selected) { handleSkillClick(selected.id); }
+              }}
+              style={{
+                width: "100%",
+                height: "75%", 
+                padding: "2vh 2vw",
+                borderRadius: "2vh",
+                boxSizing: "border-box",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "center",
+                backgroundColor: "#142143",
+
+              }}
+            />
+          </div>
+
+        {/* 3. More Skills Card (div3) */}
+        <div style={{ 
+          gridArea: "3 / 1 / 8 / 4", 
+          alignSelf: "stretch" 
+        }}>
+          <MoreSkillsCard 
+            skills={moreSkills}
+            selected={selectedMoreName} 
+            onSelect={(skillName: string) => {
+              const selected = moreSkillObjects.find((skill) => skill.skill_name === skillName);
+              if (selected) { handleSkillClick(selected.id); }
+            }}
+            style={{ 
+              height: "100%",
+              width: "100%",
+              borderRadius: "2vh",
+              boxSizing: "border-box",
+             backgroundColor: "#142143",
+
+            }}
+          />
+        </div>
+
+        {/* 4. Past Tests Card (div4) */}
+        <div style={{ 
+          gridArea: "3 / 4 / 8 / 6", 
+          alignSelf: "stretch" 
+        }}>
+          <PastTestsCard 
+            tests={allPastTests} 
+            style={{ 
+              height: "100%",
+              width: "100%",
+              borderRadius: "2vh",
+              boxSizing: "border-box",
+              backgroundColor: "#142143",
+            }}
+          />
+        </div>
+
       </RootLayout>
 
-      {isConfirmOpen && pendingSkillName ? (
+      {/* Confirmation Popup */}
+      {isConfirmOpen && pendingSkillName && (
         <SkillConfirmPopup
           skillName={pendingSkillName}
           isLoading={isStarting}
@@ -231,7 +272,7 @@ export default function SkillAssessment() {
           }}
           onConfirm={() => handleStartAssessment(pendingSkillId)}
         />
-      ) : null}
+      )}
     </div>
   );
 }

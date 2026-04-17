@@ -1,5 +1,5 @@
 "use client";
-import React, { useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 
 // --- Helper: Dynamic Circle Component (Green Only) ---
 const CircleScore = ({ score }: { score: number }) => {
@@ -41,8 +41,50 @@ const CircleScore = ({ score }: { score: number }) => {
 };
 
 // --- Card 1: Learning Skills (Horizontal Scroll) ---
-export const LearningSkillsCard = ({ skills, selected, onSelect, style }: any) => {
+type LearningSkillItem = {
+  id: string;
+  label: string;
+  isCurrent?: boolean;
+};
+
+export const LearningSkillsCard = ({
+  items,
+  selectedId,
+  focusedId,
+  onSelect,
+  style,
+  title = "Skills you are currently learning",
+}: {
+  items: LearningSkillItem[];
+  selectedId?: string;
+  focusedId?: string;
+  onSelect: (id: string) => void;
+  style?: React.CSSProperties;
+  title?: string;
+}) => {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const itemRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+
+  useEffect(() => {
+    const container = scrollRef.current;
+    const focusTarget = focusedId || selectedId;
+    if (!container || !focusTarget) {
+      return;
+    }
+
+    const button = itemRefs.current[focusTarget];
+    if (!button) {
+      return;
+    }
+
+    const buttonCenter = button.offsetLeft + button.offsetWidth / 2;
+    const targetScrollLeft = Math.max(0, buttonCenter - container.clientWidth / 2);
+    container.scrollTo({
+      left: targetScrollLeft,
+      behavior: "smooth",
+    });
+  }, [focusedId, selectedId, items]);
+
   const handleScroll = () => {
     if (scrollRef.current) scrollRef.current.scrollBy({ left: 200, behavior: 'smooth' });
   };
@@ -54,26 +96,43 @@ export const LearningSkillsCard = ({ skills, selected, onSelect, style }: any) =
       ...style, marginTop: "50px" 
     }}>
       <h3 style={{ fontSize: "16px", marginBottom: "15px", fontFamily: 'var(--font-nova-square)', fontWeight: "200" }}>
-        Skills you are currently learning
+        {title}
       </h3>
       <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
         <div ref={scrollRef} style={{ display: "flex", gap: "20px", overflowX: "auto", scrollbarWidth: "none", msOverflowStyle: "none" }}>
-          {skills.map((skill: string) => (
+          {items.map((item: LearningSkillItem) => {
+            const isSelected = selectedId === item.id;
+            const isCurrent = Boolean(item.isCurrent);
+            return (
             <button
-              key={skill}
-              onClick={() => onSelect(skill)}
+              key={item.id}
+              ref={(element) => {
+                itemRefs.current[item.id] = element;
+              }}
+              onClick={() => onSelect(item.id)}
               style={{
                 padding: "15px 30px", borderRadius: "10px", border: "none", flexShrink: 0,
-                backgroundColor: selected === skill ? "#E6FFB2" : "#c1cbe6",
+                backgroundColor: isSelected ? "#E6FFB2" : isCurrent ? "#fff6bf" : "#c1cbe6",
+                boxShadow: isCurrent ? "0 0 0 2px #E6FFB2 inset" : "none",
                 color: "black", fontWeight: "bold", cursor: "pointer", fontSize: "13px",
-                transition: "transform 0.2s"
+                transition: "transform 0.2s",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "flex-start",
+                minWidth: "180px",
               }}
               onMouseEnter={(e) => e.currentTarget.style.transform = "scale(1.05)"}
               onMouseLeave={(e) => e.currentTarget.style.transform = "scale(1)"}
             >
-              {skill}
+              <span>{item.label}</span>
+              {isCurrent ? (
+                <span style={{ fontSize: "11px", marginTop: "6px", color: "#1b3a1f", opacity: 0.85 }}>
+                  Current Step
+                </span>
+              ) : null}
             </button>
-          ))}
+            );
+          })}
         </div>
         <span onClick={handleScroll} style={{ fontSize: "24px", cursor: "pointer", color: "#c1cbe6" }}>❯</span>
       </div>

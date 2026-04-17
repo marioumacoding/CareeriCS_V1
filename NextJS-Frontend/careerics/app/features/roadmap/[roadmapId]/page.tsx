@@ -25,6 +25,8 @@ import {
   statusChipClass,
 } from "../utils";
 
+const LAST_ACTIVE_ROADMAP_STORAGE_KEY = "roadmap:last-active-id";
+
 export default function RoadmapDetailPage() {
   const router = useRouter();
   const params = useParams<{ roadmapId: string }>();
@@ -147,6 +149,14 @@ export default function RoadmapDetailPage() {
     void loadRoadmapDetail();
   }, [loadRoadmapDetail]);
 
+  useEffect(() => {
+    if (typeof window === "undefined" || !roadmapId) {
+      return;
+    }
+
+    window.localStorage.setItem(LAST_ACTIVE_ROADMAP_STORAGE_KEY, roadmapId);
+  }, [roadmapId]);
+
   const handleToggleStep = useCallback(
     async (stepId: string, nextStatus: RoadmapCompletionStatus) => {
       if (!roadmapId || !user?.id) {
@@ -182,6 +192,37 @@ export default function RoadmapDetailPage() {
       setSelectedStepId(firstStep?.id ?? null);
     },
     [sections],
+  );
+
+  const handleSelectStep = useCallback(
+    async (stepId: string) => {
+      setSelectedStepId(stepId);
+
+      if (!roadmapId || !user?.id) {
+        return;
+      }
+
+      const currentStatus = progressByStepId[stepId]?.completion_status ?? "not_started";
+      if (currentStatus !== "not_started") {
+        return;
+      }
+
+      setUpdatingStepId(stepId);
+      setErrorMessage(null);
+
+      const response = await roadmapService.upsertStepProgress(roadmapId, user.id, stepId, {
+        completion_status: "in_progress",
+      });
+
+      if (response.success) {
+        setProgressSummary(response.data);
+      } else {
+        setErrorMessage(response.message ?? "Unable to mark step as in progress.");
+      }
+
+      setUpdatingStepId(null);
+    },
+    [progressByStepId, roadmapId, user?.id],
   );
 
   return (
@@ -253,7 +294,9 @@ export default function RoadmapDetailPage() {
           selectedSectionId={selectedSection?.id ?? null}
           progressByStepId={progressByStepId}
           onToggleStep={handleToggleStep}
-          onSelectStep={setSelectedStepId}
+          onSelectStep={(stepId) => {
+            void handleSelectStep(stepId);
+          }}
           updatingStepId={updatingStepId}
         />
 

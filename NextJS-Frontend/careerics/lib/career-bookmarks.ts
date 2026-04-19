@@ -1,4 +1,13 @@
 import type { APICareerTrackScore } from "@/types";
+import {
+  addOrMoveUnifiedBookmark,
+  getUnifiedBookmarks,
+  isUnifiedBookmarked,
+  MAX_UNIFIED_BOOKMARKS,
+  removeUnifiedBookmark,
+  setUnifiedBookmarks,
+  UNIFIED_BOOKMARKS_UPDATED_EVENT,
+} from "@/lib/unified-bookmarks";
 
 export interface CareerBookmarkItem {
   track_id: string;
@@ -8,100 +17,81 @@ export interface CareerBookmarkItem {
   saved_at: string;
 }
 
-export const CAREER_BOOKMARKS_UPDATED_EVENT = "career-bookmarks-updated";
+export const CAREER_BOOKMARKS_UPDATED_EVENT = UNIFIED_BOOKMARKS_UPDATED_EVENT;
 
-function getStorageKey(userId?: string | null): string {
-  return `career-bookmarks:${userId ?? "guest"}`;
-}
-
-function safeParseBookmarks(raw: string | null): CareerBookmarkItem[] {
-  if (!raw) {
-    return [];
-  }
-
-  try {
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) {
-      return [];
-    }
-
-    return parsed.filter((item): item is CareerBookmarkItem => {
-      return Boolean(
-        item &&
-          typeof item.track_id === "string" &&
-          typeof item.track_name === "string" &&
-          typeof item.score === "number" &&
-          typeof item.saved_at === "string",
-      );
-    });
-  } catch {
-    return [];
-  }
-}
-
-function notifyBookmarksUpdated(userId?: string | null) {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  window.dispatchEvent(
-    new CustomEvent(CAREER_BOOKMARKS_UPDATED_EVENT, {
-      detail: { userId: userId ?? "guest" },
-    }),
-  );
+function mapToCareerBookmark(item: {
+  entity_id: string;
+  title: string;
+  description?: string | null;
+  score?: number | null;
+  saved_at: string;
+}): CareerBookmarkItem {
+  return {
+    track_id: item.entity_id,
+    track_name: item.title,
+    track_description: item.description ?? null,
+    score: typeof item.score === "number" ? item.score : 0,
+    saved_at: item.saved_at,
+  };
 }
 
 export function getCareerBookmarks(userId?: string | null): CareerBookmarkItem[] {
-  if (typeof window === "undefined") {
-    return [];
-  }
-
-  const key = getStorageKey(userId);
-  const bookmarks = safeParseBookmarks(window.localStorage.getItem(key));
-
-  return bookmarks.sort((a, b) => {
-    return new Date(b.saved_at).getTime() - new Date(a.saved_at).getTime();
-  });
+  return getUnifiedBookmarks(userId)
+    .filter((bookmark) => bookmark.kind === "career")
+    .map((bookmark) => mapToCareerBookmark(bookmark));
 }
 
 export function isCareerBookmarked(trackId: string, userId?: string | null): boolean {
-  return getCareerBookmarks(userId).some((bookmark) => bookmark.track_id === trackId);
+  return isUnifiedBookmarked("career", trackId, userId);
 }
 
 export function setCareerBookmarks(bookmarks: CareerBookmarkItem[], userId?: string | null): void {
-  if (typeof window === "undefined") {
-    return;
-  }
+  const nonCareer = getUnifiedBookmarks(userId).filter((bookmark) => bookmark.kind !== "career");
+  const careers = bookmarks.map((bookmark) => ({
+    kind: "career" as const,
+    entity_id: bookmark.track_id,
+    title: bookmark.track_name,
+    description: bookmark.track_description ?? null,
+    score: bookmark.score,
+    saved_at: bookmark.saved_at,
+  }));
 
-  const key = getStorageKey(userId);
-  window.localStorage.setItem(key, JSON.stringify(bookmarks));
-  notifyBookmarksUpdated(userId);
+  setUnifiedBookmarks([...careers, ...nonCareer], userId);
 }
 
 export function toggleCareerBookmark(
   track: APICareerTrackScore,
   userId?: string | null,
 ): { bookmarked: boolean; bookmarks: CareerBookmarkItem[] } {
-  const existing = getCareerBookmarks(userId);
-  const alreadyBookmarked = existing.some((item) => item.track_id === track.track_id);
+  const alreadyBookmarked = isUnifiedBookmarked("career", track.track_id, userId);
 
   if (alreadyBookmarked) {
-    const next = existing.filter((item) => item.track_id !== track.track_id);
-    setCareerBookmarks(next, userId);
+    const next = removeUnifiedBookmark("career", track.track_id, userId)
+      .filter((bookmark) => bookmark.kind === "career")
+      .map((bookmark) => mapToCareerBookmark(bookmark));
     return { bookmarked: false, bookmarks: next };
   }
 
-  const next: CareerBookmarkItem[] = [
-    {
-      track_id: track.track_id,
-      track_name: track.track_name,
-      track_description: track.track_description,
-      score: track.score,
-      saved_at: new Date().toISOString(),
-    },
-    ...existing,
-  ];
+  const unified = getUnifiedBookmarks(userId);
+  if (unified.length >= MAX_UNIFIED_BOOKMARKS) {
+    return {
+      bookmarked: false,
+      bookmarks: getCareerBookmarks(userId),
+    };
+  }
 
-  setCareerBookmarks(next, userId);
+  const next = addOrMoveUnifiedBookmark(
+    {
+      kind: "career",
+      entity_id: track.track_id,
+      title: track.track_name,
+      description: track.track_description ?? null,
+      score: track.score,
+    },
+    userId,
+  )
+    .filter((bookmark) => bookmark.kind === "career")
+    .map((bookmark) => mapToCareerBookmark(bookmark));
+
   return { bookmarked: true, bookmarks: next };
 }

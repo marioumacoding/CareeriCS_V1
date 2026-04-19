@@ -1,4 +1,63 @@
-import { NextRequest } from "next/server";
+import { Agent } from "undici";
+import { NextRequest, NextResponse } from "next/server";
+
+export const runtime = "nodejs";
+
+const DEFAULT_HEADERS_TIMEOUT_MS = 180_000;
+
+function parseMs(value: string | undefined, fallback: number): number {
+  if (!value) {
+    return fallback;
+  }
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+const upstreamHeadersTimeoutMs = parseMs(
+  process.env.FASTAPI_PROXY_HEADERS_TIMEOUT_MS,
+  DEFAULT_HEADERS_TIMEOUT_MS,
+);
+
+const upstreamDispatcher = new Agent({
+  headersTimeout: upstreamHeadersTimeoutMs,
+  bodyTimeout: 0,
+});
+
+const isDevelopment = process.env.NODE_ENV !== "production";
+
+type ErrorMeta = {
+  name: string;
+  message: string;
+  causeCode?: string;
+  causeMessage?: string;
+};
+
+function toErrorMeta(error: unknown): ErrorMeta {
+  if (!(error instanceof Error)) {
+    return {
+      name: "UnknownError",
+      message: String(error),
+    };
+  }
+
+  const cause = (error as Error & { cause?: { code?: string; message?: string } }).cause;
+  return {
+    name: error.name,
+    message: error.message,
+    causeCode: cause?.code,
+    causeMessage: cause?.message,
+  };
+}
+
+function isHeadersTimeoutError(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  const cause = (error as Error & { cause?: { code?: string } }).cause;
+  return cause?.code === "UND_ERR_HEADERS_TIMEOUT";
+}
 
 const HOP_BY_HOP_HEADERS = new Set([
   "connection",
@@ -41,6 +100,58 @@ function buildForwardHeaders(req: NextRequest): Headers {
   return headers;
 }
 
+type PreparedUpstreamRequest = {
+  headers: Headers;
+  body: BodyInit | null | undefined;
+  replayable: boolean;
+  requiresDuplex: boolean;
+};
+
+function isReplayableContentType(contentType: string | null): boolean {
+  if (!contentType) {
+    return false;
+  }
+
+  const normalized = contentType.toLowerCase();
+  return (
+    normalized.startsWith("application/json") ||
+    normalized.startsWith("application/x-www-form-urlencoded")
+  );
+}
+
+async function prepareUpstreamRequest(
+  req: NextRequest,
+  hasBody: boolean,
+): Promise<PreparedUpstreamRequest> {
+  const headers = buildForwardHeaders(req);
+
+  if (!hasBody || !req.body) {
+    return {
+      headers,
+      body: undefined,
+      replayable: false,
+      requiresDuplex: false,
+    };
+  }
+
+  if (isReplayableContentType(headers.get("content-type"))) {
+    const bodyBuffer = await req.arrayBuffer();
+    return {
+      headers,
+      body: bodyBuffer.byteLength ? new Uint8Array(bodyBuffer) : undefined,
+      replayable: true,
+      requiresDuplex: false,
+    };
+  }
+
+  return {
+    headers,
+    body: req.body,
+    replayable: false,
+    requiresDuplex: true,
+  };
+}
+
 function rewriteLocationHeader(location: string, req: NextRequest, upstreamBase: string): string {
   const proxyPrefix = `${req.nextUrl.origin}/api/fastapi`;
 
@@ -75,13 +186,113 @@ async function handleProxy(
 
   const method = req.method;
   const hasBody = method !== "GET" && method !== "HEAD";
-  const upstreamResponse = await fetch(url, {
+  const preparedRequest = await prepareUpstreamRequest(req, hasBody);
+  let upstreamResponse: Response;
+  let primaryErrorMeta: ErrorMeta | null = null;
+
+  const baseFetchInit: RequestInit & { duplex?: "half" } = {
     method,
-    headers: buildForwardHeaders(req),
-    body: hasBody ? req.body : undefined,
-    redirect: "manual",
-    duplex: hasBody ? "half" : undefined,
-  } as RequestInit & { duplex?: "half" });
+    headers: preparedRequest.headers,
+    body: preparedRequest.body,
+    redirect: "manual" as RequestRedirect,
+    cache: "no-store" as RequestCache,
+    ...(preparedRequest.requiresDuplex ? { duplex: "half" as const } : {}),
+  };
+
+  try {
+    upstreamResponse = await fetch(url, {
+      ...baseFetchInit,
+      dispatcher: upstreamDispatcher,
+    } as RequestInit & { duplex?: "half"; dispatcher?: Agent });
+  } catch (error) {
+    primaryErrorMeta = toErrorMeta(error);
+
+    if (isHeadersTimeoutError(error)) {
+      return NextResponse.json(
+        {
+          detail: "FastAPI timed out while preparing response headers.",
+          code: "UPSTREAM_HEADERS_TIMEOUT",
+        },
+        { status: 504 },
+      );
+    }
+
+    const canRetryWithoutDispatcher = !preparedRequest.requiresDuplex;
+
+    if (canRetryWithoutDispatcher) {
+      try {
+        upstreamResponse = await fetch(url, baseFetchInit);
+      } catch (fallbackError) {
+        const fallbackErrorMeta = toErrorMeta(fallbackError);
+
+        if (isHeadersTimeoutError(fallbackError)) {
+          return NextResponse.json(
+            {
+              detail: "FastAPI timed out while preparing response headers.",
+              code: "UPSTREAM_HEADERS_TIMEOUT",
+            },
+            { status: 504 },
+          );
+        }
+
+        if (isDevelopment) {
+          console.error("[fastapi-proxy] upstream fetch failed", {
+            url,
+            method,
+            primary: primaryErrorMeta,
+            fallback: fallbackErrorMeta,
+          });
+        }
+
+        return NextResponse.json(
+          {
+            detail: "Failed to connect to FastAPI upstream.",
+            code: "UPSTREAM_FETCH_FAILED",
+            ...(isDevelopment
+              ? {
+                  debug: {
+                    url,
+                    method,
+                    replayableBody: preparedRequest.replayable,
+                    primary: primaryErrorMeta,
+                    fallback: fallbackErrorMeta,
+                  },
+                }
+              : {}),
+          },
+          { status: 502 },
+        );
+      }
+
+      primaryErrorMeta = null;
+    } else {
+      if (isDevelopment) {
+        console.error("[fastapi-proxy] upstream fetch failed", {
+          url,
+          method,
+          primary: primaryErrorMeta,
+        });
+      }
+
+      return NextResponse.json(
+        {
+          detail: "Failed to connect to FastAPI upstream.",
+          code: "UPSTREAM_FETCH_FAILED",
+          ...(isDevelopment
+            ? {
+                debug: {
+                  url,
+                  method,
+                  replayableBody: preparedRequest.replayable,
+                  primary: primaryErrorMeta,
+                },
+              }
+            : {}),
+        },
+        { status: 502 },
+      );
+    }
+  }
 
   const responseHeaders = new Headers(upstreamResponse.headers);
   const location = responseHeaders.get("location");

@@ -2,7 +2,7 @@
 
 /* eslint-disable react-hooks/set-state-in-effect, react-hooks/preserve-manual-memoization */
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import RootLayout from "@/app/features/layout";
@@ -140,6 +140,7 @@ function findRoadmapMatchByCareer(
 export default function RoadmapPage() {
   const router = useRouter();
   const { user, isLoading: isAuthLoading } = useAuth();
+  const hasUserSelectedRoadmapRef = useRef(false);
 
   const [selectedRoadmapId, setSelectedRoadmapId] = useState<string>(DEFAULT_PATH_OPTION);
 
@@ -300,14 +301,40 @@ export default function RoadmapPage() {
     }
 
     setSelectedRoadmapId((prev) => {
-      if (prev === DEFAULT_PATH_OPTION) {
+      const selectedExists =
+        prev !== DEFAULT_PATH_OPTION &&
+        roadmapList.some((item) => item.id === prev);
+
+      const topBookmarkedRoadmapId = bookmarkedRoadmapIds.find((roadmapId) => {
+        return roadmapList.some((item) => item.id === roadmapId);
+      });
+
+      if (topBookmarkedRoadmapId) {
+        if (!selectedExists) {
+          return topBookmarkedRoadmapId;
+        }
+
+        // Allow bookmark-first auto-promotion after async bookmark load
+        // unless the user already made an explicit manual selection.
+        if (!hasUserSelectedRoadmapRef.current) {
+          return topBookmarkedRoadmapId;
+        }
+
         return prev;
       }
 
-      const exists = roadmapList.some((item) => item.id === prev);
-      return exists ? prev : DEFAULT_PATH_OPTION;
+      if (selectedExists) {
+        return prev;
+      }
+
+      return roadmapList[0]?.id ?? DEFAULT_PATH_OPTION;
     });
-  }, [roadmapList]);
+  }, [bookmarkedRoadmapIds, roadmapList]);
+
+  const handleRoadmapChange = useCallback((roadmapId: string) => {
+    hasUserSelectedRoadmapRef.current = roadmapId !== DEFAULT_PATH_OPTION;
+    setSelectedRoadmapId(roadmapId);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -637,6 +664,60 @@ export default function RoadmapPage() {
     return options;
   }, [roadmapList, roadmapListById, unifiedBookmarks]);
 
+  useEffect(() => {
+    if (isAuthLoading || !user?.id || !bookmarkedRoadmapOptions.length) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const syncMappedRoadmapsToBackendBookmarks = async () => {
+      const backendResponse = await roadmapService.getUserRoadmapBookmarks(user.id);
+      if (cancelled || !backendResponse.success) {
+        return;
+      }
+
+      const backendRoadmapIdSet = new Set(
+        backendResponse.data.bookmarks.map((bookmark) => bookmark.roadmap_id),
+      );
+
+      const mappedRoadmapIds = Array.from(
+        new Set(bookmarkedRoadmapOptions.map((option) => option.id)),
+      ).slice(0, MAX_UNIFIED_BOOKMARKS);
+
+      const missingRoadmapIds = mappedRoadmapIds.filter((roadmapId) => {
+        return !backendRoadmapIdSet.has(roadmapId);
+      });
+
+      if (!missingRoadmapIds.length) {
+        return;
+      }
+
+      for (const roadmapId of missingRoadmapIds) {
+        const toggleResponse = await roadmapService.toggleRoadmapBookmark(roadmapId, user.id);
+        if (cancelled) {
+          return;
+        }
+
+        if (!toggleResponse.success || !toggleResponse.data.bookmarked) {
+          continue;
+        }
+      }
+
+      if (cancelled) {
+        return;
+      }
+
+      await loadUserBookmarks();
+    };
+
+    void syncMappedRoadmapsToBackendBookmarks();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [bookmarkedRoadmapOptions, isAuthLoading, loadUserBookmarks, user?.id]);
+
   return (
     <RootLayout
       style={{
@@ -654,7 +735,7 @@ export default function RoadmapPage() {
           options={compactRoadmapOptions}
           allRoadmaps={bookmarkedRoadmapOptions}
           emptyStateMessage="No bookmarks yet. Save roadmap or career suggestions to see them here."
-          onRoadmapChange={setSelectedRoadmapId}
+          onRoadmapChange={handleRoadmapChange}
         />
 
         <div className="flex min-h-0 flex-1 flex-col gap-3 px-6 pb-5 sm:px-7">

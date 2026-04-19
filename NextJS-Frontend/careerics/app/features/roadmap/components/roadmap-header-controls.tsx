@@ -3,16 +3,13 @@
 import { useRef } from "react";
 import { Bookmark, ChevronRight } from "lucide-react";
 
-import type { RoadmapCompletionStatus } from "@/types";
-
 interface RoadmapOption {
   id: string;
   title: string;
 }
 
 interface RoadmapQuickPick extends RoadmapOption {
-  completionPercent?: number;
-  completionStatus?: RoadmapCompletionStatus;
+  kind?: "roadmap" | "career";
   isBookmarked?: boolean;
 }
 
@@ -86,11 +83,12 @@ export default function RoadmapHeaderControls({
             <div className="inline-flex w-max flex-nowrap items-center gap-2.5 pb-1 pr-1" role="tablist" aria-label="Roadmaps">
               {allRoadmaps.length > 0 ? (
                 allRoadmaps.map((roadmap) => {
+                  const quickPickKind = roadmap.kind ?? "roadmap";
                   const active = selectedRoadmapId === roadmap.id;
 
                   return (
                     <button
-                      key={roadmap.id}
+                      key={`${quickPickKind}:${roadmap.id}`}
                       type="button"
                       role="tab"
                       aria-selected={active}
@@ -110,7 +108,7 @@ export default function RoadmapHeaderControls({
                 })
               ) : (
                 <p className="pl-1 text-[0.88rem] font-medium text-[#4f5a70]">
-                  {emptyStateMessage ?? "No bookmarked roadmaps yet. Use the bookmark icon to save one."}
+                  {emptyStateMessage ?? "No bookmarks yet. Save one to see it here."}
                 </p>
               )}
             </div>

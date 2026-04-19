@@ -66,7 +66,6 @@ export default function HomePage() {
             desc: bookmark.description || "Continue your roadmap journey.",
             href: `/journey?career=${encodeURIComponent(bookmark.title)}`,
             buttonLabel: "Continue",
-            tag: "Roadmap",
           };
         }
 
@@ -99,15 +98,14 @@ export default function HomePage() {
   ];
 
   return (
-    <div style={{ width: "100%", height: "100vh", padding: "20px", boxSizing: "border-box" }}>
+    <div style={{ width: "100%", height: "100%", padding: "20px", boxSizing: "border-box" }}>
       <div style={{
         display: "grid",
         gridTemplateColumns: "1.3fr 1.3fr 1.3fr 0.7fr 0.9fr", 
         gridTemplateRows: "1.4fr 1.4fr 0.7fr 0.9fr", 
         gridColumnGap: "10px",
         gridRowGap: "6px",
-        height: "88%", 
-        marginTop: "-60px",
+        height: "100%", 
         width: "100%"
       }}>
         <div style={{ gridArea: "1 / 1 / 3 / 4" }}>

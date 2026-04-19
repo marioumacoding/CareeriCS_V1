@@ -407,14 +407,49 @@ def get_user_roadmaps_progress_service(db: Session, user_id: UUID) -> UserRoadma
     return UserRoadmapProgressListSchema(user_id=user_id, roadmaps=items)
 
 
+def _get_roadmap_completion_percent(db: Session, user_id: UUID, roadmap_id: UUID) -> int:
+    total_steps = (
+        db.query(func.count(RoadmapStep.id))
+        .join(RoadmapSection, RoadmapSection.id == RoadmapStep.section_id)
+        .filter(RoadmapSection.roadmap_id == roadmap_id)
+        .scalar()
+    )
+
+    completed_steps = (
+        db.query(func.count(func.distinct(RoadmapAssessmentResult.step_id)))
+        .filter(
+            RoadmapAssessmentResult.user_id == user_id,
+            RoadmapAssessmentResult.roadmap_id == roadmap_id,
+            RoadmapAssessmentResult.type == "step",
+            RoadmapAssessmentResult.completion_status == "completed",
+        )
+        .scalar()
+    )
+
+    return _percent(int(completed_steps or 0), int(total_steps or 0))
+
+
 def get_current_roadmap_learning_service(
     db: Session,
     user_id: UUID,
     roadmap_id: UUID | None = None,
 ) -> CurrentRoadmapLearningSchema:
-    base_query = db.query(RoadmapAssessmentResult).filter(
-        RoadmapAssessmentResult.user_id == user_id,
-        RoadmapAssessmentResult.type == "step",
+    base_query = (
+        db.query(
+            RoadmapAssessmentResult.roadmap_id.label("roadmap_id"),
+            RoadmapAssessmentResult.section_id.label("section_id"),
+            RoadmapAssessmentResult.step_id.label("step_id"),
+            Roadmap.title.label("roadmap_title"),
+            RoadmapSection.title.label("section_title"),
+            RoadmapStep.title.label("step_title"),
+        )
+        .join(Roadmap, Roadmap.id == RoadmapAssessmentResult.roadmap_id)
+        .outerjoin(RoadmapSection, RoadmapSection.id == RoadmapAssessmentResult.section_id)
+        .outerjoin(RoadmapStep, RoadmapStep.id == RoadmapAssessmentResult.step_id)
+        .filter(
+            RoadmapAssessmentResult.user_id == user_id,
+            RoadmapAssessmentResult.type == "step",
+        )
     )
 
     if roadmap_id:
@@ -439,26 +474,14 @@ def get_current_roadmap_learning_service(
     if not current_step_row or not current_step_row.roadmap_id:
         raise ValueError("No current roadmap learning progress found for user")
 
-    roadmap = db.query(Roadmap).filter(Roadmap.id == current_step_row.roadmap_id).first()
-    if not roadmap:
-        raise ValueError("Roadmap not found for current learning progress")
-
-    section = None
-    if current_step_row.section_id:
-        section = db.query(RoadmapSection).filter(RoadmapSection.id == current_step_row.section_id).first()
-
-    step = None
-    if current_step_row.step_id:
-        step = db.query(RoadmapStep).filter(RoadmapStep.id == current_step_row.step_id).first()
-
-    summary = get_roadmap_progress_service(db, roadmap.id, user_id)
+    progress_percent = _get_roadmap_completion_percent(db, user_id, current_step_row.roadmap_id)
 
     return CurrentRoadmapLearningSchema(
-        roadmap_id=roadmap.id,
-        roadmap_title=roadmap.title,
-        section_id=section.id if section else current_step_row.section_id,
-        section_title=section.title if section else None,
-        step_id=step.id if step else current_step_row.step_id,
-        step_title=step.title if step else None,
-        progress_percent=summary.completion_percent,
+        roadmap_id=current_step_row.roadmap_id,
+        roadmap_title=current_step_row.roadmap_title,
+        section_id=current_step_row.section_id,
+        section_title=current_step_row.section_title,
+        step_id=current_step_row.step_id,
+        step_title=current_step_row.step_title,
+        progress_percent=progress_percent,
     )

@@ -264,6 +264,26 @@ export interface UserRoadmapBookmarkToggle {
   bookmarked: boolean;
 }
 
+export type UnifiedBookmarkKind = "roadmap" | "career";
+
+export interface UnifiedBookmarkEntry {
+  kind: UnifiedBookmarkKind;
+  entity_id: string;
+  title: string;
+  description?: string | null;
+  score?: number | null;
+  saved_at: string;
+}
+
+export interface UnifiedBookmarkDraft {
+  kind: UnifiedBookmarkKind;
+  entity_id: string;
+  title: string;
+  description?: string | null;
+  score?: number | null;
+  saved_at?: string;
+}
+
 export interface StepProgressUpsertRequest {
   completion_status: RoadmapCompletionStatus;
   score?: number | null;

@@ -82,7 +82,15 @@ export default function RoadmapDetailPage() {
     setIsLoading(true);
     setErrorMessage(null);
 
-    const roadmapResponse = await roadmapService.getRoadmapById(roadmapId);
+    const roadmapPromise = roadmapService.getRoadmapById(roadmapId);
+    const progressPromise = user?.id
+      ? roadmapService.getRoadmapProgress(roadmapId, user.id)
+      : Promise.resolve(null);
+
+    const [roadmapResponse, progressResponse] = await Promise.all([
+      roadmapPromise,
+      progressPromise,
+    ]);
 
     if (!roadmapResponse.success) {
       setRoadmap(null);
@@ -134,9 +142,7 @@ export default function RoadmapDetailPage() {
       return;
     }
 
-    const progressResponse = await roadmapService.getRoadmapProgress(roadmapId, user.id);
-
-    if (progressResponse.success) {
+    if (progressResponse?.success) {
       setProgressSummary(progressResponse.data);
     } else {
       setProgressSummary(null);

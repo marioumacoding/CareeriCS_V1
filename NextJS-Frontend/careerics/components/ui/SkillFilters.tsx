@@ -14,6 +14,7 @@ interface SkillFiltersProps {
   skillType: SkillFilterType;
   onSkillTypeChange: (type: SkillFilterType) => void;
   disabled?: boolean;
+  disableSkillTypeToggle?: boolean;
   trackHelperText?: string;
 }
 
@@ -24,8 +25,11 @@ const SkillFilters = ({
   skillType,
   onSkillTypeChange,
   disabled = false,
+  disableSkillTypeToggle = false,
   trackHelperText,
 }: SkillFiltersProps) => {
+  const isSkillTypeDisabled = disabled || disableSkillTypeToggle;
+
   const getButtonStyle = (type: SkillFilterType) => ({
     flex: 1,
     padding: "1.2vh 0.5vw",
@@ -35,9 +39,9 @@ const SkillFilters = ({
     color: skillType === type ? "#1e293b" : "#fff",
     fontSize: "0.9vw",
     fontWeight: "bold" as const,
-    cursor: disabled ? "not-allowed" : "pointer",
+    cursor: isSkillTypeDisabled ? "not-allowed" : "pointer",
     transition: "all 0.3s ease",
-    opacity: disabled ? 0.6 : 1,
+    opacity: isSkillTypeDisabled ? 0.6 : 1,
   });
 
   return (
@@ -102,7 +106,7 @@ const SkillFilters = ({
         <div style={{ display: "flex", gap: "1vw" }}>
           <button
             onClick={() => onSkillTypeChange("general")}
-            disabled={disabled}
+            disabled={isSkillTypeDisabled}
             style={getButtonStyle("general")}
           >
             General Topic
@@ -110,12 +114,25 @@ const SkillFilters = ({
 
           <button
             onClick={() => onSkillTypeChange("specific")}
-            disabled={disabled}
+            disabled={isSkillTypeDisabled}
             style={getButtonStyle("specific")}
           >
             Specific Skill
           </button>
         </div>
+        {disableSkillTypeToggle ? (
+          <p
+            style={{
+              margin: "0.7vh 0 0 0",
+              fontSize: "0.72vw",
+              lineHeight: 1.35,
+              color: "#E6FFB2",
+              fontWeight: 600,
+            }}
+          >
+            Skill type is disabled in General Skills mode.
+          </p>
+        ) : null}
       </div>
     </div>
   );

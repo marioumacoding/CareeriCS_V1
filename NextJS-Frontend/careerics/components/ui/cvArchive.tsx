@@ -125,11 +125,6 @@ export const LearningSkillsCard = ({
               onMouseLeave={(e) => e.currentTarget.style.transform = "scale(1)"}
             >
               <span>{item.label}</span>
-              {isCurrent ? (
-                <span style={{ fontSize: "11px", marginTop: "6px", color: "#1b3a1f", opacity: 0.85 }}>
-                  Current Step
-                </span>
-              ) : null}
             </button>
             );
           })}

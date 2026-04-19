@@ -71,6 +71,18 @@ export const CareersCard = ({ careers, style }: any) => {
             <div key={career.title} style={{ backgroundColor: "#142143", borderRadius: "15px", padding: "10px 15px", flex: "0 0 160px", height: "90%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "space-evenly", textAlign: "center" }}>
               <div style={{ position: 'relative', width: '70px', height: '45px' }}><Image src="/landing/Rectangle.svg" alt="Icon" fill style={{ objectFit: 'contain' }} /></div>
               <div style={{ fontSize: "25px", textAlign: "center", fontWeight: '400', wordWrap: 'break-word' }}>{career.title}</div>
+              {career.tag ? (
+                <div
+                  style={{
+                    fontSize: "10px",
+                    letterSpacing: "0.08em",
+                    textTransform: "uppercase",
+                    color: "#b6c5e8",
+                  }}
+                >
+                  {career.tag}
+                </div>
+              ) : null}
               <p style={{ fontSize: "12px", opacity: 0.7, margin: "0", lineHeight: "1", maxWidth: "100%" }}>{career.desc}</p>
               <button
                 onClick={() => handleContinue(career)}

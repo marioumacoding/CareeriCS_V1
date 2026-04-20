@@ -1,7 +1,7 @@
 import json
 from typing import Any, List, Dict
 from sqlalchemy.orm import Session
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from db.models import CareerTrackResult, CareerTrack
 from .answer_service import get_questions_and_answers_for_session
@@ -11,10 +11,29 @@ from ai.prompts import career_quiz_evaluation_prompt
 from ai.completion import deepseek_response
 
 
+def _serialize_track_scores(scores: List[Dict[str, Any]], track_map: Dict[str, CareerTrack]):
+    serialized = []
+
+    for item in scores:
+        track_id = str(item["track_id"])
+        track = track_map.get(track_id)
+
+        serialized.append({
+            "track_id": track_id,
+            "track_name": track.name if track else "Unknown Track",
+            "track_description": track.description if track else None,
+            "score": int(item["score"]),
+        })
+
+    serialized.sort(key=lambda s: s["score"], reverse=True)
+    return serialized
+
+
 # =========================
 # MAIN EVALUATION SERVICE
 # =========================
 def evaluate_career_track(db: Session, session_id: str) -> Dict[str, Any]:
+    session_uuid = UUID(str(session_id))
 
     # -------------------------
     # 1. FETCH DATA
@@ -22,6 +41,7 @@ def evaluate_career_track(db: Session, session_id: str) -> Dict[str, Any]:
     raw_answers = get_questions_and_answers_for_session(db, session_id)
     selected_cards = get_selected_cards(db, session_id)
     tracks = db.query(CareerTrack).all()
+    track_map = {str(track.id): track for track in tracks}
 
     # -------------------------
     # 2. STRUCTURE ANSWERS
@@ -54,11 +74,19 @@ def evaluate_career_track(db: Session, session_id: str) -> Dict[str, Any]:
     # -------------------------
     validate_result(result)
 
+    normalized_results = [
+        {
+            "track_id": UUID(str(item["track_id"])),
+            "score": int(item["score"]),
+        }
+        for item in result
+    ]
+
     # -------------------------
     # 7. CLEAN PREVIOUS RESULTS (IMPORTANT)
     # -------------------------
     db.query(CareerTrackResult)\
-        .filter(CareerTrackResult.session_id == session_id)\
+        .filter(CareerTrackResult.session_id == session_uuid)\
         .delete()
 
     # -------------------------
@@ -67,11 +95,11 @@ def evaluate_career_track(db: Session, session_id: str) -> Dict[str, Any]:
     track_results = [
         CareerTrackResult(
             id=uuid4(),
-            session_id=session_id,
+            session_id=session_uuid,
             track_id=r["track_id"],
             score=int(r["score"])
         )
-        for r in result
+        for r in normalized_results
     ]
 
     db.bulk_save_objects(track_results)
@@ -83,7 +111,36 @@ def evaluate_career_track(db: Session, session_id: str) -> Dict[str, Any]:
         raise e
 
     return {
-        "track_scores": result
+        "track_scores": _serialize_track_scores(normalized_results, track_map)
+    }
+
+
+def get_career_track_results(db: Session, session_id: str) -> Dict[str, Any]:
+    session_uuid = UUID(str(session_id))
+
+    track_results = (
+        db.query(CareerTrackResult)
+        .filter(CareerTrackResult.session_id == session_uuid)
+        .all()
+    )
+
+    if not track_results:
+        return {"track_scores": []}
+
+    track_ids = [result.track_id for result in track_results]
+    tracks = db.query(CareerTrack).filter(CareerTrack.id.in_(track_ids)).all()
+    track_map = {str(track.id): track for track in tracks}
+
+    serialized_results = [
+        {
+            "track_id": result.track_id,
+            "score": int(result.score),
+        }
+        for result in track_results
+    ]
+
+    return {
+        "track_scores": _serialize_track_scores(serialized_results, track_map)
     }
 
 

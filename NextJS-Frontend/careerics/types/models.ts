@@ -207,6 +207,141 @@ export interface CVProfile {
   references: CVReference[];
 }
 
+// ── FastAPI Roadmap domain ─────────────────────────
+
+export type RoadmapCompletionStatus = "not_started" | "in_progress" | "completed";
+
+export interface RoadmapResource {
+  resourceType?: string;
+  title?: string;
+  url?: string;
+  [key: string]: unknown;
+}
+
+export interface RoadmapStepRead {
+  id: string;
+  title: string;
+  description?: string;
+  order: number;
+  resources: RoadmapResource[];
+}
+
+export interface RoadmapSectionRead {
+  id: string;
+  title: string;
+  description?: string;
+  order: number;
+  steps: RoadmapStepRead[];
+}
+
+export interface RoadmapRead {
+  id: string;
+  title: string;
+  description?: string;
+  sections: RoadmapSectionRead[];
+}
+
+export interface RoadmapListItem {
+  id: string;
+  title: string;
+  description?: string;
+  sections_count: number;
+  steps_count: number;
+}
+
+export interface UserRoadmapBookmark {
+  roadmap_id: string;
+  created_at: string;
+}
+
+export interface UserRoadmapBookmarkList {
+  user_id: string;
+  bookmarks: UserRoadmapBookmark[];
+}
+
+export interface UserRoadmapBookmarkToggle {
+  roadmap_id: string;
+  bookmarked: boolean;
+}
+
+export type UnifiedBookmarkKind = "roadmap" | "career";
+
+export interface UnifiedBookmarkEntry {
+  kind: UnifiedBookmarkKind;
+  entity_id: string;
+  title: string;
+  description?: string | null;
+  score?: number | null;
+  saved_at: string;
+}
+
+export interface UnifiedBookmarkDraft {
+  kind: UnifiedBookmarkKind;
+  entity_id: string;
+  title: string;
+  description?: string | null;
+  score?: number | null;
+  saved_at?: string;
+}
+
+export interface StepProgressUpsertRequest {
+  completion_status: RoadmapCompletionStatus;
+  score?: number | null;
+  proficiency?: string | null;
+}
+
+export interface StepProgressRead {
+  step_id: string;
+  completion_status: RoadmapCompletionStatus;
+  completed_at?: string | null;
+  score?: number | null;
+  proficiency?: string | null;
+}
+
+export interface SectionProgressSummary {
+  section_id: string;
+  title: string;
+  completion_status: RoadmapCompletionStatus;
+  completed_steps: number;
+  total_steps: number;
+  completion_percent: number;
+  steps: StepProgressRead[];
+}
+
+export interface RoadmapProgressSummary {
+  roadmap_id: string;
+  title: string;
+  completion_status: RoadmapCompletionStatus;
+  completed_sections: number;
+  total_sections: number;
+  completed_steps: number;
+  total_steps: number;
+  completion_percent: number;
+  sections: SectionProgressSummary[];
+}
+
+export interface UserRoadmapProgressItem {
+  roadmap_id: string;
+  title: string;
+  completion_status: RoadmapCompletionStatus;
+  completion_percent: number;
+}
+
+export interface UserRoadmapProgressList {
+  user_id: string;
+  roadmaps: UserRoadmapProgressItem[];
+}
+
+export interface CurrentRoadmapLearning {
+  roadmap_id: string;
+  roadmap_title: string;
+  section_id?: string | null;
+  section_title?: string | null;
+  step_id?: string | null;
+  step_title?: string | null;
+  progress_percent: number;
+}
+
 // ── FastAPI Skills domain ───────────────────────────────
 
 export interface APISkill {
@@ -216,9 +351,12 @@ export interface APISkill {
 
 // ── FastAPI Skill assessment domain ─────────────────────
 
+export type APIAssessmentSessionType = "skills" | "roadmap" | "section" | "step";
+
 export interface APIStartAssessmentRequest {
-  skill_id: string;
+  target_id: string;
   num_questions: number;
+  session_type: APIAssessmentSessionType;
 }
 
 export interface APIAssessmentQuestion {
@@ -255,7 +393,11 @@ export interface APISubmitAssessmentResponse {
 export interface APIAssessmentSessionSummary {
   id: string;
   user_id: string;
-  skill_id: string;
+  type: APIAssessmentSessionType | string;
+  skill_id?: string | null;
+  roadmap_id?: string | null;
+  section_id?: string | null;
+  step_id?: string | null;
   total_questions: number;
   score: number;
   status: string;
@@ -272,4 +414,69 @@ export interface APIReport {
   filename: string;
   created_at: string;
   type: APIReportType;
+}
+
+// ── FastAPI Career quiz domain ──────────────────────────
+
+export type APICareerCardType = "hobby" | "technical";
+
+export interface APICareerSessionCreate {
+  user_id: string;
+  status?: string;
+}
+
+export interface APICareerSessionRead {
+  id: string;
+  user_id: string;
+  status: string;
+  started_at?: string | null;
+  submitted_at?: string | null;
+}
+
+export interface APICareerCardRead {
+  id: string;
+  name: string;
+  description?: string | null;
+}
+
+export interface APICareerCardSelectionItem {
+  id: string;
+  type: APICareerCardType;
+}
+
+export interface APICareerSelectedCardRead {
+  type: APICareerCardType;
+  id: string;
+  name: string;
+}
+
+export interface APICareerQuestionResponse {
+  id: string;
+  hobby_id?: string | null;
+  technical_skill_id?: string | null;
+  text: string;
+  type: APICareerCardType;
+}
+
+export interface APICareerAnswerInput {
+  question_id: string;
+  answer: number;
+}
+
+export interface APICareerAnswerRead {
+  id: string;
+  session_id: string;
+  question_id: string;
+  answer: number;
+}
+
+export interface APICareerTrackScore {
+  track_id: string;
+  track_name: string;
+  track_description?: string | null;
+  score: number;
+}
+
+export interface APICareerEvaluationRead {
+  track_scores: APICareerTrackScore[];
 }

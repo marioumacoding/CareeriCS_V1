@@ -10,7 +10,8 @@ from services.career.answer_service import (
     submitAnswers
 )
 from services.career.evaluation_service import (
-    evaluate_career_track
+    evaluate_career_track,
+    get_career_track_results,
 )
 
 router = APIRouter(
@@ -37,5 +38,16 @@ def evaluate_career_quiz_for_session(
 ):
     try:
         return evaluate_career_track(db, str(session_id))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/{session_id}/results", response_model=schemas.CareerEvaluationRead)
+def get_career_quiz_results_for_session(
+    session_id: UUID,
+    db: Session = Depends(get_db)
+):
+    try:
+        return get_career_track_results(db, str(session_id))
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

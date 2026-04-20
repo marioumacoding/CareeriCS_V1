@@ -72,7 +72,12 @@ whisper_client = InferenceClient(
 
 ser_client = pipeline(
     "audio-classification",
-    model="superb/hubert-large-superb-er"
+    model="superb/hubert-large-superb-er",
+    framework="pt",
 )
 
-sentiment_client = pipeline("sentiment-analysis")
+sentiment_client = pipeline(
+    "sentiment-analysis",
+    model="distilbert/distilbert-base-uncased-finetuned-sst-2-english",
+    framework="pt",
+)

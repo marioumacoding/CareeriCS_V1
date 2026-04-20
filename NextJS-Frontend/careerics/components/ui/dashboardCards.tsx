@@ -3,6 +3,7 @@
 import React, { useRef } from "react";
 import Image from "next/image";
 import ChoiceCard from "./choice-card-home";
+import { useRouter } from 'next/navigation';
 
 // --- 1. Helper: CircleScoreSVG ---
 const CircleScoreSVG = ({
@@ -73,6 +74,20 @@ const CircleScoreSVG = ({
 
 // --- Card 1: CareersCard ---
 export const CareersCard = ({ careers, style }: any) => {
+  const router = useRouter();
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const scrollRight = () => {
+    if (scrollRef.current) scrollRef.current.scrollBy({ left: 200, behavior: 'smooth' });
+  };
+
+  const handleContinue = (career: any) => {
+    if (!career?.href) {
+      return;
+    }
+
+    router.push(career.href);
+  };
+
   return (
     <div
       style={{

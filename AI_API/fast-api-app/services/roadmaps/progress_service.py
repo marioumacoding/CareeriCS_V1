@@ -2,10 +2,12 @@ from datetime import datetime, timezone
 from typing import Dict, List
 from uuid import UUID, uuid4
 
+from sqlalchemy import and_, case, func
 from sqlalchemy.orm import Session
 
 from db.models import Roadmap, RoadmapAssessmentResult, RoadmapSection, RoadmapStep
 from schemas import (
+    CurrentRoadmapLearningSchema,
     RoadmapProgressSummarySchema,
     SectionProgressSummarySchema,
     StepProgressReadSchema,
@@ -311,17 +313,175 @@ def get_roadmap_progress_service(db: Session, roadmap_id: UUID, user_id: UUID) -
 
 def get_user_roadmaps_progress_service(db: Session, user_id: UUID) -> UserRoadmapProgressListSchema:
     roadmaps = db.query(Roadmap).order_by(Roadmap.title.asc()).all()
-    items: List[UserRoadmapProgressItemSchema] = []
+    section_totals_rows = (
+        db.query(
+            RoadmapSection.id.label("section_id"),
+            RoadmapSection.roadmap_id.label("roadmap_id"),
+            func.count(RoadmapStep.id).label("total_steps"),
+        )
+        .outerjoin(RoadmapStep, RoadmapStep.section_id == RoadmapSection.id)
+        .group_by(RoadmapSection.id, RoadmapSection.roadmap_id)
+        .all()
+    )
 
+    completed_steps_rows = (
+        db.query(
+            RoadmapStep.section_id.label("section_id"),
+            func.count(RoadmapAssessmentResult.id).label("completed_steps"),
+        )
+        .join(
+            RoadmapAssessmentResult,
+            and_(
+                RoadmapAssessmentResult.step_id == RoadmapStep.id,
+                RoadmapAssessmentResult.user_id == user_id,
+                RoadmapAssessmentResult.type == "step",
+                RoadmapAssessmentResult.completion_status == "completed",
+            ),
+        )
+        .group_by(RoadmapStep.section_id)
+        .all()
+    )
+
+    completed_steps_by_section: Dict[UUID, int] = {
+        row.section_id: int(row.completed_steps or 0)
+        for row in completed_steps_rows
+        if row.section_id
+    }
+
+    roadmap_totals: Dict[UUID, Dict[str, int]] = {}
+    for row in section_totals_rows:
+        roadmap_id = row.roadmap_id
+        section_id = row.section_id
+        if not roadmap_id or not section_id:
+            continue
+
+        total_steps = int(row.total_steps or 0)
+        completed_steps = completed_steps_by_section.get(section_id, 0)
+
+        aggregates = roadmap_totals.setdefault(
+            roadmap_id,
+            {
+                "completed_sections": 0,
+                "total_sections": 0,
+                "completed_steps": 0,
+                "total_steps": 0,
+            },
+        )
+
+        aggregates["total_sections"] += 1
+        aggregates["total_steps"] += total_steps
+        aggregates["completed_steps"] += completed_steps
+
+        section_status = _completion_status(completed_steps, total_steps)
+        if section_status == "completed":
+            aggregates["completed_sections"] += 1
+
+    default_totals = {
+        "completed_sections": 0,
+        "total_sections": 0,
+        "completed_steps": 0,
+        "total_steps": 0,
+    }
+
+    items: List[UserRoadmapProgressItemSchema] = []
     for roadmap in roadmaps:
-        summary = get_roadmap_progress_service(db, roadmap.id, user_id)
+        aggregates = roadmap_totals.get(roadmap.id, default_totals)
+        completion_status = _completion_status(
+            aggregates["completed_sections"],
+            aggregates["total_sections"],
+        )
+        completion_percent = _percent(
+            aggregates["completed_steps"],
+            aggregates["total_steps"],
+        )
+
         items.append(
             UserRoadmapProgressItemSchema(
                 roadmap_id=roadmap.id,
                 title=roadmap.title,
-                completion_status=summary.completion_status,
-                completion_percent=summary.completion_percent,
+                completion_status=completion_status,
+                completion_percent=completion_percent,
             )
         )
 
     return UserRoadmapProgressListSchema(user_id=user_id, roadmaps=items)
+
+
+def _get_roadmap_completion_percent(db: Session, user_id: UUID, roadmap_id: UUID) -> int:
+    total_steps = (
+        db.query(func.count(RoadmapStep.id))
+        .join(RoadmapSection, RoadmapSection.id == RoadmapStep.section_id)
+        .filter(RoadmapSection.roadmap_id == roadmap_id)
+        .scalar()
+    )
+
+    completed_steps = (
+        db.query(func.count(func.distinct(RoadmapAssessmentResult.step_id)))
+        .filter(
+            RoadmapAssessmentResult.user_id == user_id,
+            RoadmapAssessmentResult.roadmap_id == roadmap_id,
+            RoadmapAssessmentResult.type == "step",
+            RoadmapAssessmentResult.completion_status == "completed",
+        )
+        .scalar()
+    )
+
+    return _percent(int(completed_steps or 0), int(total_steps or 0))
+
+
+def get_current_roadmap_learning_service(
+    db: Session,
+    user_id: UUID,
+    roadmap_id: UUID | None = None,
+) -> CurrentRoadmapLearningSchema:
+    base_query = (
+        db.query(
+            RoadmapAssessmentResult.roadmap_id.label("roadmap_id"),
+            RoadmapAssessmentResult.section_id.label("section_id"),
+            RoadmapAssessmentResult.step_id.label("step_id"),
+            Roadmap.title.label("roadmap_title"),
+            RoadmapSection.title.label("section_title"),
+            RoadmapStep.title.label("step_title"),
+        )
+        .join(Roadmap, Roadmap.id == RoadmapAssessmentResult.roadmap_id)
+        .outerjoin(RoadmapSection, RoadmapSection.id == RoadmapAssessmentResult.section_id)
+        .outerjoin(RoadmapStep, RoadmapStep.id == RoadmapAssessmentResult.step_id)
+        .filter(
+            RoadmapAssessmentResult.user_id == user_id,
+            RoadmapAssessmentResult.type == "step",
+        )
+    )
+
+    if roadmap_id:
+        base_query = base_query.filter(RoadmapAssessmentResult.roadmap_id == roadmap_id)
+
+    # Pick the most recently updated actionable step for the user.
+    # This avoids stale in_progress rows shadowing newer completed actions.
+    current_step_row = (
+        base_query
+        .filter(RoadmapAssessmentResult.completion_status.in_(["in_progress", "completed"]))
+        .order_by(
+            RoadmapAssessmentResult.updated_at.desc(),
+            case(
+                (RoadmapAssessmentResult.completion_status == "in_progress", 0),
+                (RoadmapAssessmentResult.completion_status == "completed", 1),
+                else_=2,
+            ),
+        )
+        .first()
+    )
+
+    if not current_step_row or not current_step_row.roadmap_id:
+        raise ValueError("No current roadmap learning progress found for user")
+
+    progress_percent = _get_roadmap_completion_percent(db, user_id, current_step_row.roadmap_id)
+
+    return CurrentRoadmapLearningSchema(
+        roadmap_id=current_step_row.roadmap_id,
+        roadmap_title=current_step_row.roadmap_title,
+        section_id=current_step_row.section_id,
+        section_title=current_step_row.section_title,
+        step_id=current_step_row.step_id,
+        step_title=current_step_row.step_title,
+        progress_percent=progress_percent,
+    )

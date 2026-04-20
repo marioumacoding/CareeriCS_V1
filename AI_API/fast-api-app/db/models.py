@@ -59,6 +59,7 @@ class User(Base):
     sessions = relationship("Session", back_populates="user", cascade="all, delete-orphan")
     reports = relationship("Report", back_populates="user",cascade="all, delete-orphan")
     assessment = relationship("RoadmapAssessmentResult", back_populates="user", cascade="all, delete-orphan")
+    bookmarks = relationship("UserRoadmapBookmark", back_populates="user", cascade="all, delete-orphan")
     career_sessions = relationship("CareerSession", back_populates="user", cascade="all, delete-orphan")
 
 
@@ -318,7 +319,8 @@ class AssessmentSession(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), nullable=False)
-    skill_id = Column(UUID(as_uuid=True), ForeignKey("skills.id"), nullable=False)
+    # Keep optional because section/step/roadmap assessments don't always have a direct skill FK.
+    skill_id = Column(UUID(as_uuid=True), ForeignKey("skills.id"), nullable=True)
     roadmap_id = Column(UUID(as_uuid=True), ForeignKey("roadmaps.id"), nullable=True)
     section_id = Column(UUID(as_uuid=True), ForeignKey("roadmap_sections.id"), nullable=True)
     step_id = Column(UUID(as_uuid=True), ForeignKey("roadmap_steps.id"), nullable=True)
@@ -426,6 +428,28 @@ class Roadmap(Base):
 
     section = relationship("RoadmapSection", back_populates="roadmap", cascade="all, delete-orphan")
     assessment = relationship("RoadmapAssessmentResult", back_populates="roadmap")
+    bookmarks = relationship("UserRoadmapBookmark", back_populates="roadmap", cascade="all, delete-orphan")
+
+
+# =========================
+# ROADMAP BOOKMARK
+# =========================
+class UserRoadmapBookmark(Base):
+    __tablename__ = "user_roadmap_bookmarks"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    roadmap_id = Column(UUID(as_uuid=True), ForeignKey("roadmaps.id", ondelete="CASCADE"), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    user = relationship("User", back_populates="bookmarks")
+    roadmap = relationship("Roadmap", back_populates="bookmarks")
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "roadmap_id", name="uq_user_roadmap_bookmarks_user_roadmap"),
+        Index("ix_user_roadmap_bookmarks_user_id", "user_id"),
+        Index("ix_user_roadmap_bookmarks_roadmap_id", "roadmap_id"),
+    )
 
 
 # =========================
@@ -633,3 +657,86 @@ class CareerTrackResult(Base):
 
     session = relationship("CareerSession", back_populates="track_results")
     track = relationship("CareerTrack", back_populates="track_results")
+
+
+# ###########################################################################################################################
+# JOBS
+# ###########################################################################################################################
+
+# =========================
+# JOB POSTS
+# =========================
+class JobPost(Base):
+    __tablename__ = "job_posts"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    job_title = Column(String, nullable=False, index=True)
+    company_name = Column(String, nullable=False, index=True)
+    location = Column(String, nullable=True)
+    job_url = Column(String, nullable=False, unique=True)
+    source = Column(String, nullable=True)
+    posted_date = Column(DateTime(timezone=True), nullable=True)
+    description = Column(Text, nullable=True)
+    scraped_at = Column(DateTime(timezone=True), nullable=True)
+    requirements_raw = Column(Text, nullable=True)
+    requirements_list = Column(ARRAY(String), nullable=True)
+    experience = Column(Text, nullable=True)
+    career_level = Column(String, nullable=True)
+    education_level = Column(String, nullable=True)
+    salary = Column(String, nullable=True)
+    categories = Column(ARRAY(String), nullable=True)
+    skills = Column(ARRAY(String), nullable=True)
+
+    created_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+        index=True
+    )
+    updated_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False
+    )
+
+    user_interactions = relationship("JobUserInteraction", back_populates="job_post", cascade="all, delete-orphan")
+
+    __table_args__ = (
+        Index("idx_job_post_title_company", "job_title", "company_name"),
+        Index("idx_job_post_created_at", "created_at"),
+    )
+
+
+# =========================
+# JOB USER INTERACTIONS
+# =========================
+class JobUserInteraction(Base):
+    __tablename__ = "job_user_interactions"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    job_post_id = Column(UUID(as_uuid=True), ForeignKey("job_posts.id"), nullable=False)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    viewed_at = Column(DateTime(timezone=True), nullable=True)
+    is_saved = Column(Boolean, nullable=False, default=False)
+    saved_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False
+    )
+    updated_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False
+    )
+
+    job_post = relationship("JobPost", back_populates="user_interactions")
+    user = relationship("User")
+
+    __table_args__ = (
+        UniqueConstraint("job_post_id", "user_id", name="uq_job_user_interaction_user_job"),
+        Index("idx_job_user_interactions_user_saved", "user_id", "is_saved"),
+        Index("idx_job_user_interactions_user_viewed_at", "user_id", "viewed_at"),
+    )

@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import FeatureCard from "@/components/ui/feature-card";
 import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui";
 
 export default function LandingPage() {
   const router = useRouter();
@@ -130,22 +131,16 @@ export default function LandingPage() {
           </a>
         </nav>
 
-        <button
+        <Button
           onClick={() => router.push("/auth/login")}
           style={{
-            padding: "10px 35px",
-            borderRadius: "12px",
-            border: "3px solid #ffffff",
-            fontWeight: "Bold",
-            fontFamily: "var(--font-jura)",
-            fontSize: "1vw",
-            cursor: "pointer",
-            backgroundColor: "var(--bg-color)",
-            color: "#fff",
+            padding: "3vh 2vw",
+            maxWidth: "fit-content",
           }}
+          variant="outline"
         >
           Sign In
-        </button>
+        </Button>
       </header>
 
       {/* Home */}
@@ -229,22 +224,13 @@ export default function LandingPage() {
           <p style={{ marginBottom: "30px" }}>
             Not sure where to go or how to start? Just graduated and you feel lost? Careeri CS got your back.
           </p>
-          <button
+          <Button
             onClick={() => router.push("/auth/register")}
-            style={{
-              padding: "10px 35px",
-              border: "none",
-              borderRadius: "12px",
-              fontWeight: "Bold",
-              fontSize: "1.2vw",
-              cursor: "pointer",
-              fontFamily: "var(--font-jura)",
-              backgroundColor: "#B8EF46",
-              color: "#000",
-              width: "30vh"
-            }}>
+            variant="primary"
+            style={{ width: "100%" }}
+          >
             Register
-          </button>
+          </Button>
         </div>
 
         <div
@@ -305,6 +291,7 @@ export default function LandingPage() {
               title="Career Quiz"
               description={<>Career confusion? We don’t know her.<br /> Discover where you’ll thrive with our 5-minute Quiz.</>}
               color="var(--phase1-color)"
+              link="/features/career"
             />
           </div>
 
@@ -314,6 +301,7 @@ export default function LandingPage() {
               title={<>CV<br />Builder</>}
               description={<>Never had a CV before and you got no idea how to start?<br />  Our Ai model will build you an ATS- friendly CV. <br /> No guesswork Just results. </>}
               color="var(--phase3-color)"
+              link="/features/cv"
             />
           </div>
 
@@ -323,6 +311,7 @@ export default function LandingPage() {
               title={<>CV Enhancer</>}
               description={<>Already have a CV but it’s not getting you anywhere?<br />  We’ll optimize it to get you recruiters attention.</>}
               color="var(--phase3-color)"
+              link="/features/cv"
             />
           </div>
 
@@ -332,6 +321,7 @@ export default function LandingPage() {
               title={<>Roadmap<br />Generation</>}
               description={<>Unsure about your next steps?<br />Get a clear map towards your dream role.<br /> We’ll tell you exactly what to learn and how.</>}
               color="var(--phase2-color)"
+              link="/features/roadmap"
             />
           </div>
 
@@ -341,6 +331,7 @@ export default function LandingPage() {
               title={<>Courses</>}
               description={<>Learn actual skills that match market demands.</>}
               color="var(--phase2-color)"
+              link="/features/courses"
             />
           </div>
 
@@ -350,6 +341,7 @@ export default function LandingPage() {
               title={<>HR Interview</>}
               description={<>Practice the impossible questions.</>}
               color="var(--phase4-color)"
+              link="/features/interview"
             />
           </div>
 
@@ -359,6 +351,7 @@ export default function LandingPage() {
               title={<>Job<br />Applicator</>}
               description={<>Job hunting shouldn’t feel like a full time job. <br /> Careeri CS will look for you, and  only give you the best matches - Saving you the hustle.</>}
               color="var(--phase5-color)"
+              link="/features/job"
             />
           </div>
 
@@ -368,6 +361,7 @@ export default function LandingPage() {
               title={<>Skill Assessment</>}
               description={<>Find out where you truly stand. Identify strengths, uncover gaps, and know what to improve.</>}
               color="var(--phase2-color)"
+              link="features/skill"
             />
           </div>
 
@@ -377,6 +371,7 @@ export default function LandingPage() {
               title={<>Tech Interview</>}
               description={<>Explain your mind clearly under pressure.</>}
               color="var(--phase4-color)"
+              link="/features/interview"
             />
           </div>
 
@@ -385,10 +380,20 @@ export default function LandingPage() {
       </section>
 
       {/* 4. ROADMAP SECTION */}
-      <section id="journey" style={{ scrollMarginTop: "70px", paddingBottom: "5%", textAlign: "center", background: "var(--bg-color)" }}>
+      <section id="journey"
+        style={{
+          scrollMarginTop: "70px",
+          paddingBottom: "5%",
+          textAlign: "center",
+          background: "var(--bg-color)",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
         <h3 style={{ fontSize: "2.5vw", fontWeight: "400", marginBottom: "50px" }}>
           Follow your personalized career journey
         </h3>
+
         <div style={{ maxWidth: "100%", marginTop: "1.2%", marginRight: "0 auto", marginLeft: "0 auto" }}>
           <img
             src="/landing/Journey.svg"
@@ -396,6 +401,13 @@ export default function LandingPage() {
             style={{ width: "100%", height: "auto" }}
           />
         </div>
+        <Button
+          onClick={() => router.push("/auth/register")}
+          variant="primary"
+          style={{ marginLeft: "auto", position: "relative", marginRight:"10%",marginTop: "-10vh" }}
+        >
+          Start Your Journey
+        </Button>
       </section>
     </div>
   );

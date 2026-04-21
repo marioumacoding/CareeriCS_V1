@@ -71,12 +71,6 @@ export default function Login() {
   return (
       <form
         onSubmit={handleLogin}
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          paddingInline: "1vh",
-
-        }}
       >
 
         <AlertMessage message={error} type="error" />

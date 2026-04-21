@@ -40,27 +40,19 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
       BackPath = "/auth/login";
       break;
 
-    case "/auth/forgot-password":
-      CardTitle = "Forgot Password";
-      Message = "Remember your password?";
-      Link = "/auth/login";
-      LinkText = "Login";
-      showDiv = false;
-      BackPath = "/login";
-      break;
-
     case "/auth/reset-password":
       CardTitle = "Reset Password";
       Message = "Remember your password";
       Link = "/auth/login"
       LinkText = "Sign In Here"
       showDiv = false;
-      BackPath = "/login";
+      BackPath = "/auth/login";
       break;
 
     case "/auth/update-password":
       CardTitle = "Set New Password";
       showDiv = false;
+      BackPath = "/auth/login"
       break;
 
     case "/auth/callback":
@@ -210,7 +202,7 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
         </div>
 
         <button
-          onClick={() => router.back()}
+          onClick={() => router.push(BackPath ?? "/")}
           style={{
             position: "absolute",
             top: "1vh",

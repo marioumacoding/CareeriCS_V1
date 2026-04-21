@@ -134,13 +134,6 @@ export default function Register() {
   return (
     <form
       onSubmit={handleRegister}
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        paddingInline: "1vh",
-        width: "100%",
-        height: "100%",
-      }}
     >
 
       <AlertMessage message={error} type="error" />

@@ -22,8 +22,6 @@ export default function HomePage() {
   const defaultCareerData: CareerCardItem[] = [
     { title: "Frontend", desc: "Build fast, responsive, interactive interfaces." },
     { title: "UI/UX", desc: "Design intuitive and user-focused experiences." },
-    { title: "Backend", desc: "Power applications with secure, scalable logic." },
-    { title: "Full Stack", desc: "Build end-to-end products from UI to APIs." },
   ];
 
   const [bookmarks, setBookmarks] = useState<UnifiedBookmarkEntry[]>([]);

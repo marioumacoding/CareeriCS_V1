@@ -222,6 +222,7 @@ export default function CareerDiscoveryPage() {
                   description={path.desc}
                   image={path.image}
                   buttonVariant="primary-inverted"
+                  buttonLabel="Learn More"
                 />
               ))}
             </div>

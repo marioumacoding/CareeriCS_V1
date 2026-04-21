@@ -126,11 +126,13 @@ export const CareersCard = ({ careers, style }: any) => {
 
         {careers.map((career: any) => (
           <ChoiceCard
-            key={career.id}
+            key={career.title}
             title={career.title}
             image={`/landing/Rectangle.svg`}
             description={career.desc}
             buttonVariant="primary-inverted"
+            buttonLabel={career.buttonLabel}
+            onClick={() => handleContinue(career)}
           />
         ))}
       </div>

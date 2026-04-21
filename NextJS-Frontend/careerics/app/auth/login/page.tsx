@@ -28,12 +28,6 @@ export default function Login() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // -- Hover state for styling --
-  const [signHover, setSignHover] = useState(false);
-  const [googleHover, setGoogleHover] = useState(false);
-  const [resetHover, setResetHover] = useState(false);
-  const [registerHover, setRegisterHover] = useState(false);
-
   // -- Handlers --
   useEffect(() => {
     const urlError = searchParams.get("error");
@@ -75,14 +69,14 @@ export default function Login() {
   }
 
   return (
-    <AuthLayout
-      CardTitle="Sign In"
-      Message="Don't have an account yet"
-      Link="/auth/register"
-      LinkText="Register Here"
-    >
       <form
         onSubmit={handleLogin}
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          paddingInline: "1vh",
+
+        }}
       >
 
         <AlertMessage message={error} type="error" />
@@ -119,6 +113,7 @@ export default function Login() {
           variant="text"
           textContent={{ before: "Forgot your password -", buttonText: "Reset Here" }}
           onClick={() => router.push("/auth/reset-password")}
+          style={{marginBottom:"1vh"}}
         />
 
         <div
@@ -133,7 +128,7 @@ export default function Login() {
           <Button
             type="submit"
             variant="primary"
-            style={{ marginLeft: "5vh",whiteSpace: "nowrap"  }}
+            style={{ whiteSpace: "nowrap" }}
           >
             {loading ? "Signing in..." : "Sign In"}
           </Button>
@@ -154,7 +149,7 @@ export default function Login() {
             type="button"
             variant="secondary"
             onClick={handleGoogleLogin}
-            style={{ marginRight: "5vh", whiteSpace: "nowrap" }}
+            style={{  whiteSpace: "nowrap" }}
           >
             <img src="/auth/Google.svg" alt="Google" style={{ height: "4vh" }} />
             Continue with Google
@@ -163,6 +158,5 @@ export default function Login() {
 
 
       </form>
-    </AuthLayout>
   );
 }

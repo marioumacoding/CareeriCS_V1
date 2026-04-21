@@ -103,7 +103,6 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
             fontFamily: "var(--font-nova-square)",
             padding: "0vh",
             marginTop: "1vh",
-            marginLeft: "5vh",
             ...style
           }}
         >

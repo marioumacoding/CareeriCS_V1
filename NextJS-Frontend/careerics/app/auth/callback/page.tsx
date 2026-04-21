@@ -98,14 +98,15 @@ export default function AuthCallback() {
   return (
     <div
       style={{
-        minHeight: "100vh",
+       
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: "var(--bg-color)",
         color: "white",
         fontFamily: "var(--font-nova-square)",
         fontSize: "1.2rem",
+        height: "100%",
+        width: "100%",
       }}
     >
       Completing sign-in...

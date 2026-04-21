@@ -19,8 +19,6 @@ export default function InputField({
     <div
       style={{
         ...(isMargin && { marginBottom: "2vh" }),
-        marginLeft: "5vh",
-        marginRight: "5vh",
       }}
     >
       <label

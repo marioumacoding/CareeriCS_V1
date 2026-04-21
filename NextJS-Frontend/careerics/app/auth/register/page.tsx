@@ -1,9 +1,7 @@
 ﻿"use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { authService } from "@/services/auth.service";
-import AuthLayout from "@/app/auth/layout";
 import InputField from "@/components/ui/input-field";
 import { Button } from "@/components/ui/button"
 import AlertMessage from "@/components/ui/alert-message";
@@ -21,57 +19,93 @@ export default function Register() {
   const router = useRouter();
 
   // -- Form state --
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
+  const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [confirmPasswordError, setConfirmPasswordError] = useState<string | null>(null);
 
-  // -- Hover state --
-  const [registerHover, setRegisterHover] = useState(false);
-  const [googleHover, setGoogleHover] = useState(false);
-  const [signHoverText, setSignHoverText] = useState(false);
+  function validatePassword(value: string) {
+    if (value.length === 0) {
+      setPasswordError(null);
+      return;
+    }
 
-  const inputStyle = {
-    width: "95%",
-    fontFamily: "var(--font-nova-square)",
-    padding: "0.6rem",
-    marginTop: "0.3rem",
-    borderRadius: "6px",
-    border: "none",
-    backgroundColor: "white",
-  };
+    if (value.length < 8) {
+      setPasswordError("Password must be at least 8 characters.");
+      return;
+    }
 
-  const labelStyle: React.CSSProperties = {
-    color: "white",
-    fontSize: "0.9rem",
-  };
+    if (value.length > 72) {
+      setPasswordError("Password must not exceed 72 characters.");
+      return;
+    }
 
+    if (/\s/.test(value)) {
+      setPasswordError("Password cannot contain spaces.");
+      return;
+    }
+
+    if (!/[a-z]/.test(value)) {
+      setPasswordError("Add at least one lowercase letter.");
+      return;
+    }
+
+    if (!/[A-Z]/.test(value)) {
+      setPasswordError("Add at least one uppercase letter.");
+      return;
+    }
+
+    if (!/\d/.test(value)) {
+      setPasswordError("Add at least one number.");
+      return;
+    }
+
+    if (!/[@$!%*?&]/.test(value)) {
+      setPasswordError("Add at least one special character.");
+      return;
+    }
+
+    setPasswordError(null);
+  }
+
+  function validateConfirmPassword(
+    passwordValue: string,
+    confirmValue: string
+  ) {
+    if (confirmValue.length === 0) {
+      return;
+    }
+
+    if (passwordValue !== confirmValue) {
+      setConfirmPasswordError("Passwords do not match.");
+    } else {
+      setConfirmPasswordError(null);
+    }
+  }
   // -- Handlers --
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setSuccess(null);
 
-    // Client-side validation
-    if (password !== confirmPassword) {
-      setError("Passwords do not match.");
+    // Required check
+    if (!password) {
+      setPasswordError("Password is required.");
       return;
     }
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters.");
-      return;
-    }
+
 
     setLoading(true);
     try {
       const data = await authService.signUp({
         email,
         password,
-        displayName: `${firstName} ${lastName}`.trim(),
+        displayName,
       });
 
       // If Supabase has "Confirm email" enabled, user.identities will be
@@ -98,124 +132,154 @@ export default function Register() {
   }
 
   return (
-    <AuthLayout
-      CardTitle="Create An Account"
-      Message="Already have an account"
-      Link="/auth/login"
-      LinkText="Sign In Here"
+    <form
+      onSubmit={handleRegister}
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        paddingInline: "1vh",
+        width: "100%",
+        height: "100%",
+      }}
     >
-      <form
-        onSubmit={handleRegister}
+
+      <AlertMessage message={error} type="error" />
+      <AlertMessage message={success} type="success" />
+
+      <InputField
+        label="Full Name"
+        id="reg-displayname"
+        name="displayName"
+        placeholder="Enter your full name"
+        value={displayName}
+        onChange={(e) => setDisplayName(e.target.value)}
+        required
+        style={{
+          width: "100%"
+        }}
+      />
+
+      <InputField
+        label="Email"
+        id="reg-email"
+        name="email"
+        type="email"
+        placeholder="Enter your email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        required
+        style={{
+          width: "100%"
+        }}
+      />
+
+      <InputField
+        label="Password"
+        id="reg-password"
+        name="password"
+        type="password"
+        placeholder="Enter your password"
+        value={password}
+        onChange={(e) => {
+          const value = e.target.value;
+          setPassword(value);
+          validatePassword(value);
+        }}
+        required
+        style={{
+          width: "100%"
+        }}
+        isMargin={passwordError ? false : true}
+      />
+
+      {passwordError && (<p
+        style={{
+          marginTop: "0px",
+          marginRight: "auto",
+          position: "relative",
+          maxWidth: "35ch",
+          fontSize: "2vh",
+          fontFamily: "var(--font-nova-square)",
+          textAlign: "left",
+          color: passwordError ? "#ff7979" : "white",
+          marginBlock: "1vh",
+        }}
       >
+        {passwordError ? passwordError : ""}
+      </p>)}
 
-        <AlertMessage message={error} type="error" />
-        <AlertMessage message={success} type="success" />
+      <InputField
+        label="Confirm Password"
+        id="reg-confirm-password"
+        name="confirmPassword"
+        type="password"
+        placeholder="Confirm your password"
+        value={confirmPassword}
+        isMargin={confirmPasswordError ? false : true}
+        onChange={(e) => {
+          const value = e.target.value;
+          setConfirmPassword(value);
+          validateConfirmPassword(password, value);
+        }}
 
-        <InputField
-          label="First Name"
-          id="reg-firstname"
-          name="firstName"
-          placeholder="Enter your first name"
-          value={firstName}
-          onChange={(e) => setFirstName(e.target.value)}
-          required
-          style={{
-            width: "100%"
-          }}
-        />
+        required
+        style={{
+          width: "100%",
+        }}
+      />
 
-        <InputField
-          label="Last Name"
-          id="reg-lastname"
-          name="lastName"
-          placeholder="Enter your last name"
-          value={lastName}
-          onChange={(e) => setLastName(e.target.value)}
-          required
-          style={{
-            width: "100%"
-          }}
-        />
+      {confirmPasswordError && (<p
+        style={{
+          marginTop: "0px",
+          marginRight: "auto",
+          position: "relative",
+          maxWidth: "35ch",
+          fontSize: "2vh",
+          fontFamily: "var(--font-nova-square)",
+          textAlign: "left",
+          color: confirmPasswordError ? "#ff7979" : "white",
+          marginBlock: "1vh",
+        }}
+      >
+        {confirmPasswordError ? confirmPasswordError : ""}
+      </p>)}
 
-        <InputField
-          label="Email"
-          id="reg-email"
-          name="email"
-          type="email"
-          placeholder="Enter your email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-          style={{
-            width: "100%"
-          }}
-        />
-
-        <InputField
-          label="Password"
-          id="reg-password"
-          name="password"
-          type="password"
-          placeholder="Enter your password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          style={{
-            width: "100%"
-          }}
-        />
-
-        <InputField
-          label="Confirm Password"
-          id="reg-confirm-password"
-          name="confirmPassword"
-          type="password"
-          placeholder="Confirm your password"
-          value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
-          required
-          style={{
-            width: "100%"
-          }}
-        />
+      <div
+        style={{
+          display: "flex",
+          marginBottom: "3vh",
+          alignItems: "center",
+          justifyContent: "center",
+        }}>
+        <Button
+          type="submit"
+          variant="primary"
+          style={{ whiteSpace: "nowrap" }}
+        >
+          {loading ? "Registering..." : "Register"}
+        </Button>
 
         <div
           style={{
-            display: "flex",
-            marginBottom: "3vh",
-            alignItems: "center",
-            justifyContent: "center",
-          }}>
-          <Button
-            type="submit"
-            variant="primary"
-            style={{ marginLeft: "5vh", whiteSpace: "nowrap" }}
-          >
-            {loading ? "Registering..." : "Register"}
-          </Button>
+            textAlign: "center",
+            marginInline: "1vh",
+            color: "var(--text-grey)",
+            fontFamily: "var(--font-nova-square",
+            fontSize: "3vh",
+          }}
+        >or</div>
 
-          <div
-            style={{
-              textAlign: "center",
-              marginInline: "1vh",
-              color: "var(--text-grey)",
-              fontFamily: "var(--font-nova-square",
-              fontSize: "3vh",
-            }}
-          >or</div>
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={handleGoogleRegister}
+          style={{ whiteSpace: "nowrap" }}
+        >
+          <img src="/auth/Google.svg" alt="Google" style={{ height: "4vh" }} />
+          Continue with Google
+        </Button>
+      </div>
 
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={handleGoogleRegister}
-            style={{ marginRight: "5vh", whiteSpace: "nowrap" }}
-          >
-            <img src="/auth/Google.svg" alt="Google" style={{ height: "4vh" }} />
-            Continue with Google
-          </Button>
-        </div>
-
-      </form>
-    </AuthLayout>
+    </form>
   );
 }

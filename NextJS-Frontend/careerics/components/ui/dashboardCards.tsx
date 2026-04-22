@@ -105,7 +105,7 @@ export const CareersCard = ({ children, style }: any) => {
           display: "grid",
           position: "relative",
           height: "100%",
-          gap: "10px",
+          gap: "20px",
           paddingBottom:"2vh",
           gridTemplateColumns:"repeat(3,1fr)"
         }}
@@ -371,6 +371,7 @@ export const NextPhaseCard = ({ style, desc, phaseNumber }: NextPhaseCardProps) 
       justifyContent: "space-between",
       height: "100%",
       paddingLeft: "3vw",
+      overflow:"clip",
       ...style,
     }}
   >
@@ -420,9 +421,8 @@ export const NextPhaseCard = ({ style, desc, phaseNumber }: NextPhaseCardProps) 
       <div
         style={{
           backgroundColor: "white",
-          height: "70%",
+          height: "100%",
           width: "0.4vh",
-          marginRight: "1vw",
 
         }} />
       <img

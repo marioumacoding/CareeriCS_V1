@@ -151,7 +151,7 @@ useEffect(() => {
 
       <CareersCard
         careers={careerData}
-        style={{ gridArea: "1 / 1 / 3 / 4" }}
+        style={{ gridArea: "1 / 1 / 3 / 4"}}
       >
 
         {careerData.map((career: any) => (

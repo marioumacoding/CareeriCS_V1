@@ -72,34 +72,37 @@ export default function ChoiceCard({
           marginBottom: 0,
         }}
       >
-        {!isBookmark && (
-          <div
+
+          {!isBookmark && (
+            <div
+              style={{
+                marginLeft: "auto",
+                fontSize: "0.8rem",
+                position: "relative",
+                color: effectiveSelected ? "var(--hover-green)" : "black",
+                cursor: effectiveSelected ? "default" : "pointer",
+                fontFamily: "var(--font-nova-square)",
+                height:"fit-content",
+              }}
+              onClick={onClick}
+            >
+              {effectiveSelected ? "selected" : "See stats"}
+            </div>
+          )}
+
+          {/* Image */}
+  
+          {!isBookmark && <img
+            src={image || icon || ""}
+            alt={title || "career icon"}
             style={{
-              marginLeft: "auto",
-              fontSize: "0.8rem",
-              position: "relative",
-              color: effectiveSelected ? "var(--hover-green)" : "black",
-              cursor: effectiveSelected ? "default" : "pointer",
-              fontFamily: "var(--font-nova-square)",
+              width: "2.5rem",
+              height: "auto",
+              display: "block",
+              filter: effectiveSelected ? "none" : "invert(1)",
+              marginBottom:"0.5rem",
             }}
-            onClick={onClick}
-          >
-            {effectiveSelected ? "selected" : "See stats"}
-          </div>
-        )}
-
-        {/* Image */}
-
-        {!isBookmark && <img
-          src={image || icon || ""}
-          alt={title || "career icon"}
-          style={{
-            width: "4rem",
-            height: "auto",
-            display: "block",
-            filter: effectiveSelected ? "none" : "invert(1)",
-          }}
-        />}
+          />}
 
 
 
@@ -127,6 +130,7 @@ export default function ChoiceCard({
           margin: 0,
           textAlign: "left",
           marginTop: 0,
+          marginRight:"auto",
         }}
       >
         {description}

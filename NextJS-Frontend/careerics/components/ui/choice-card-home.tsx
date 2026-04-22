@@ -123,7 +123,7 @@ export default function ChoiceCard({
         style={{
           flexGrow: 0,
           flexShrink: 0,
-          fontSize: "0.8rem",
+          fontSize: "0.7rem",
           margin: 0,
           textAlign: "left",
           marginTop: 0,

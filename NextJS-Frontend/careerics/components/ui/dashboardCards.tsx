@@ -277,11 +277,15 @@ export const JourneyProgressCard = ({ percentage = 10, style }: any) => {
       style={{
         backgroundColor: "#142143",
         borderRadius: " 3vh",
-        padding: "3vh",
+        paddingTop: "3vh",
         color: "white",
         alignContent: "center",
         justifyItems: "center",
         ...style,
+        overflow: "hidden",
+        display:"flex",
+        flexDirection:"column",
+        alignItems:"center",
       }}
     >
       <h3
@@ -299,7 +303,7 @@ export const JourneyProgressCard = ({ percentage = 10, style }: any) => {
         alt="Progress"
         style={{
           position: "relative",
-          height: "75%"
+          height: "70%"
         }}
       />
 
@@ -320,13 +324,17 @@ export const CurrentPhaseCard = ({ percentage = 10, style }: any) => {
         alignContent: "center",
         justifyItems: "center",
         ...style,
-        overflow: "hidden"
+        overflow: "hidden",
+        display:"flex",
+        flexDirection:"column",
+        alignItems:"center"
       }}
     >
       <h3
         style={{
           fontSize: "1.1rem",
           fontFamily: "var(--font-nova-square)",
+          marginBottom:"auto",
         }}
       >
         Current Phase

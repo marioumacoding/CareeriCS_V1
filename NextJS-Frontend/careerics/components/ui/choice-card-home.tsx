@@ -18,6 +18,9 @@ interface ChoiceCardProps {
   disabled?: boolean;
   buttonLabel?: string;
   buttonVariant?: "primary" | "secondary" | "primary-inverted";
+  isSelected?: boolean;
+  blogPath?: string;
+  type?: string;
 }
 
 export default function ChoiceCard({
@@ -25,30 +28,26 @@ export default function ChoiceCard({
   image,
   title,
   description,
-  route,
   style,
-  buttonVariant,
   onClick,
   disabled = false,
   buttonLabel = "Start",
+  isSelected,
+  blogPath,
+  type,
 }: ChoiceCardProps) {
   const router = useRouter();
 
-  const handleButtonClick = () => {
-    if (onClick) {
-      onClick();
-    } else if (route) {
-      router.push(route);
-    }
-  };
 
+  const isBookmark = type === "bookmark";
+  const effectiveSelected = isSelected || isBookmark;
   return (
     <div
       style={{
         position: "relative",
         width: "100%",
         height: "100%",
-        backgroundColor: "var(--dark-blue)",
+        backgroundColor: effectiveSelected ? "var(--dark-blue)" : "#C1CBE6",
         borderRadius: "2vh",
         display: "flex",
         flexDirection: "column",
@@ -56,57 +55,64 @@ export default function ChoiceCard({
         padding: "3vh",
         boxSizing: "border-box",
         overflow: "hidden",
-        gap: "1vh",
+        gap: "0vh",
+        color: effectiveSelected ? "white" : "black",
+        fontFamily: "var(--font-nova-square)",
+        fontWeight: effectiveSelected ? "normal" : "bold",
         ...style
       }}
     >
       <div
         style={{
           display: "flex",
-          height: "40%",
-          alignItems: "center",
-          marginBottom: "auto",
-          width: "fit-content",
-          gap: "10px",
-          alignSelf: "flex-start",
+          height: "fit-content",
+          width: "100%",
+          flexDirection: "column",
+          gap: 0,
+          marginBottom: 0,
         }}
       >
-        {/* Left — Image */}
-        <div
-          style={{
-            position: "relative",
-            width: "10vh",
-            height: "100%",
-          }}
-        >
-          <Image
-            src={image || icon || ""}
-            alt={title || "career icon"}
-            fill
+        {!isBookmark && (
+          <div
             style={{
-              objectFit: "contain",
+              marginLeft: "auto",
+              fontSize: "0.8rem",
+              position: "relative",
+              color: effectiveSelected ? "var(--hover-green)" : "black",
+              cursor: effectiveSelected ? "default" : "pointer",
+              fontFamily: "var(--font-nova-square)",
             }}
-          />
-        </div>
+            onClick={onClick}
+          >
+            {effectiveSelected ? "selected" : "See stats"}
+          </div>
+        )}
 
-        {/* Center — Splitter */}
-        <div
+        {/* Image */}
+
+        {!isBookmark && <img
+          src={image || icon || ""}
+          alt={title || "career icon"}
           style={{
-            height: "80%",
-            backgroundColor: "white",
-            width: "0.1vh",
-            marginLeft: "auto",
-            marginRight: "auto",
+            width: "4rem",
+            height: "auto",
+            display: "block",
+            filter: effectiveSelected ? "none" : "invert(1)",
           }}
-        />
+        />}
 
-        {/* Right — Title */}
+
+
+        {/* Title */}
         <p
           style={{
-            color: "white",
-            fontSize: "1rem",
-            fontFamily: "var(--font-nova-square)",
-            width: "min-content",
+            fontSize: "1.2rem",
+            width: "max-content",
+            marginRight: "auto",
+            marginTop: "0",
+            position: "relative",
+            marginBottom: isBookmark ? "2rem" : 0,
+
           }}
         >
           {title}
@@ -117,10 +123,10 @@ export default function ChoiceCard({
         style={{
           flexGrow: 0,
           flexShrink: 0,
-          color: "white",
-          textAlign: "center",
           fontSize: "0.8rem",
           margin: 0,
+          textAlign: "left",
+          marginTop: 0,
         }}
       >
         {description}
@@ -128,15 +134,15 @@ export default function ChoiceCard({
 
       <Button
         type="button"
-        variant={buttonVariant}
-        onClick={handleButtonClick}
+        variant={isSelected ? "primary-inverted" : "secondary"}
+        onClick={() => { router.push(blogPath || "/"); }}
         disabled={disabled}
         style={{
           flexGrow: 0,
           flexShrink: 0,
           width: "100%",
           marginTop: "auto",
-          paddingBlock:"2.3vh"
+          paddingBlock: "2.3vh"
         }}
       >
         {buttonLabel}

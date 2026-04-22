@@ -2,8 +2,6 @@
 
 import React, { useRef } from "react";
 import Image from "next/image";
-import ChoiceCard from "./choice-card-home";
-import { useRouter } from 'next/navigation';
 
 // --- 1. Helper: CircleScoreSVG ---
 const CircleScoreSVG = ({
@@ -73,21 +71,9 @@ const CircleScoreSVG = ({
 };
 
 // --- Card 1: CareersCard ---
-export const CareersCard = ({ careers, style }: any) => {
-  const router = useRouter();
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const scrollRight = () => {
-    if (scrollRef.current) scrollRef.current.scrollBy({ left: 200, behavior: 'smooth' });
-  };
-
-  const handleContinue = (career: any) => {
-    if (!career?.href) {
-      return;
-    }
-
-    router.push(career.href);
-  };
-
+export const CareersCard = ({ children, style }: any) => {
+  
+  
   return (
     <div
       style={{
@@ -116,25 +102,16 @@ export const CareersCard = ({ careers, style }: any) => {
 
       <div
         style={{
-          display: "flex",
+          display: "grid",
           position: "relative",
           height: "100%",
           gap: "10px",
           paddingBottom:"2vh",
+          gridTemplateColumns:"repeat(3,1fr)"
         }}
       >
 
-        {careers.map((career: any) => (
-          <ChoiceCard
-            key={career.title}
-            title={career.title}
-            image={`/landing/Rectangle.svg`}
-            description={career.desc}
-            buttonVariant="primary-inverted"
-            buttonLabel={career.buttonLabel}
-            onClick={() => handleContinue(career)}
-          />
-        ))}
+        {children}
       </div>
     </div>
   );
@@ -249,9 +226,9 @@ export const RecentActivityCard = ({ activities, style }: any) => {
       <div
         style={{
           display: "flex",
-          marginTop: "1vh",
           width: "fit-content",
-          marginLeft: "auto"
+          marginLeft: "auto",
+          marginTop:"auto",
         }} >
 
         <div

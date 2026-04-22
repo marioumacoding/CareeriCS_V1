@@ -1,4 +1,6 @@
 "use client";
+
+import ChoiceCard from "@/components/ui/choice-card-home";
 import { useEffect, useMemo, useState } from "react";
 import { CareersCard, RecentActivityCard, JourneyProgressCard, NextPhaseCard, CurrentPhaseCard } from "@/components/ui/dashboardCards";
 import { useAuth } from "@/providers/auth-provider";
@@ -18,13 +20,53 @@ type CareerCardItem = {
 
 export default function HomePage() {
   const { user, isLoading: isAuthLoading } = useAuth();
-
-  const defaultCareerData: CareerCardItem[] = [
-    { title: "Frontend", desc: "Build fast, responsive, interactive interfaces." },
-    { title: "UI/UX", desc: "Design intuitive and user-focused experiences." },
-  ];
-
   const [bookmarks, setBookmarks] = useState<UnifiedBookmarkEntry[]>([]);
+  const [selectedCareer, setSelectedCareer] = useState<string | null>(null);
+  const handleContinue = (career: any) => {
+  setSelectedCareer(career.title)
+};
+const selectedBookmark = useMemo(() => {
+  return bookmarks.find((b) => b.title === selectedCareer) || null;
+}, [bookmarks, selectedCareer]);
+
+const dashboardData = useMemo(() => {
+  if (!selectedBookmark) {
+    return {
+      activities: [
+        { id: "placeholder-1", date: "No activity yet", type: "file" },
+      ],
+      progress: 0,
+      currentPhase: 0,
+      nextPhase: 1,
+      nextPhaseDesc: "Select a career or roadmap to see next phase details.",
+    };
+  }
+
+  return {
+    activities: selectedBookmark.activities ?? [
+      { id: "placeholder-1", date: "No activity yet", type: "file" },
+    ],
+
+    progress: selectedBookmark.journeyProgressPercentage ?? 10,
+
+    currentPhase: selectedBookmark.currentPhase ?? 1,
+
+    nextPhase:
+      selectedBookmark.nextPhase ??
+      (selectedBookmark.currentPhase ? selectedBookmark.currentPhase + 1 : 2),
+
+    nextPhaseDesc:
+      selectedBookmark.nextPhaseDesc ??
+      selectedBookmark.nextPhaseDescription ??
+      "No next phase description available.",
+  };
+}, [selectedBookmark]);
+
+useEffect(() => {
+  if (bookmarks.length > 0 && !selectedCareer) {
+    setSelectedCareer(bookmarks[0].title);
+  }
+}, [bookmarks]);
 
   const loadBookmarks = () => {
     if (isAuthLoading) {
@@ -62,6 +104,7 @@ export default function HomePage() {
           return {
             title: bookmark.title,
             desc: bookmark.description || "Continue your roadmap journey.",
+            selected: 0,
             href: `/journey?career=${encodeURIComponent(bookmark.title)}`,
             buttonLabel: "Continue",
           };
@@ -83,17 +126,11 @@ export default function HomePage() {
         desc: "Save roadmap or career suggestions and they will appear here.",
         href: "/features/roadmap",
         buttonLabel: "Explore",
+        type:"bookmark"
       },
-      ...defaultCareerData,
+
     ];
   }, [bookmarks]);
-
-  const activities = [
-    { id: "CV-003", date: "created on 5/3/2026", type: "file" },
-    { id: "CV-003", date: "created on 5/3/2026", type: "file" },
-    { id: "Techh-003", date: "created on 5/3/2026", type: "file" },
-    { id: "Test-005", topic: "UX Fundamentals", score: 50, type: "test" },
-  ];
 
   return (
 
@@ -108,23 +145,51 @@ export default function HomePage() {
         gridTemplateRows: "1.4fr 1.4fr 0.7fr 0.9fr",
         gridColumnGap: "25px",
         gridRowGap: "20px",
-        
+
       }}
     >
 
-      <CareersCard careers={careerData} style={{ gridArea: "1 / 1 / 3 / 4" }} />
+      <CareersCard
+        careers={careerData}
+        style={{ gridArea: "1 / 1 / 3 / 4" }}
+      >
 
-      <RecentActivityCard activities={activities} style={{ gridArea: "1 / 4 / 3 / 6" }} />
+        {careerData.map((career: any) => (
+          <ChoiceCard
+            key={career.title}
+            isSelected={selectedCareer === career.title}
+            title={career.title}
+            image={`/landing/Rectangle.svg`}
+            description={career.desc}
+            buttonLabel={career.buttonLabel}
+            blogPath={career.href}
+            onClick={() => handleContinue(career)}
+            type={career.type || ""}
+          />
+        ))}
+      </CareersCard>
 
-      <JourneyProgressCard percentage={10} style={{ gridArea: "3 / 1 / 5 / 2" }} />
 
-      <CurrentPhaseCard percentage={2} style={{ gridArea: "3 / 2 / 5 / 2" }} />
-      
-      <NextPhaseCard 
-      style={{ gridArea: "3 / 3 / 5 / 6" }} 
-      desc="bla bla bla bla bla bla bla bla bla blaaa bla bla bla"
-      phaseNumber="4"
-      />
+      <RecentActivityCard
+  activities={dashboardData.activities}
+  style={{ gridArea: "1 / 4 / 3 / 6" }}
+/>
+
+     <JourneyProgressCard
+  percentage={dashboardData.progress}
+  style={{ gridArea: "3 / 1 / 5 / 2" }}
+/>
+
+      <CurrentPhaseCard
+  percentage={dashboardData.currentPhase}
+  style={{ gridArea: "3 / 2 / 5 / 2" }}
+/>
+
+      <NextPhaseCard
+  style={{ gridArea: "3 / 3 / 5 / 6" }}
+  desc={dashboardData.nextPhaseDesc}
+  phaseNumber={String(dashboardData.nextPhase)}
+/>
 
     </div>
   );

@@ -66,6 +66,7 @@ class SessionUpdate(BaseModel):
 class SessionRead(SessionBase):
     id: UUID
     user_id: UUID
+    created_at: Optional[datetime] = None
     emotion_evaluation: Optional[Dict] = None
     tone_evaluation: Optional[Dict] = None
     sentiment_evaluation: Optional[Dict] = None
@@ -635,6 +636,12 @@ class CareerSelectedCardRead(BaseModel):
     type: Literal["hobby", "technical"]
     id: UUID
     name: str
+    model_config = ConfigDict(from_attributes=True)
+
+class CareerTrackRead(BaseModel):
+    id: UUID
+    name: str
+    description: Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
 
 class CareerTrackScoreRead(BaseModel):

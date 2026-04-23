@@ -1,6 +1,7 @@
 "use client";
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
+import ChoiceCard from "@/components/ui/choice-card-career";
 import { useAuth } from "@/providers/auth-provider";
 import { careerService } from "@/services";
 

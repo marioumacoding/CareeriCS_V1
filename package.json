@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "country-state-city": "^3.2.1",
     "lucide-react": "^0.576.0",
     "styled-components": "^6.3.11",
     "undici": "^8.1.0"

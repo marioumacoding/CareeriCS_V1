@@ -1,216 +1,242 @@
-"use client";
+  "use client";
 
-import { useMemo, useState } from "react";
-import CustomDropdown from "@/components/ui/dropdown-menu";
-import { StepFlow } from "@/components/ui/roadmap-flow";
+  import { useMemo, useState } from "react";
+  import { useRouter } from "next/navigation";
+  import CustomDropdown from "@/components/ui/dropdown-menu";
+  import { StepFlow } from "@/components/ui/roadmap-flow";
 
-export default function RoadmapPage() {
-  const DEFAULT_PATH_OPTION = "__default_path__";
-  const MAX_BOOKMARKS = 3;
+  export default function RoadmapPage() {
+    const router = useRouter();
 
-  const options = useMemo(() => {
-    return [
-      { id: DEFAULT_PATH_OPTION, title: "Find a new path" },
-      { id: "frontend", title: "Frontend Developer" },
-      { id: "backend", title: "Backend Developer" },
-      { id: "ai", title: "AI Engineer" },
-      { id: "mobile", title: "Mobile Developer" },
-    ];
-  }, []);
+    const DEFAULT_PATH_OPTION = "__default_path__";
+    const MAX_BOOKMARKS = 3;
 
-  const [selectedRoadmapId, setSelectedRoadmapId] =
-    useState<string>(DEFAULT_PATH_OPTION);
+    const options = useMemo(() => {
+      return [
+        { id: DEFAULT_PATH_OPTION, title: "Find a new path" },
+        { id: "frontend", title: "Frontend Developer" },
+        { id: "backend", title: "Backend Developer" },
+        { id: "ai", title: "AI Engineer" },
+        { id: "mobile", title: "Mobile Developer" },
+      ];
+    }, []);
 
-  const [bookmarkedRoadmaps, setBookmarkedRoadmaps] =
-    useState<{ id: string; title: string }[]>([]);
+    const [selectedRoadmapId, setSelectedRoadmapId] =
+      useState<string>(DEFAULT_PATH_OPTION);
 
-  const onRoadmapChange = (roadmapId: string) => {
-    setSelectedRoadmapId(roadmapId);
-  };
+    const [activeStep, setActiveStep] = useState<number | null>(null);
 
-  const selectedRoadmap = useMemo(() => {
-    return options.find(
-      (o) => o.id === selectedRoadmapId
-    );
-  }, [selectedRoadmapId, options]);
+    const [bookmarkedRoadmaps, setBookmarkedRoadmaps] =
+      useState<{ id: string; title: string }[]>([]);
 
-  const handleBookmark = () => {
-    if (
-      !selectedRoadmap ||
-      selectedRoadmap.id === DEFAULT_PATH_OPTION
-    ) {
-      return;
-    }
+    const onRoadmapChange = (roadmapId: string) => {
+      setSelectedRoadmapId(roadmapId);
+      setActiveStep(null); 
+    };
 
-    const exists = bookmarkedRoadmaps.some(
-      (b) => b.id === selectedRoadmap.id
-    );
+    const selectedRoadmap = useMemo(() => {
+      return options.find((o) => o.id === selectedRoadmapId);
+    }, [selectedRoadmapId, options]);
 
-    if (exists) {
-      setBookmarkedRoadmaps((prev) =>
-        prev.filter((b) => b.id !== selectedRoadmap.id)
+    const handleBookmark = () => {
+      if (!selectedRoadmap || selectedRoadmap.id === DEFAULT_PATH_OPTION) {
+        return;
+      }
+
+      const exists = bookmarkedRoadmaps.some(
+        (b) => b.id === selectedRoadmap.id
       );
-      return;
-    }
 
-    if (bookmarkedRoadmaps.length >= MAX_BOOKMARKS) {
-      console.warn("Max 3 bookmarks allowed");
-      return;
-    }
+      if (exists) {
+        setBookmarkedRoadmaps((prev) =>
+          prev.filter((b) => b.id !== selectedRoadmap.id)
+        );
+        return;
+      }
 
-    setBookmarkedRoadmaps((prev) => [
-      ...prev,
-      selectedRoadmap,
-    ]);
-  };
+      if (bookmarkedRoadmaps.length >= MAX_BOOKMARKS) {
+        console.warn("Max 3 bookmarks allowed");
+        return;
+      }
 
-  const nodes = [
-    "Step 1", "Step 2", "Step 3", "Step 4",
-    "Step 5", "Step 6", "Step 7", "Step 8",
-    "Step 9", "Step 10", "Step 11", "Step 12", "jj"
-  ];
+      setBookmarkedRoadmaps((prev) => [...prev, selectedRoadmap]);
+    };
 
-  return (
-    <div
-      style={{
-        position: "relative",
-        width: "100%",
-        height: "100%",
-        padding: "40px",
-        display: "flex",
-        flexDirection: "column",
-      }}
-    >
-      {/* Top Row */}
+    // slug helper
+    const toSlug = (text: string) =>
+      text.toLowerCase().replace(/\s+/g, "-");
+
+    const roadmapStepsMap: Record<
+      string,
+      { label: string; href: string }[]
+    > = {
+      frontend: [
+        { label: "html", href: "#" },
+        { label: "css", href: "#" },
+        { label: "js", href: "#" },
+        { label: "react", href: "#" },
+        { label: "next", href: "#" },
+      ],
+      backend: [
+        { label: "internet", href: "#" },
+        { label: "node", href: "#" },
+        { label: "apis", href: "#" },
+      ],
+    };
+
+    const steps = useMemo(() => {
+      return roadmapStepsMap[selectedRoadmapId] || [];
+    }, [selectedRoadmapId]);
+
+    const handleFullscreen = () => {
+      router.push(`/roadmap-feature?roadmap=${selectedRoadmapId}`);
+    };
+
+    return (
       <div
         style={{
-          height: "fit-content",
+          position: "relative",
           width: "100%",
+          height: "100%",
+          padding: "40px",
           display: "flex",
-          flexDirection: "row",
-          marginRight: "auto",
-          alignItems: "center",
-          gap: "1rem",
-          marginBottom: "1rem",
+          flexDirection: "column",
         }}
       >
-        <CustomDropdown
-          value={selectedRoadmapId}
-          options={options}
-          placeholder="Find a new path"
-          onChange={onRoadmapChange}
-        />
-
-        {/* Bookmarked Display */}
-        {bookmarkedRoadmaps.length > 0 ? (
-          bookmarkedRoadmaps.map((b) => (
-            <div
-              key={b.id}
-              style={{
-                fontFamily: "var(--font-nova-square)",
-                padding: "6px 10px",
-                borderRadius: "8px",
-                backgroundColor:
-                  selectedRoadmapId === b.id
-                    ? "var(--hover-green)"
-                    : "var(--medium-blue)",
-                color:
-                  selectedRoadmapId === b.id
-                    ? "black"
-                    : "white",
-                fontSize: "0.85rem",
-                cursor: "pointer"
-              }}
-              onClick={() => setSelectedRoadmapId(b.id)}
-            >
-              {b.title}
-            </div>
-          ))
-        ) : (
-          <span
-            style={{
-              fontSize: "0.9rem",
-              color: "#6b7280",
-            }}
-          >
-            No bookmarks
-          </span>
-        )}
-      </div>
-
-      {/* Roadmap Panel */}
-      <div
-  style={{
-    width: "100%",
-    flex: 1,              
-    minHeight: 0,        
-    borderRadius: "4vh",
-    backgroundColor: "var(--dark-blue)",
-    display: "flex",
-    flexDirection: "column",
-    padding: "2rem",
-    overflow: "hidden",  // locks panel boundary
-  }}
->
-        {/* Header */}
+        {/* Top Row */}
         <div
           style={{
-            display: "flex",
             height: "fit-content",
-            justifyContent: "space-between",
+            width: "100%",
+            display: "flex",
+            flexDirection: "row",
+            marginRight: "auto",
             alignItems: "center",
-            marginBottom:"1rem",
+            gap: "1rem",
+            marginBottom: "1rem",
           }}
         >
-          <h1
-            style={{
-              fontSize: "1.2rem",
-              color: "white",
-            }}
-          >
-            {selectedRoadmap?.title} Roadmap
-          </h1>
+          <CustomDropdown
+            value={selectedRoadmapId}
+            options={options}
+            placeholder="Find a new path"
+            onChange={onRoadmapChange}
+          />
 
-          <div
-            style={{
-              display: "flex",
-              gap: "1rem",
-            }}
-          >
-            <img
-              src={"/roadmap/fullscreen.svg"}
+          {/* Bookmarked Display */}
+          {bookmarkedRoadmaps.length > 0 ? (
+            bookmarkedRoadmaps.map((b) => (
+              <div
+                key={b.id}
+                style={{
+                  fontFamily: "var(--font-nova-square)",
+                  padding: "6px 10px",
+                  borderRadius: "8px",
+                  backgroundColor:
+                    selectedRoadmapId === b.id
+                      ? "var(--hover-green)"
+                      : "var(--medium-blue)",
+                  color:
+                    selectedRoadmapId === b.id ? "black" : "white",
+                  fontSize: "0.85rem",
+                  cursor: "pointer",
+                }}
+                onClick={() => setSelectedRoadmapId(b.id)}
+              >
+                {b.title}
+              </div>
+            ))
+          ) : (
+            <span
               style={{
-                height: "1.5rem",
-                cursor: "pointer",
+                fontSize: "0.9rem",
+                color: "#6b7280",
               }}
-            />
-
-            <img
-              src={"/roadmap/bookmark.svg"}
-              style={{
-                height: "1.5rem",
-                cursor: "pointer",
-              }}
-              onClick={handleBookmark}
-            />
-          </div>
+            >
+              No bookmarks
+            </span>
+          )}
         </div>
 
-        {/*Roadmap*/}
+        {/* Roadmap Panel */}
         <div
           style={{
             width: "100%",
-            height: "100%",
-            paddingInline: "2rem",
-            overflowY: "auto",
-            scrollbarWidth: "none",
+            flex: 1,
+            minHeight: 0,
+            borderRadius: "4vh",
+            backgroundColor: "var(--dark-blue)",
+            display: "flex",
+            flexDirection: "column",
+            padding: "2rem",
+            overflow: "hidden",
           }}
         >
-            <div>
-              <StepFlow steps={nodes} />
+          {/* Header */}
+          <div
+            style={{
+              display: "flex",
+              height: "fit-content",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: "1rem",
+            }}
+          >
+            <h1
+              style={{
+                fontSize: "1.2rem",
+                color: "white",
+              }}
+            >
+              {selectedRoadmap?.title} Roadmap
+            </h1>
+
+            <div
+              style={{
+                display: "flex",
+                gap: "1rem",
+              }}
+            >
+              <img
+                src={"/roadmap/fullscreen.svg"}
+                style={{
+                  height: "1.5rem",
+                  cursor: "pointer",
+                }}
+                onClick={handleFullscreen}
+              />
+
+              <img
+                src={"/roadmap/bookmark.svg"}
+                style={{
+                  height: "1.5rem",
+                  cursor: "pointer",
+                }}
+                onClick={handleBookmark}
+              />
             </div>
+          </div>
+
+          {/* Roadmap */}
+          <div
+            style={{
+              width: "100%",
+              height: "100%",
+              paddingInline: "2rem",
+              overflowY: "auto",
+              scrollbarWidth: "none",
+            }}
+          >
+            <div>
+              <StepFlow
+                steps={steps}
+                roadmapId={selectedRoadmapId}
+                selectedIndex={activeStep ?? undefined}
+                onSelect={setActiveStep}
+              />
+            </div>
+          </div>
         </div>
       </div>
-    </div>
-  );
-}
+    );
+  }

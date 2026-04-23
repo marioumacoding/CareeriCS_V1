@@ -17,7 +17,7 @@ export const CurrentCoursesCard = ({ courses, selected, onSelect, style }: any) 
       <h3 style={{ fontSize: "18px", marginBottom: "15px", fontFamily: 'var(--font-nova-square)', fontWeight: "200" }}>
         Courses you are currently taking
       </h3>
-      <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
         <div
           ref={scrollRef}
           style={{
@@ -33,7 +33,7 @@ export const CurrentCoursesCard = ({ courses, selected, onSelect, style }: any) 
                 key={course.title}
                 onClick={() => onSelect(course.title)}
                 style={{
-                  padding: "20px", borderRadius: "15px", flexShrink: 0, minWidth: "220px",
+                  padding: "10px", borderRadius: "15px", flexShrink: 0, minWidth: "220px",
                   // El lon sabet: ya selected (Light Green) ya default (Grey-Blue)
                   backgroundColor: selected === course.title ? "#E6FFB2" : "#c1cbe6",
                   color: "black", cursor: "pointer", position: "relative", transition: "0.2s"
@@ -42,7 +42,6 @@ export const CurrentCoursesCard = ({ courses, selected, onSelect, style }: any) 
                 <div style={{ fontWeight: "bold", fontSize: "14px" }}>{course.title}</div>
                 <div style={{ fontSize: "10px", fontWeight: "bold" }}>by {course.provider}</div>
 
-                {/* Status Indicator Circle - Only shows ✓ if completed */}
                 <div
                   style={{
                     position: "absolute", right: "15px", top: "50%", transform: "translateY(-50%)",

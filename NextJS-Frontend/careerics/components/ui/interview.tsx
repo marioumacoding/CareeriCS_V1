@@ -10,7 +10,7 @@ interface Question {
 interface SidebarLogicProps {
   questions: Question[];
   currentActiveId: number;
-  unlockedStepId: number;
+  unlockedStepId?: number; 
   onQuestionClick: (id: number) => void;
   label?: string;
   title?: string;
@@ -27,43 +27,32 @@ export default function SidebarLogicOnly({
   children,
 }: SidebarLogicProps) {
   return (
-    /* 1. Outer Wrap: display flex we height 100% ashan yemsik el sidebar */
-    <div style={{ 
-      display: "flex", 
-      width: "100%", 
-      height: "100%", // Fill el container el kbeer
-      position: "absolute", // Ashan y-fit el parent layout bel-zabt
-      top: 0,
-      left: 0,
-    }}>
+    <div style={{ display: "flex", width: "100%", height: "100%", position: "absolute", top: 0, left: 0}}>
       
       <aside style={{ 
-        width: "320px", 
-        backgroundColor: "#b4b4b4", 
-        padding: "40px 20px", 
-        display: "flex", 
-        flexDirection: "column",
-        height: "100%", 
-        flexShrink: 0,
+        width: "320px", backgroundColor: "#b4b4b4", padding: "40px 20px", 
+        display: "flex", flexDirection: "column", height: "100%", flexShrink: 0 
       }}>
-        <h1 style={{ 
-          fontSize: "24px", 
-          color: "#1a1a1a", 
-          fontWeight: 700, 
-          marginBottom: "30px",
-          fontFamily: 'var(--font-nova-square)' 
-        }}>
+        <h1 style={{ fontSize: "24px", color: "#1a1a1a", fontWeight: 700, marginBottom: "30px", fontFamily: 'var(--font-nova-square)' }}>
           {title}
         </h1>
+        <hr style={{ 
+          marginBottom: "2vh", 
+          border: "none", 
+          height: "1px", 
+          backgroundColor: "#142143" 
+        }}
 
-        <div style={{ flex: 1, overflowY: "auto", scrollbarWidth: "none" }}>
+        />
+    <div style={{ flex: 1, overflowY: "auto", scrollbarWidth: "none" }}>
           <style>{`.no-scrollbar::-webkit-scrollbar { display: none; }`}</style>
           
           <div className="no-scrollbar" style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
             {questions.map((q) => {
               const isSelected = currentActiveId === q.id;
-              const isLocked = q.id > unlockedStepId;
-              const isPast = q.id < unlockedStepId;
+
+              const isLocked = unlockedStepId !== undefined ? q.id > unlockedStepId : false;
+              const isPast = unlockedStepId !== undefined ? q.id < unlockedStepId : false;
 
               return (
                 <div 
@@ -81,11 +70,21 @@ export default function SidebarLogicOnly({
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", color: "#1a1a1a", fontWeight: 600 }}>
                     <span style={{ fontSize: "14px" }}>{label} {q.id}: {q.title}</span>
                     <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
-                      <span style={{ fontSize: "12px" }}>{isLocked ? "🔒" : isPast ? "✅" : ""}</span>
-                      <span style={{ 
-                        transition: "transform 0.3s", 
-                        transform: isSelected ? "rotate(180deg)" : "rotate(0deg)" 
-                      }}>▼</span>
+                      {/* El icons hat-zhar bas law feeh logic lock (unlockedStepId msh undefined) */}
+                      <span style={{ fontSize: "12px" }}>
+                        {isLocked ? "🔒" : isPast ? "✅" : ""}
+                      </span>
+                     <img 
+                        src="/auth/Back Arrow.svg" // Hot el path bta3 el sora bta3tak hna
+                        alt="chevron"
+                        style={{ 
+                          width: "16px", // Zabat el size zay ma enta 3ayez
+                          height: "auto",
+                          transition: "transform 0.3s ease", 
+                          transform: isSelected ? "rotate(180deg)" : "rotate(270deg)",
+                          filter: "brightness(0) saturate(100%)"    // Ikhtiyari: law el sora soda w 3ayez t-ghayar lonha le ay haga tanya
+                        }} 
+                      />
                     </div>
                   </div>
 
@@ -106,15 +105,7 @@ export default function SidebarLogicOnly({
         </div>
       </aside>
 
-      {/* 3. Main Content Area */}
-      <main style={{ 
-        flex: 1, 
-        height: "100%", 
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        position: "relative"
-      }}>
+      <main style={{ flex: 1, height: "100%", display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
         {children}
       </main>
     </div>

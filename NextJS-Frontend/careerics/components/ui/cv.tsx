@@ -12,6 +12,7 @@ export default function CV() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [status, setStatus] = useState<AppStatus>('idle');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFilePreviewUrl, setSelectedFilePreviewUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
   const [downloadName, setDownloadName] = useState("enhanced-cv.pdf");
@@ -31,6 +32,20 @@ export default function CV() {
       }
     };
   }, [downloadUrl]);
+
+  useEffect(() => {
+    if (!selectedFile) {
+      setSelectedFilePreviewUrl(null);
+      return;
+    }
+
+    const previewUrl = URL.createObjectURL(selectedFile);
+    setSelectedFilePreviewUrl(previewUrl);
+
+    return () => {
+      URL.revokeObjectURL(previewUrl);
+    };
+  }, [selectedFile]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -133,9 +148,23 @@ export default function CV() {
               transition: "all 0.3s ease",
             }}
           >
-            <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="rgb(0, 0, 0)" strokeWidth="1">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" />
-            </svg>
+            {selectedFile && selectedFile.type === 'application/pdf' && selectedFilePreviewUrl ? (
+              <iframe
+                src={`${selectedFilePreviewUrl}#toolbar=0&navpanes=0&scrollbar=0`}
+                title="Selected CV preview"
+                style={{ width: '100%', height: '100%', border: 'none', borderRadius: '32px' }}
+              />
+            ) : selectedFile ? (
+              <img
+                src="/cv/cv.svg"
+                alt="Selected CV file"
+                style={{ width: '84px', height: '125px', objectFit: 'contain' }}
+              />
+            ) : (
+              <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="rgb(0, 0, 0)" strokeWidth="1">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" />
+              </svg>
+            )}
           </div>
 
           <Button 
@@ -160,12 +189,6 @@ export default function CV() {
              status === 'completed' ? "Upload another CV" : 
              selectedFile ? "Enhance Now" : "Open Files"}
           </Button>
-
-          {selectedFile && status !== "completed" && (
-            <p style={{ color: "white", opacity: 0.8, marginTop: "-14px", maxWidth: "220px" }}>
-              {selectedFile.name}
-            </p>
-          )}
 
           {error && (
             <p style={{ color: "#ffb4b4", maxWidth: "220px", marginTop: "-8px" }}>{error}</p>

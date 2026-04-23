@@ -61,6 +61,7 @@ export interface APISession {
   type: string;
   status: string;
   user_id: string;
+  created_at?: string | null;
   emotion_evaluation?: Record<string, unknown> | null;
   tone_evaluation?: Record<string, unknown> | null;
   sentiment_evaluation?: Record<string, unknown> | null;
@@ -468,6 +469,12 @@ export interface APICareerAnswerRead {
   session_id: string;
   question_id: string;
   answer: number;
+}
+
+export interface APICareerTrack {
+  id: string;
+  name: string;
+  description?: string | null;
 }
 
 export interface APICareerTrackScore {

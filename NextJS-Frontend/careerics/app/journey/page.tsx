@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { buildSectionProgressMap } from "@/app/features/roadmap/utils";
@@ -409,6 +409,30 @@ export default function JourneyPage() {
     return section?.title ?? currentLearning?.section_title ?? "No active section";
   }, [currentLearning?.section_title, currentRoadmap, selectedSectionId]);
 
+  const selectedSection = useMemo(() => {
+    if (!currentRoadmap || !selectedSectionId) {
+      return null;
+    }
+
+    return currentRoadmap.sections.find((item) => item.id === selectedSectionId) ?? null;
+  }, [currentRoadmap, selectedSectionId]);
+
+  const handleTakeAssessment = useCallback(() => {
+    if (!selectedSectionId) {
+      router.push("/features/skill");
+      return;
+    }
+
+    const params = new URLSearchParams({
+      targetId: selectedSectionId,
+      targetName: selectedSection?.title ?? selectedSectionTitle,
+      sessionType: "section",
+      numQuestions: "7",
+    });
+
+    router.push(`/skill-feature/questions?${params.toString()}`);
+  }, [router, selectedSection?.title, selectedSectionId, selectedSectionTitle]);
+
   return (
     <div
       style={{
@@ -550,7 +574,7 @@ export default function JourneyPage() {
           <JourneyButton
             course="Take Assessment"
             icon="/sidebar/CV.svg"
-            onClick={() => router.push("/features/skill")}
+            onClick={handleTakeAssessment}
           />
         </div>
       </div>

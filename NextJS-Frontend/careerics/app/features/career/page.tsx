@@ -1,7 +1,6 @@
 "use client";
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import ChoiceCard from "@/components/ui/choice-card-home";
 import { useAuth } from "@/providers/auth-provider";
 import { careerService } from "@/services";
 
@@ -15,32 +14,32 @@ export default function CareerDiscoveryPage() {
   const careerPaths = [
   {
     title: "Backend Development",
-    desc: "Build APIs, databases, and server systems that handle logic, data, and security.",
+    desc: "Build secure APIs, databases, and server-side logic.",
     image: "/Landing/Rectangle.svg",
   },
   {
     title: "Frontend Development",
-    desc: "Develop responsive interfaces and interactive features users see and use.",
+    desc: "Build responsive interfaces and interactive features for users.",
     image: "/Landing/Rectangle.svg",
   },
   {
     title: "UI/UX Design",
-    desc: "Design user-friendly layouts and experiences that improve usability and navigation.",
+    desc: "Design user-friendly layouts to improve usability and navigation.",
     image: "/Landing/Rectangle.svg",
   },
   {
     title: "Data Science",
-    desc: "Analyze large datasets to discover patterns, insights, and support decisions.",
+    desc: "Analyze datasets to discover patterns and support decisions.",
     image: "/Landing/Rectangle.svg",
   },
   {
     title: "Machine Learning",
-    desc: "Create models that learn from data to automate tasks and make predictions.",
+    desc: "Create models to automate tasks and provide predictions.",
     image: "/Landing/Rectangle.svg",
   },
   {
     title: "Cybersecurity",
-    desc: "Secure systems, networks, and data by detecting threats and preventing attacks.",
+    desc: "Secure systems and networks by detecting and preventing attacks.",
     image: "/Landing/Rectangle.svg",
   },
 ];
@@ -167,16 +166,17 @@ export default function CareerDiscoveryPage() {
             gridArea: "3 / 1 / 8 / 7",
             backgroundColor: "#1C427B",
             borderRadius: "4vh",
-            padding: "3vh 2vw",
+            padding: "2vh 2vw",
             display: "flex",
             flexDirection: "column",
+            marginBottom: "-3vh",
           }}
         >
           <h2
             style={{
               color: "white",
               fontSize: "3.5vh",
-              marginBottom: "3vh",
+              marginBottom: "2vh",
               fontFamily: "var(--font-nova-square)",
             }}
           >
@@ -213,6 +213,7 @@ export default function CareerDiscoveryPage() {
                 gap: "1vh",
                 flex: 1,
                 height: "100%",
+                marginTop: "-2vh",
               }}
             >
               {visibleCards.map((path, idx) => (

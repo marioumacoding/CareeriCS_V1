@@ -1,7 +1,8 @@
 {
   "dependencies": {
     "lucide-react": "^0.576.0",
-    "styled-components": "^6.3.11"
+    "styled-components": "^6.3.11",
+    "undici": "^8.1.0"
   },
   "devDependencies": {
     "@types/styled-components": "^5.1.36"

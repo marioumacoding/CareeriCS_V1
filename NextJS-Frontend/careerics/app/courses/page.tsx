@@ -40,6 +40,7 @@ const CourseCard = ({ course }: { course: any }) => {
       width: "280px", minHeight: "120px", height: "auto",
       backgroundColor: isDone ? "#3D3D3D" : "#BABABA", 
       borderRadius: "40px", padding: "20px",
+      borderRadius: "40px", padding: "10px",
       display: "flex", alignItems: "stretch", position: "relative",
     }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "70px", flexShrink: 0 }}>

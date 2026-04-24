@@ -10,13 +10,13 @@ const Folder = ({ children }: FolderProps) => {
   const pathname = usePathname();
 
   const pageConfig: Record<string, { title: string; subtitle: string; tabwidth: string }> = {
-    "/features/home": { title: "Home", subtitle: "Welcome to CareeriCS, where your journey begins", tabwidth: "30%" },
-    "/features/career": { title: "Career Exploration", subtitle: "Find your path", tabwidth: "35%" },
-    "/features/courses": { title: "Courses Hub", subtitle: "Expand your knowledge", tabwidth: "25%" },
-    "/features/roadmap": { title: "Roadmaps", subtitle: "Discover where you stand", tabwidth: "20%" },
-    "/features/skill": { title: "Skill Assessment", subtitle: "Discover where you stand", tabwidth: "30%" },
-    "/features/cv": { title: "CV Crafting", subtitle: "Turn experience into impact", tabwidth: "25%" },
-    "/features/interview": { title: "Interview Preparation",  subtitle: "Practice makes perfect",  tabwidth: "38%"},
+    "/features/home": { title: "Careeri's Journey", subtitle: "Welcome to CareeriCS", tabwidth: "27%" },
+    "/features/career": { title: "Career Exploration", subtitle: "Find your path", tabwidth: "28%" },
+    "/features/courses": { title: "Courses Hub", subtitle: "Expand your knowledge", tabwidth: "22%" },
+    "/features/roadmap": { title: "Roadmaps", subtitle: "Discover where you stand", tabwidth: "19%" },
+    "/features/skill": { title: "Skill Assessment", subtitle: "Discover where you stand", tabwidth: "26.5%" },
+    "/features/cv": { title: "CV Crafting", subtitle: "Turn experience into impact", tabwidth: "20%" },
+    "/features/interview": { title: "Interview Preparation",  subtitle: "Practice makes perfect",  tabwidth: "31%"},
     "/features/job": { title: "Job Search", subtitle: "Your next opportunity is waiting", tabwidth: "20%" },
   };
 
@@ -55,35 +55,35 @@ const Folder = ({ children }: FolderProps) => {
          width: current.tabwidth,
          height: "100%",
          position: "relative",
-        }}
-     >
+         }}
+        >
 
-          <div
+        <div
           id="grey-tab-body"
           style={{
           flex: 1,
           backgroundColor: "var(--bg-grey)",
-          borderTopLeftRadius: "50px", // Matches your folder body
+          borderTopLeftRadius: "50px", 
           display: "flex",
           alignItems: "center",
           paddingLeft: "3vw",
          }}
-      >
-    <span
-      style={{
-        zIndex: 3,
-        fontSize: "clamp(1rem, 1.8vw, 1.6rem)",
-        alignContent: "center",
-        paddingTop: "3vh",
-        fontWeight: "700",
-        whiteSpace: "nowrap",
-      }}
-    >
-      {current.title}
-    </span>
-  </div>
+         >
+          <span
+           style={{
+           zIndex: 3,
+           fontSize: "clamp(1rem, 1.8vw, 1.6rem)",
+           alignContent: "center",
+           paddingTop: "3vh",
+           fontWeight: "700",
+           whiteSpace: "nowrap",
+           }}
+          >
+          {current.title}
+          </span>
+         </div>
 
-  {/* 2. THE STATIC SLOPE: This part never distorts */}
+  {/* The Slope*/}
   <svg
     viewBox="0 0 200 80"
     preserveAspectRatio="none"

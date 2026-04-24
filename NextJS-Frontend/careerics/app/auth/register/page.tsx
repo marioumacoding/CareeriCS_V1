@@ -154,7 +154,7 @@ export default function Register() {
 
   async function handleGoogleRegister() {
     try {
-      await authService.signInWithGoogle();
+      await authService.signInWithGoogle("/features/home");
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Google sign-up failed.";
       setError(message);

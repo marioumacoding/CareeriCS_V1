@@ -1,22 +1,71 @@
 "use client";
-import { useState } from "react";
 import { ReactNode } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button"
 
 interface AuthLayoutProps {
   children: ReactNode;
-  CardTitle?: string;
-  Message?: string;
-  Link?: string;
-  LinkText?: string;
-  showDiv?: boolean;
-  BackPath?: string;
 }
 
 
-export default function AuthLayout({ children, CardTitle, Message, Link, LinkText, showDiv = true, BackPath }: AuthLayoutProps) {
+export default function AuthLayout({ children }: AuthLayoutProps) {
   const router = useRouter();
+  const pathname = usePathname();
+
+  // Default values
+  let CardTitle = "";
+  let Message = "";
+  let Link = "/";
+  let LinkText = "";
+  let showDiv = true;
+  let BackPath: string | undefined;
+
+  // Route-based conditions
+  switch (pathname) {
+    case "/auth/login":
+      CardTitle = "Welcome Back";
+      Message = "Don't have an account?";
+      Link = "/auth/register";
+      LinkText = "Sign up";
+      showDiv = true;
+      BackPath = "/";
+      break;
+
+    case "/auth/register":
+      CardTitle = "Create Account";
+      Message = "Already have an account?";
+      Link = "/auth/login";
+      LinkText = "Login";
+      showDiv = true;
+      BackPath = "/auth/login";
+      break;
+
+    case "/auth/reset-password":
+      CardTitle = "Reset Password";
+      Message = "Remember your password";
+      Link = "/auth/login"
+      LinkText = "Sign In Here"
+      showDiv = false;
+      BackPath = "/auth/login";
+      break;
+
+    case "/auth/update-password":
+      CardTitle = "Set New Password";
+      showDiv = false;
+      BackPath = "/auth/login"
+      break;
+
+    case "/auth/callback":
+      CardTitle = "Callback";
+      showDiv = false;
+      break;
+
+    default:
+      CardTitle = "Authentication";
+      showDiv = true;
+      BackPath = "/";
+  }
+
   return (
 
     <div
@@ -109,56 +158,59 @@ export default function AuthLayout({ children, CardTitle, Message, Link, LinkTex
       >
         <div
           style={{
-            zIndex: 15,
-            padding: "3vh",
+            zIndex: 2,
+            borderRadius: "3vh",
             width: "fit-content",
             height: "fit-content",
             backgroundColor: "var(--form-grey)",
-            textAlign: "center",
-            borderRadius: "3vh",
             margin: "0 auto",
-            justifyItems: "center",
-            flexShrink: 0
+            display: "flex",
+            alignItems: "center",
+            flexDirection: "column",
+            paddingBlock: "3vh",
+            paddingInline: "3vw",
+            textAlign:"center",
           }}
         >
-          <h1 style={{ color: "#fff", fontSize: "4vh" }}>{CardTitle}</h1>
+          <h1 style={{ color: "#fff", fontSize: "4vh", marginBottom: "2vh" }}>{CardTitle}</h1>
 
           {children}
 
           {showDiv && (
-            <div
-              style={{
-                backgroundColor: "#fff",
-                width: "85%",
-                height: "0.5vh",
-              }}>
+            <div style={{width:"95%", display:"flex", flexDirection:"column", alignItems:"center"}}>
+              <div
+                style={{
+                  backgroundColor: "#fff",
+                  width: "100%",
+                  height: "0.5vh",
+                }}>
+              </div>
 
 
 
+              <Button
+                variant="text"
+                textContent={{ before: Message ?? "", buttonText: LinkText ?? "" }}
+                onClick={() => router.push(Link ?? "/")}
+              />
 
             </div>
           )}
-          <Button
-            variant="text"
-            textContent={{ before: Message ?? "", buttonText: LinkText ?? "" }}
-            onClick={() => router.push(Link ?? "/")}
-            style={{ marginLeft: "0" }}
-          />
 
 
 
         </div>
 
         <button
-          onClick={() => router.back()}
+          onClick={() => router.push(BackPath ?? "/")}
           style={{
             position: "absolute",
             top: "1vh",
             left: "1vh",
-            width: "10vh", 
-            backgroundColor:"transparent" ,
+            width: "10vh",
+            backgroundColor: "transparent",
             border: "none",
-            cursor:"pointer"
+            cursor: "pointer"
           }}
         >
           <svg preserveAspectRatio='none' viewBox="0 0 78 78" fill="none" xmlns="http://www.w3.org/2000/svg">

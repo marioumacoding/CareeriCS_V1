@@ -49,55 +49,50 @@ export default function ChoiceCard({
         width: "100%",
         height: "100%",
         backgroundColor: "var(--dark-blue)",
-        borderRadius: "2vh",
+        borderRadius: "4vh",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        padding: "3vh",
-        boxSizing: "border-box",
+        justifyContent:"space-between",
+        paddingTop:"5vh",
+        paddingBottom: "3vh",
+        paddingInline:"3vw",
         overflow: "hidden",
-        gap: "1vh",
         ...style
       }}
     >
       <div
         style={{
-          display: "grid",
-          gridTemplateColumns: "10fr 1fr 10fr",
-          height: "40%",
-          justifyItems: "center",
+          display: "flex",
+          width:"100%",
           alignItems: "center",
-          flexGrow: 0,
-          flexShrink: 0,
           marginBottom: "auto",
+          justifyContent:"space-between",
         }}
       >
-        <div style={{ position: "relative", width: "70%", height: "100%" }}>
-          <Image
+        
+          <img
             src={image || icon || ""}
             alt={title || "career icon"}
-            fill
             style={{
-              objectFit: "contain",
+              height:"12vh"
             }}
           />
-        </div>
 
         <div
           style={{
             height: "80%",
             backgroundColor: "white",
             width: "0.1vh",
-            margin: 0,
           }}
         />
 
         <p
           style={{
-            margin: 0,
             color: "white",
-            fontSize: "clamp(0.8rem,1.7vw,1.5rem)",
+            fontSize: "1.4rem",
             fontFamily: "var(--font-nova-square)",
+            width: "min-content",
           }}
         >
           {title}
@@ -126,7 +121,8 @@ export default function ChoiceCard({
           flexGrow: 0,
           flexShrink: 0,
           paddingInline: "5vw",
-          marginTop: "auto"
+          marginTop: "auto",
+          paddingBlock:"2.5vh",
         }}
       >
         {buttonLabel}

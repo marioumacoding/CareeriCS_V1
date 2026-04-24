@@ -39,7 +39,7 @@ const CourseCard = ({ course }: { course: any }) => {
     <div style={{
       width: "280px", minHeight: "120px", height: "auto",
       backgroundColor: isDone ? "#3D3D3D" : "#BABABA", 
-      borderRadius: "40px", padding: "20px",
+      borderRadius: "40px", padding: "10px",
       display: "flex", alignItems: "stretch", position: "relative",
     }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "70px", flexShrink: 0 }}>
@@ -101,7 +101,7 @@ export default function CourseLibraryPage() {
                 type="text" placeholder="search" value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 style={{ 
-                  width: "100%", backgroundColor: "rgba(255,255,255,0.05)", 
+                  width: "100%", backgroundColor: "rgba(234, 18, 18, 0.05)", 
                   border: "1px solid rgb(255, 255, 255)", borderRadius: "20px", 
                   padding: "8px 45px 8px 15px", color: "white", outline: "none"
                 }} 

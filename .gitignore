@@ -1,4 +1,5 @@
 ### --- Python / FastAPI --- ###
+venv/
 AI_API/fast-api-app/.env
 AI_API/fast-api-app/audio/answers/
 AI_API/fast-api-app/audio/followups/

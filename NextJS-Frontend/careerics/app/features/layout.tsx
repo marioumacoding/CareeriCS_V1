@@ -1,5 +1,8 @@
+"use client";
+
 import Sidebar from "@/components/ui/sidebar";
 import BG from "@/components/ui/folder";
+import { usePathname } from "next/navigation";
 import React, { CSSProperties, ReactNode } from "react";
 
 interface RootLayoutProps {
@@ -11,30 +14,33 @@ export default function RootLayout({
   style,
   children,
 }: RootLayoutProps & { children: React.ReactNode }) {
-  return (
+  const pathname = usePathname();
+  const isRoadmapDetailRoute = /^\/features\/roadmap\/[^/]+\/?$/.test(pathname);
 
-    <div style={{
-      position: "fixed",
-      inset: 0,
-      overflow: "hidden",
-      backgroundColor: "var(--bg-color)",
-      display: "flex"
-    }}>
+  if (isRoadmapDetailRoute) {
+    return <>{children}</>;
+  }
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        overflow: "hidden",
+        backgroundColor: "var(--bg-color)",
+        display: "flex",
+      }}
+    >
 
       <Sidebar />
 
-      <div style={{ flex: 1, padding: "1vh" }}>
+      <div style={{ flex: 1, minWidth: 0, padding: "1vh" }}>
         <BG>
 
           <div style={{
             position: "relative",
-            height: "80%",
-            margin: "0 auto",
-            display: "grid",
-            paddingTop: "1vh",
-            paddingBottom: "1vh",
-            paddingLeft: "5vw",
-            paddingRight: "5vw",  
+            height: "100%",
+            margin: "0 auto", 
             ...style,
           }}
           >
@@ -43,9 +49,9 @@ export default function RootLayout({
 
 
         </BG>
-      </div >
+      </div>
 
-    </div >
+    </div>
 
   );
 }

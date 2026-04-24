@@ -127,12 +127,16 @@ export default function Interview() {
   ];
 
   return (
-    <RootLayout
+    <div
       style={{
+        display:"grid",
         gridTemplateColumns: "repeat(3, 1fr)",
         gridTemplateRows: "repeat(3, 1fr)",
-        gridColumnGap: "4vh",
-        gridRowGap: "4vh",
+        gridColumnGap: "25px",
+        gridRowGap: "20px",
+        width:"100%",
+        height:"100%",
+        padding:"40px",
       }}
     >
       <ChoiceCard
@@ -172,6 +176,6 @@ export default function Interview() {
         icon="/interview/Interview Tip.svg"
         style={{ gridArea: "3 / 1 / 4 / 4" }}
       />
-    </RootLayout>
+    </div>
   );
 }

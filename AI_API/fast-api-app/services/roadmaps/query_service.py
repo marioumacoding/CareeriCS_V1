@@ -1,6 +1,7 @@
 from typing import List
 from uuid import UUID
 
+from sqlalchemy import distinct, func
 from sqlalchemy.orm import Session
 
 from db.models import Roadmap, RoadmapSection, RoadmapStep
@@ -13,28 +14,31 @@ from schemas import (
 
 
 def list_roadmaps_service(db: Session) -> List[RoadmapListItemSchema]:
-    roadmaps = db.query(Roadmap).order_by(Roadmap.title.asc()).all()
-    response: List[RoadmapListItemSchema] = []
-
-    for roadmap in roadmaps:
-        sections_count = db.query(RoadmapSection).filter(RoadmapSection.roadmap_id == roadmap.id).count()
-        steps_count = (
-            db.query(RoadmapStep)
-            .join(RoadmapSection, RoadmapStep.section_id == RoadmapSection.id)
-            .filter(RoadmapSection.roadmap_id == roadmap.id)
-            .count()
+    rows = (
+        db.query(
+            Roadmap.id.label("id"),
+            Roadmap.title.label("title"),
+            Roadmap.description.label("description"),
+            func.count(distinct(RoadmapSection.id)).label("sections_count"),
+            func.count(distinct(RoadmapStep.id)).label("steps_count"),
         )
-        response.append(
-            RoadmapListItemSchema(
-                id=roadmap.id,
-                title=roadmap.title,
-                description=roadmap.description or "",
-                sections_count=sections_count,
-                steps_count=steps_count,
-            )
-        )
+        .outerjoin(RoadmapSection, RoadmapSection.roadmap_id == Roadmap.id)
+        .outerjoin(RoadmapStep, RoadmapStep.section_id == RoadmapSection.id)
+        .group_by(Roadmap.id, Roadmap.title, Roadmap.description)
+        .order_by(Roadmap.title.asc())
+        .all()
+    )
 
-    return response
+    return [
+        RoadmapListItemSchema(
+            id=row.id,
+            title=row.title,
+            description=row.description or "",
+            sections_count=int(row.sections_count or 0),
+            steps_count=int(row.steps_count or 0),
+        )
+        for row in rows
+    ]
 
 
 def _build_roadmap_read(roadmap: Roadmap, sections: List[RoadmapSection], steps_by_section: dict) -> RoadmapReadSchema:

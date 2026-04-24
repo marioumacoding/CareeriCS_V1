@@ -75,7 +75,7 @@ def submit_answers(db: Session, session_id: str, user_id: str, user_answers: lis
     db.commit()
 
     # Save proficiency based on session type
-    if session.type == "skills":
+    if session.type in ("skills", "skill"):
         user_skill = db.query(UserSkill).filter_by(user_id=user_id, skill_id=session.skill_id).first()
         if user_skill:
             user_skill.score = score
@@ -104,17 +104,21 @@ def submit_answers(db: Session, session_id: str, user_id: str, user_answers: lis
         if roadmap_result:
             roadmap_result.score = score
             roadmap_result.proficiency = proficiency
+            roadmap_result.completion_status = "completed"
+            roadmap_result.completed_at = datetime.utcnow()
             roadmap_result.updated_at = datetime.utcnow()
         else:
             roadmap_result = RoadmapAssessmentResult(
                 id=uuid4(),
                 user_id=user_id,
-                roadmap_id=session.roadmap_id if session.type == "roadmap" else None,
-                section_id=session.section_id if session.type == "section" else None,
+                roadmap_id=session.roadmap_id,
+                section_id=session.section_id if session.type in ("section", "step") else None,
                 step_id=session.step_id if session.type == "step" else None,
                 type=session.type,
                 score=score,
                 proficiency=proficiency,
+                completion_status="completed",
+                completed_at=datetime.utcnow(),
             )
             db.add(roadmap_result)
 

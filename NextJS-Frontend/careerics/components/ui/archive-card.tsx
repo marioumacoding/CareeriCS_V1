@@ -26,12 +26,23 @@ export default function ArchiveCard({
     onDownload,
 }: ArchiveCardProps) {
 
-    const scrollableRef = useRef<HTMLDivElement>(null);
+    const scrollRef = useRef<HTMLDivElement>(null);
 
-    const handleScroll = () => {
-        if (scrollableRef.current) {
-            const div = scrollableRef.current;
-            div.scrollBy({ top: div.clientHeight, behavior: "smooth" });
+    const scrollDown = () => {
+        if (scrollRef.current) {
+            scrollRef.current.scrollBy({
+                top: 200,
+                behavior: "smooth",
+            });
+        }
+    };
+
+    const scrollUp = () => {
+        if (scrollRef.current) {
+            scrollRef.current.scrollBy({
+                top: -200,
+                behavior: "smooth",
+            });
         }
     };
 
@@ -42,11 +53,13 @@ export default function ArchiveCard({
                 width: "100%",
                 height: "100%",
                 backgroundColor: "#142143",
-                borderRadius: "2vh",
+                borderRadius: "4vh",
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
-                padding: "1vh",
+                paddingTop: "3vh",
+                paddingInline: "4vh",
+                paddingBottom: "1vh",
                 boxSizing: "border-box",
                 overflow: "hidden",
                 gap: "1vh",
@@ -59,19 +72,17 @@ export default function ArchiveCard({
                     color: "white",
                     fontSize: "clamp(0.7rem,1.6vw,1.3rem)",
                     fontFamily: "var(--font-nova-square)",
-                    maxHeight: "5%",
                 }}
             >
                 {title}
             </p>
             <div
-                ref={scrollableRef}
+                ref={scrollRef}
                 style={{
                     overflow: "scroll",
                     scrollbarWidth: "none",
                     position: "relative",
-                    width: "90%",
-                    height: "65%",
+                    width: "100%",
                 }}
             >
                 {isLoading ? (
@@ -132,35 +143,50 @@ export default function ArchiveCard({
                         ))}
                     </div>
                 )}
-                
+
             </div>
 
-            <button
-                onClick={handleScroll}
+            <div
                 style={{
-                    position: "absolute",
-                    right: "0",
-                    bottom: "0",
-                    maxWidth:"3.5vw",
-                    backgroundColor:"transparent" ,
-            border: "none",
-            cursor:"pointer"
-                }}
-            >
-                <svg preserveAspectRatio="none" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"
+                    display: "flex",
+                    marginTop: "auto",
+                    width: "fit-content",
+                    marginLeft: "auto"
+                }} >
+
+                <div
+                    onClick={scrollUp}
                     style={{
-                        width:"100%",
-                        height:"100%",
+                        cursor: "pointer",
+                        transform: "rotate(-270deg)",
+                        marginRight: "auto",
                     }}
                 >
-                    <path
-                        d="M23.4984 25.8494L32.51 16.9155L35.2291 19.6582L23.4747 31.3111L11.8218 19.5568L14.5644 16.8377L23.4984 25.8494Z"
-                        fill="#E6E0E9"
+                    <img
+                        src="/auth/Back Arrow.svg"
+                        alt="Scroll"
+                        width={30}
+                        height={30}
                     />
-                </svg>
+                </div>
 
-
-            </button>
+                <div
+                    onClick={scrollDown}
+                    style={{
+                        display: "flex",
+                        justifyContent: "center",
+                        cursor: "pointer",
+                        transform: "rotate(270deg)",
+                    }}
+                >
+                    <img
+                        src="/auth/Back Arrow.svg"
+                        alt="Scroll"
+                        width={30}
+                        height={30}
+                    />
+                </div>
+            </div>
         </div>
     );
 }

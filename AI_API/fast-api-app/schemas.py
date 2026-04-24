@@ -666,18 +666,16 @@ class UserJobsListResponse(BaseModel):
 # =====================================================
 
 class CourseBase(BaseModel):
-    track: str
+    platform: Optional[str] = None
     title: str
     instructor: Optional[str] = None
-    rating: Optional[float] = None
-    reviews: Optional[str] = None
+    tags: Optional[List[str]] = None
     duration: Optional[str] = None
+    url: str
+    category: Optional[str] = None
     level: Optional[str] = None
-    language: Optional[str] = None
     price: Optional[str] = None
-    original_price: Optional[str] = None
-    course_url: str
-    source: Optional[str] = None
+    language: Optional[str] = None
 
 
 class CourseCreate(CourseBase):
@@ -691,15 +689,31 @@ class CourseResponse(CourseBase):
     model_config = ConfigDict(from_attributes=True)
 
 
-class CourseSaveInteractionResponse(BaseModel):
+CourseStatus = Literal["saved", "enrolled", "completed"]
+
+
+class CourseStatusUpdateRequest(BaseModel):
+    status: CourseStatus
+
+
+class CourseProgressResponse(BaseModel):
     id: UUID
     course_id: UUID
     user_id: UUID
-    is_saved: bool
+    status: CourseStatus
+    started_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
     saved_at: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
     model_config = ConfigDict(from_attributes=True)
+
+
+class BulkCourseImportResult(BaseModel):
+    inserted: int
+    skipped: int
+    total_processed: int
+    duplicates: List[str]
 
 
 class UserCoursesListResponse(BaseModel):

@@ -1,200 +1,124 @@
 from datetime import UTC, datetime
-from typing import Any, Dict, List, Optional, Tuple
-from urllib.parse import urlparse
+from typing import Any, Dict, List, Optional
 from uuid import UUID
-import re
 
-from sqlalchemy import func, or_
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy import func
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session
 
-from db.models import Course, CourseUserInteraction, User
+from db.models import Course, CourseUserProgress, User
 
 
-def _parse_rating(value: Any) -> Optional[float]:
+VALID_COURSE_STATUSES = {"saved", "enrolled", "completed"}
+
+
+def _normalize_str(value: Any) -> Optional[str]:
     if value is None:
         return None
 
-    if isinstance(value, (int, float)):
-        return float(value)
-
     text = str(value).strip()
-    if not text:
+    return text or None
+
+
+def _normalize_tags(value: Any) -> Optional[List[str]]:
+    if value is None:
         return None
 
-    match = re.search(r"\d+(\.\d+)?", text)
-    if not match:
+    if isinstance(value, str):
+        cleaned = value.strip()
+        return [cleaned] if cleaned else None
+
+    if not isinstance(value, list):
         return None
 
-    try:
-        return float(match.group(0))
-    except ValueError:
+    tags: List[str] = []
+    seen = set()
+    for item in value:
+        if item is None:
+            continue
+        cleaned = str(item).strip()
+        if not cleaned:
+            continue
+        normalized_key = cleaned.casefold()
+        if normalized_key in seen:
+            continue
+        seen.add(normalized_key)
+        tags.append(cleaned)
+
+    return tags or None
+
+
+def _normalize_course_input(course_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    title = _normalize_str(course_data.get("name") or course_data.get("title"))
+    url = _normalize_str(course_data.get("url"))
+
+    if not title or not url:
         return None
 
-
-def _infer_source(url: str) -> Optional[str]:
-    if not url:
-        return None
-
-    parsed = urlparse(url)
-    host = (parsed.netloc or "").lower()
-
-    if "coursera" in host:
-        return "coursera"
-    if "udemy" in host:
-        return "udemy"
-    if host:
-        return host.replace("www.", "")
-
-    return None
-
-
-def normalize_course_data(course_data: dict) -> dict:
-    course_url = (course_data.get("course_url") or course_data.get("link") or "").strip()
-    source = (course_data.get("source") or "").strip() or _infer_source(course_url)
-
-    normalized = {
-        "track": (course_data.get("track") or "").strip(),
-        "title": (course_data.get("title") or "").strip(),
-        "instructor": (course_data.get("instructor") or "").strip() or None,
-        "rating": _parse_rating(course_data.get("rating")),
-        "reviews": (course_data.get("reviews") or "").strip() or None,
-        "duration": (course_data.get("duration") or "").strip() or None,
-        "level": (course_data.get("level") or "").strip() or None,
-        "language": (course_data.get("language") or "").strip() or None,
-        "price": (course_data.get("price") or "").strip() or None,
-        "original_price": (course_data.get("original_price") or "").strip() or None,
-        "course_url": course_url,
-        "source": source,
+    return {
+        "platform": _normalize_str(course_data.get("platform")),
+        "title": title,
+        "instructor": _normalize_str(course_data.get("instructor")),
+        "tags": _normalize_tags(course_data.get("tags")),
+        "duration": _normalize_str(course_data.get("duration")),
+        "url": url,
+        "category": _normalize_str(course_data.get("category")),
+        "level": _normalize_str(course_data.get("level")),
+        "price": _normalize_str(course_data.get("price")),
+        "language": _normalize_str(course_data.get("language")),
     }
-
-    return normalized
-
-
-def bulk_insert_courses(db: Session, courses_data: List[dict]) -> Tuple[List[Course], int, int, List[Dict[str, Any]]]:
-    created_courses: List[Course] = []
-    updated_count = 0
-    skipped_count = 0
-    skipped_items: List[Dict[str, Any]] = []
-
-    try:
-        for index, course_data in enumerate(courses_data):
-            try:
-                if not isinstance(course_data, dict):
-                    skipped_count += 1
-                    skipped_items.append({
-                        "index": index,
-                        "reason": "Course item must be a JSON object",
-                    })
-                    continue
-
-                normalized = normalize_course_data(course_data)
-
-                if not normalized["track"] or not normalized["title"] or not normalized["course_url"]:
-                    skipped_count += 1
-                    skipped_items.append({
-                        "index": index,
-                        "title": normalized.get("title") or None,
-                        "reason": "Missing required fields: track/title/course_url",
-                    })
-                    continue
-
-                existing_course = db.query(Course).filter(Course.course_url == normalized["course_url"]).first()
-
-                if existing_course:
-                    for key, value in normalized.items():
-                        if hasattr(existing_course, key):
-                            setattr(existing_course, key, value)
-                    db.add(existing_course)
-                    updated_count += 1
-                    continue
-
-                course = Course(**normalized)
-                db.add(course)
-                created_courses.append(course)
-
-            except IntegrityError:
-                db.rollback()
-                skipped_count += 1
-                skipped_items.append({
-                    "index": index,
-                    "title": (course_data.get("title") if isinstance(course_data, dict) else None),
-                    "reason": "IntegrityError while inserting/updating course",
-                })
-            except Exception as exc:
-                skipped_count += 1
-                skipped_items.append({
-                    "index": index,
-                    "title": (course_data.get("title") if isinstance(course_data, dict) else None),
-                    "reason": f"Unexpected error while processing course: {str(exc)}",
-                })
-
-        db.commit()
-
-        for course in created_courses:
-            db.refresh(course)
-
-    except Exception:
-        db.rollback()
-        raise
-
-    return created_courses, updated_count, skipped_count, skipped_items
-
-
-def fetch_courses_filtered(
-    db: Session,
-    skip: int = 0,
-    limit: int = 20,
-    query: Optional[str] = None,
-    track: Optional[str] = None,
-    level: Optional[str] = None,
-    language: Optional[str] = None,
-    instructor: Optional[str] = None,
-    source: Optional[str] = None,
-    duration: Optional[str] = None,
-    min_rating: Optional[float] = None,
-    max_rating: Optional[float] = None,
-) -> Tuple[List[Course], int]:
-    limit = min(limit, 100)
-
-    query_obj = db.query(Course)
-
-    if query:
-        search_pattern = f"%{query.strip()}%"
-        query_obj = query_obj.filter(
-            or_(
-                Course.title.ilike(search_pattern),
-                Course.track.ilike(search_pattern),
-                Course.instructor.ilike(search_pattern),
-            )
-        )
-
-    if track:
-        query_obj = query_obj.filter(Course.track.ilike(f"%{track.strip()}%"))
-    if level:
-        query_obj = query_obj.filter(Course.level.ilike(f"%{level.strip()}%"))
-    if language:
-        query_obj = query_obj.filter(Course.language.ilike(f"%{language.strip()}%"))
-    if instructor:
-        query_obj = query_obj.filter(Course.instructor.ilike(f"%{instructor.strip()}%"))
-    if source:
-        query_obj = query_obj.filter(Course.source.ilike(f"%{source.strip()}%"))
-    if duration:
-        query_obj = query_obj.filter(Course.duration.ilike(f"%{duration.strip()}%"))
-
-    if min_rating is not None:
-        query_obj = query_obj.filter(Course.rating >= min_rating)
-    if max_rating is not None:
-        query_obj = query_obj.filter(Course.rating <= max_rating)
-
-    total_count = query_obj.with_entities(func.count(Course.id)).scalar() or 0
-    courses = query_obj.order_by(Course.created_at.desc()).offset(skip).limit(limit).all()
-
-    return courses, total_count
 
 
 def fetch_course_by_id(db: Session, course_id: UUID) -> Optional[Course]:
     return db.query(Course).filter(Course.id == course_id).first()
+
+
+def get_courses_grouped(db: Session) -> Dict[str, Dict[str, List[Course]]]:
+    courses = db.query(Course).order_by(Course.category.asc().nullsfirst(), Course.title.asc()).all()
+
+    grouped: Dict[str, Dict[str, List[Course]]] = {}
+    for course in courses:
+        category = (course.category or "Uncategorized").strip() or "Uncategorized"
+        tags = [tag.strip() for tag in (course.tags or []) if tag and tag.strip()]
+        if not tags:
+            tags = ["Unspecified"]
+
+        category_group = grouped.setdefault(category, {})
+        for tag in tags:
+            category_group.setdefault(tag, []).append(course)
+
+    return grouped
+
+
+def get_courses_by_category(db: Session, category: str) -> Dict[str, List[Course]]:
+    normalized_category = category.strip()
+    courses = db.query(Course).filter(func.lower(Course.category) == normalized_category.lower()).order_by(Course.title.asc()).all()
+
+    grouped_by_skill: Dict[str, List[Course]] = {}
+    for course in courses:
+        tags = [tag.strip() for tag in (course.tags or []) if tag and tag.strip()]
+        if not tags:
+            tags = ["Unspecified"]
+
+        for tag in tags:
+            grouped_by_skill.setdefault(tag, []).append(course)
+
+    return grouped_by_skill
+
+
+def get_courses_by_skill(db: Session, tag: str, category: Optional[str] = None) -> List[Course]:
+    normalized_tag = tag.strip().casefold()
+
+    query_obj = db.query(Course)
+    if category:
+        query_obj = query_obj.filter(func.lower(Course.category) == category.strip().lower())
+
+    courses = query_obj.order_by(Course.title.asc()).all()
+    return [
+        course
+        for course in courses
+        if any((course_tag or "").strip().casefold() == normalized_tag for course_tag in (course.tags or []))
+    ]
 
 
 def _validate_user_and_course(db: Session, user_id: UUID, course_id: UUID) -> None:
@@ -207,60 +131,119 @@ def _validate_user_and_course(db: Session, user_id: UUID, course_id: UUID) -> No
         raise ValueError(f"Course with ID {course_id} not found")
 
 
-def set_course_saved_state(db: Session, user_id: UUID, course_id: UUID, is_saved: bool) -> CourseUserInteraction:
-    _validate_user_and_course(db, user_id, course_id)
+def update_course_status(db: Session, user_id: UUID, course_id: UUID, status: str) -> CourseUserProgress:
+    normalized_status = (status or "").strip().lower()
+    if normalized_status not in VALID_COURSE_STATUSES:
+        raise ValueError("Invalid status. Allowed values: saved, enrolled, completed")
 
-    interaction = db.query(CourseUserInteraction).filter(
-        CourseUserInteraction.user_id == user_id,
-        CourseUserInteraction.course_id == course_id,
-    ).first()
+    _validate_user_and_course(db, user_id, course_id)
 
     now = datetime.now(UTC)
 
-    if not interaction:
-        interaction = CourseUserInteraction(
-            user_id=user_id,
-            course_id=course_id,
-            is_saved=is_saved,
-            saved_at=now if is_saved else None,
+    insert_values: Dict[str, Any] = {
+        "user_id": user_id,
+        "course_id": course_id,
+        "status": normalized_status,
+        "saved_at": now if normalized_status == "saved" else None,
+        "started_at": now if normalized_status == "enrolled" else None,
+        "completed_at": now if normalized_status == "completed" else None,
+    }
+
+    update_values: Dict[str, Any] = {
+        "status": normalized_status,
+        "updated_at": now,
+    }
+
+    if normalized_status == "saved":
+        update_values["saved_at"] = now
+    elif normalized_status == "enrolled":
+        update_values["started_at"] = now
+    elif normalized_status == "completed":
+        update_values["completed_at"] = now
+
+    upsert_stmt = (
+        pg_insert(CourseUserProgress)
+        .values(**insert_values)
+        .on_conflict_do_update(
+            index_elements=[CourseUserProgress.user_id, CourseUserProgress.course_id],
+            set_=update_values,
         )
-        db.add(interaction)
-    else:
-        interaction.is_saved = is_saved
-        interaction.saved_at = now if is_saved else None
-        db.add(interaction)
-
-    try:
-        db.commit()
-    except IntegrityError:
-        db.rollback()
-        raise ValueError("Invalid course or user reference for interaction")
-
-    db.refresh(interaction)
-    return interaction
-
-
-def fetch_user_saved_courses(
-    db: Session,
-    user_id: UUID,
-    skip: int = 0,
-    limit: int = 20,
-) -> Tuple[List[Course], int]:
-    limit = min(limit, 100)
-
-    user_exists = db.query(User.id).filter(User.id == user_id).first()
-    if not user_exists:
-        raise ValueError(f"User with ID {user_id} not found")
-
-    query_obj = db.query(Course).join(
-        CourseUserInteraction,
-        CourseUserInteraction.course_id == Course.id,
-    ).filter(
-        CourseUserInteraction.user_id == user_id,
-        CourseUserInteraction.is_saved.is_(True),
+        .returning(CourseUserProgress.id)
     )
 
-    total_count = query_obj.count()
-    courses = query_obj.order_by(CourseUserInteraction.saved_at.desc().nullslast()).offset(skip).limit(limit).all()
+    try:
+        progress_id = db.execute(upsert_stmt).scalar_one()
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
 
-    return courses, total_count
+    progress = db.query(CourseUserProgress).filter(CourseUserProgress.id == progress_id).first()
+    if not progress:
+        raise ValueError("Failed to fetch updated course progress")
+
+    return progress
+
+
+def bulk_import_courses(db: Session, courses_data: List[dict]) -> Dict[str, Any]:
+    inserted = 0
+    skipped = 0
+    duplicates: List[str] = []
+
+    try:
+        for item in courses_data:
+            if not isinstance(item, dict):
+                skipped += 1
+                continue
+
+            normalized = _normalize_course_input(item)
+            if not normalized:
+                skipped += 1
+                continue
+
+            stmt = (
+                pg_insert(Course)
+                .values(**normalized)
+                .on_conflict_do_nothing(index_elements=[Course.url])
+                .returning(Course.id)
+            )
+
+            inserted_id = db.execute(stmt).scalar_one_or_none()
+            if inserted_id:
+                inserted += 1
+            else:
+                skipped += 1
+                duplicates.append(normalized["url"])
+
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+
+    return {
+        "inserted": inserted,
+        "skipped": skipped,
+        "total_processed": len(courses_data),
+        "duplicates": duplicates,
+    }
+
+
+# Aliases required by external callers using camelCase naming.
+def getCoursesGrouped(db: Session) -> Dict[str, Dict[str, List[Course]]]:
+    return get_courses_grouped(db)
+
+
+def getCoursesByCategory(db: Session, category: str) -> Dict[str, List[Course]]:
+    return get_courses_by_category(db, category)
+
+
+def getCoursesBySkill(db: Session, tag: str, category: Optional[str] = None) -> List[Course]:
+    return get_courses_by_skill(db, tag, category)
+
+
+def updateCourseStatus(db: Session, user_id: UUID, course_id: UUID, status: str) -> CourseUserProgress:
+    return update_course_status(db, user_id, course_id, status)
+
+
+def bulkImportCourses(db: Session, courses_data: List[dict]) -> Dict[str, Any]:
+    return bulk_import_courses(db, courses_data)

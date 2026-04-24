@@ -729,18 +729,16 @@ class Course(Base):
     __tablename__ = "courses"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    track = Column(String, nullable=False, index=True)
+    platform = Column(String, nullable=True)
     title = Column(String, nullable=False, index=True)
     instructor = Column(String, nullable=True)
-    rating = Column(Float, nullable=True)
-    reviews = Column(String, nullable=True)
+    tags = Column(ARRAY(Text), nullable=True)
     duration = Column(String, nullable=True)
+    url = Column(Text, nullable=False, unique=True)
+    category = Column(String, nullable=True, index=True)
     level = Column(String, nullable=True, index=True)
-    language = Column(String, nullable=True)
     price = Column(String, nullable=True)
-    original_price = Column(String, nullable=True)
-    course_url = Column(String, nullable=False, unique=True)
-    source = Column(String, nullable=True)
+    language = Column(String, nullable=True)
 
     created_at = Column(
         DateTime(timezone=True),
@@ -755,25 +753,27 @@ class Course(Base):
         nullable=False
     )
 
-    user_interactions = relationship("CourseUserInteraction", back_populates="course", cascade="all, delete-orphan")
+    user_progress = relationship("CourseUserProgress", back_populates="course", cascade="all, delete-orphan")
 
     __table_args__ = (
-        Index("idx_course_track_level", "track", "level"),
+        Index("idx_course_category_level", "category", "level"),
         Index("idx_course_created_at", "created_at"),
     )
 
 
 # =========================
-# COURSE USER INTERACTIONS
+# COURSE USER PROGRESS
 # =========================
-class CourseUserInteraction(Base):
-    __tablename__ = "course_user_interactions"
+class CourseUserProgress(Base):
+    __tablename__ = "course_user_progress"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    course_id = Column(UUID(as_uuid=True), ForeignKey("courses.id"), nullable=False)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    is_saved = Column(Boolean, nullable=False, default=False)
-    saved_at = Column(DateTime(timezone=True), nullable=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    course_id = Column(UUID(as_uuid=True), ForeignKey("courses.id", ondelete="CASCADE"), nullable=False)
+    status = Column(String, nullable=False)
+    started_at = Column(DateTime(timezone=True), nullable=True)
+    completed_at = Column(DateTime(timezone=True), nullable=True)
+    saved_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=True)
     created_at = Column(
         DateTime(timezone=True),
         server_default=func.now(),
@@ -786,11 +786,11 @@ class CourseUserInteraction(Base):
         nullable=False
     )
 
-    course = relationship("Course", back_populates="user_interactions")
+    course = relationship("Course", back_populates="user_progress")
     user = relationship("User")
 
     __table_args__ = (
-        UniqueConstraint("course_id", "user_id", name="uq_course_user_interaction_user_course"),
-        Index("idx_course_user_interactions_user_saved", "user_id", "is_saved"),
-        Index("idx_course_user_interactions_saved_at", "saved_at"),
+        UniqueConstraint("user_id", "course_id", name="unique_user_course"),
+        Index("idx_course_user_progress_user_status", "user_id", "status"),
+        Index("idx_course_user_progress_saved_at", "saved_at"),
     )

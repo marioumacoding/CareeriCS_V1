@@ -296,7 +296,6 @@ export default function CareerDiscoveryPage() {
                         image={CARD_IMAGE_PATH}
                         buttonVariant="primary-inverted"
                         buttonLabel="Learn More"
-                        blogPath={blogPath}
                         onClick={() => router.push(blogPath)}
                       />
                     );

@@ -39,6 +39,13 @@ def normalize_job_data(job_data: dict) -> dict:
     normalized["education_level"] = details.get("education_level") or job_data.get("education_level")
     normalized["salary"] = details.get("salary") or job_data.get("salary")
 
+    # NEW FIELDS: Handle description breakdowns from the schema
+    normalized["description_about_role"] = job_data.get("description_about_role")
+    normalized["description_key_responsibilities"] = job_data.get("description_key_responsibilities")
+    normalized["description_requirements"] = job_data.get("description_requirements")
+    normalized["description_nice_to_have"] = job_data.get("description_nice_to_have")
+    normalized["description_skills_needed"] = job_data.get("description_skills_needed")
+
     normalized["posted_date"] = None
     normalized["scraped_at"] = datetime.now(UTC)
 
@@ -112,6 +119,11 @@ def bulk_insert_jobs(db: Session, jobs_data: List[dict]) -> Tuple[List[JobPost],
                     categories=normalized.get('categories') or [],
                     skills=normalized.get('skills') or [],
                     scraped_at=normalized.get('scraped_at'),
+                    description_about_role=normalized.get('description_about_role'),
+                    description_key_responsibilities=normalized.get('description_key_responsibilities'),
+                    description_requirements=normalized.get('description_requirements'),
+                    description_nice_to_have=normalized.get('description_nice_to_have'),
+                    description_skills_needed=normalized.get('description_skills_needed'),
                 )
                 
                 db.add(job_post)
@@ -127,7 +139,8 @@ def bulk_insert_jobs(db: Session, jobs_data: List[dict]) -> Tuple[List[JobPost],
                     "reason": "IntegrityError while inserting/updating job",
                 })
             except Exception as exc:
-                # Skip individual jobs that fail
+                # Rollback on any other exception to prevent session corruption
+                db.rollback()
                 skipped_count += 1
                 skipped_items.append({
                     "index": index,

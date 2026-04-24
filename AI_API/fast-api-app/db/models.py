@@ -662,6 +662,11 @@ class JobPost(Base):
     salary = Column(String, nullable=True)
     categories = Column(ARRAY(String), nullable=True)
     skills = Column(ARRAY(String), nullable=True)
+    description_about_role = Column(Text, nullable=True)
+    description_key_responsibilities = Column(Text, nullable=True)
+    description_requirements = Column(Text, nullable=True)
+    description_nice_to_have = Column(Text, nullable=True)
+    description_skills_needed = Column(Text, nullable=True)
 
     created_at = Column(
         DateTime(timezone=True),

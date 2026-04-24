@@ -628,6 +628,11 @@ class JobPostBase(BaseModel):
     salary: Optional[str] = None
     categories: Optional[List[str]] = Field(default_factory=list)
     skills: Optional[List[str]] = Field(default_factory=list)
+    description_about_role: Optional[str] = None
+    description_key_responsibilities: Optional[str] = None
+    description_requirements: Optional[str] = None
+    description_nice_to_have: Optional[str] = None
+    description_skills_needed: Optional[str] = None
 
 
 class JobPostCreate(JobPostBase):

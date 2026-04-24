@@ -2,7 +2,8 @@
 
 import ChoiceCard from "@/components/ui/choice-card-home";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CareersCard, RecentActivityCard, JourneyProgressCard, NextPhaseCard, CurrentPhaseCard } from "@/components/ui/dashboardCards";
+import { RecentActivityCard, JourneyProgressCard, NextPhaseCard, CurrentPhaseCard } from "@/components/ui/dashboardCards";
+import { CareerCardsContainer } from "@/components/ui/career-cards-container";
 import { useAuth } from "@/providers/auth-provider";
 import { careerService, interviewService, reportsService, skillAssessmentService } from "@/services";
 import {
@@ -374,8 +375,7 @@ export default function HomePage() {
         gridRowGap: "20px",
       }}
     >
-      <CareersCard
-        careers={careerData}
+      <CareerCardsContainer
         style={{ gridArea: "1 / 1 / 3 / 4" }}
       >
         {careerData.map((career) => (
@@ -391,7 +391,7 @@ export default function HomePage() {
             type={career.type || ""}
           />
         ))}
-      </CareersCard>
+      </CareerCardsContainer>
 
       <RecentActivityCard
         activities={dashboardData.activities}

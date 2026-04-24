@@ -70,52 +70,6 @@ const CircleScoreSVG = ({
   );
 };
 
-// --- Card 1: CareersCard ---
-export const CareersCard = ({ children, style }: any) => {
-  
-  
-  return (
-    <div
-      style={{
-        backgroundColor: "#1C427B",
-        borderRadius: "3vh",
-        paddingTop: "3vh",
-        paddingLeft: "4vh",
-        paddingRight: "4vh",
-        paddingBottom: "7vh",
-        color: "white",
-        height: "100%",
-        ...style,
-      }}
-    >
-      <h3
-        style={{
-          fontSize: "1.1rem",
-          fontFamily: "var(--font-nova-square)",
-          fontWeight: "200",
-          position: "relative",
-          marginBottom: "1vh",
-        }}
-      >
-        Your Careers
-      </h3>
-
-      <div
-        style={{
-          display: "grid",
-          position: "relative",
-          height: "100%",
-          gap: "20px",
-          paddingBottom:"2vh",
-          gridTemplateColumns:"repeat(3,1fr)"
-        }}
-      >
-
-        {children}
-      </div>
-    </div>
-  );
-};
 
 // --- Card 2: Recent Activity ---
 export const RecentActivityCard = ({ activities, style }: any) => {
@@ -228,7 +182,7 @@ export const RecentActivityCard = ({ activities, style }: any) => {
           display: "flex",
           width: "fit-content",
           marginLeft: "auto",
-          marginTop:"auto",
+          marginTop: "auto",
         }} >
 
         <div
@@ -283,9 +237,9 @@ export const JourneyProgressCard = ({ percentage = 10, style }: any) => {
         justifyItems: "center",
         ...style,
         overflow: "hidden",
-        display:"flex",
-        flexDirection:"column",
-        alignItems:"center",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
       }}
     >
       <h3
@@ -325,16 +279,16 @@ export const CurrentPhaseCard = ({ percentage = 10, style }: any) => {
         justifyItems: "center",
         ...style,
         overflow: "hidden",
-        display:"flex",
-        flexDirection:"column",
-        alignItems:"center"
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center"
       }}
     >
       <h3
         style={{
           fontSize: "1.1rem",
           fontFamily: "var(--font-nova-square)",
-          marginBottom:"auto",
+          marginBottom: "auto",
         }}
       >
         Current Phase
@@ -371,7 +325,7 @@ export const NextPhaseCard = ({ style, desc, phaseNumber }: NextPhaseCardProps) 
       justifyContent: "space-between",
       height: "100%",
       paddingLeft: "3vw",
-      overflow:"clip",
+      overflow: "clip",
       ...style,
     }}
   >

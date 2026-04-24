@@ -72,6 +72,21 @@ export default function ChoiceCard({
           marginBottom: 0,
         }}
       >
+        <div style={{ display: "flex", justifyContent:"space-between", }}>
+
+          {/* Image */}
+
+          {!isBookmark && <img
+            src={image || icon || ""}
+            alt={title || "career icon"}
+            style={{
+              width: "2.5rem",
+              height: "auto",
+              display: "block",
+              filter: effectiveSelected ? "none" : "invert(1)",
+              marginBottom: "0.5rem",
+            }}
+          />}
 
           {!isBookmark && (
             <div
@@ -82,7 +97,7 @@ export default function ChoiceCard({
                 color: effectiveSelected ? "var(--hover-green)" : "black",
                 cursor: effectiveSelected ? "default" : "pointer",
                 fontFamily: "var(--font-nova-square)",
-                height:"fit-content",
+                height: "fit-content",
               }}
               onClick={onClick}
             >
@@ -90,27 +105,14 @@ export default function ChoiceCard({
             </div>
           )}
 
-          {/* Image */}
-  
-          {!isBookmark && <img
-            src={image || icon || ""}
-            alt={title || "career icon"}
-            style={{
-              width: "2.5rem",
-              height: "auto",
-              display: "block",
-              filter: effectiveSelected ? "none" : "invert(1)",
-              marginBottom:"0.5rem",
-            }}
-          />}
-
+        </div>
 
 
         {/* Title */}
         <p
           style={{
             fontSize: "1.2rem",
-            width: "max-content",
+            width: "100%",
             marginRight: "auto",
             marginTop: "0",
             position: "relative",
@@ -130,7 +132,7 @@ export default function ChoiceCard({
           margin: 0,
           textAlign: "left",
           marginTop: 0,
-          marginRight:"auto",
+          marginRight: "auto",
         }}
       >
         {description}

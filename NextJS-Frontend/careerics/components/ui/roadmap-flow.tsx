@@ -73,6 +73,14 @@ export const StepFlow: React.FC<StepFlowProps> = ({
   const toSlug = (text: string) =>
     text.toLowerCase().replace(/\s+/g, "-");
 
+  const resolveStepParam = (node: StepNode): string => {
+    if (node.href && node.href !== "#") {
+      return node.href;
+    }
+
+    return node.label ? toSlug(node.label) : "";
+  };
+
   return (
     <div
       style={{
@@ -122,15 +130,19 @@ export const StepFlow: React.FC<StepFlowProps> = ({
                 onSelect?.(node.globalIndex);
 
                 if (isNavigatable && routeOnClick && node.label) {
-                  router.push(
-                    `/roadmap-feature${
-                      roadmapId
-                        ? `?roadmap=${roadmapId}&step=${toSlug(
-                            node.label
-                          )}`
-                        : `?step=${toSlug(node.label)}`
-                    }`
-                  );
+                  const params = new URLSearchParams();
+                  const stepParam = resolveStepParam(node);
+
+                  if (roadmapId) {
+                    params.set("roadmap", roadmapId);
+                  }
+
+                  if (stepParam) {
+                    params.set("step", stepParam);
+                  }
+
+                  const query = params.toString();
+                  router.push(query ? `/roadmap-feature?${query}` : "/roadmap-feature");
                 }
               }}
               style={{
@@ -179,6 +191,7 @@ export const StepFlow: React.FC<StepFlowProps> = ({
               >
                 <img
                   src="/connector.svg"
+                  alt=""
                   style={{
                     width: "100%",
                     height: "100%",
@@ -204,6 +217,7 @@ export const StepFlow: React.FC<StepFlowProps> = ({
               >
                 <img
                   src="/connectorV.svg"
+                  alt=""
                   style={{
                     width: "100%",
                     height: "100%",

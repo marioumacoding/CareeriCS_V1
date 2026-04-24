@@ -117,13 +117,15 @@ export default function CVCrafting() {
 
   const lastVersionLabel = reports[0]?.filename ?? "No extracted version";
 
-  const handleDownloadReport = (item: { id: string }) => {
+  const handleDownloadReport = (item: { id: string; label?: string }) => {
     const downloadUrl = reportsService.getReportDownloadUrl(item.id);
     const link = document.createElement("a");
     link.href = downloadUrl;
-    link.target = "_blank";
+    link.download = item.label ?? "cv-report.pdf";
     link.rel = "noopener noreferrer";
+    document.body.appendChild(link);
     link.click();
+    link.remove();
   };
 
   return (
@@ -166,6 +168,7 @@ export default function CVCrafting() {
         <ArchiveCard
           items={archiveItems}
           title="Old Versions"
+          onDownload={handleDownloadReport}
           style={{ gridArea: "1 / 5 / 7 / 7", backgroundColor: "var(--medium-blue)" }}
         />
 

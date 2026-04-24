@@ -1,9 +1,24 @@
 "use client";
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import ChoiceCard from "@/components/ui/choice-card-career";
 import { useAuth } from "@/providers/auth-provider";
 import { careerService } from "@/services";
+import type { APICareerTrack } from "@/types";
+
+const CARD_IMAGE_PATH = "/Landing/Rectangle.svg";
+const VISIBLE_TRACKS_COUNT = 4;
+const TRACK_DESCRIPTION_FALLBACK =
+  "Explore this path and see what the day-to-day work, opportunities, and growth can look like.";
+
+function buildTrackBlogPath(track: APICareerTrack): string {
+  const params = new URLSearchParams({
+    jobTitle: track.name,
+    trackId: track.id,
+  });
+
+  return `/quiz-features/blog?${params.toString()}`;
+}
 
 export default function CareerDiscoveryPage() {
   const router = useRouter();
@@ -11,54 +26,56 @@ export default function CareerDiscoveryPage() {
 
   const [isStartingQuiz, setIsStartingQuiz] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
-
-  const careerPaths = [
-  {
-    title: "Backend Development",
-    desc: "Build secure APIs, databases, and server-side logic.",
-    image: "/Landing/Rectangle.svg",
-  },
-  {
-    title: "Frontend Development",
-    desc: "Build responsive interfaces and interactive features for users.",
-    image: "/Landing/Rectangle.svg",
-  },
-  {
-    title: "UI/UX Design",
-    desc: "Design user-friendly layouts to improve usability and navigation.",
-    image: "/Landing/Rectangle.svg",
-  },
-  {
-    title: "Data Science",
-    desc: "Analyze datasets to discover patterns and support decisions.",
-    image: "/Landing/Rectangle.svg",
-  },
-  {
-    title: "Machine Learning",
-    desc: "Create models to automate tasks and provide predictions.",
-    image: "/Landing/Rectangle.svg",
-  },
-  {
-    title: "Cybersecurity",
-    desc: "Secure systems and networks by detecting and preventing attacks.",
-    image: "/Landing/Rectangle.svg",
-  },
-];
+  const [careerTracks, setCareerTracks] = useState<APICareerTrack[]>([]);
+  const [isLoadingTracks, setIsLoadingTracks] = useState(true);
+  const [tracksError, setTracksError] = useState<string | null>(null);
 
   const [startIndex, setStartIndex] = useState(0);
 
-  const visibleCards = careerPaths.slice(startIndex, startIndex + 4);
+  useEffect(() => {
+    let alive = true;
+
+    const loadCareerTracks = async () => {
+      setIsLoadingTracks(true);
+
+      const response = await careerService.listTracks();
+      if (!alive) {
+        return;
+      }
+
+      if (!response.success || !response.data) {
+        setCareerTracks([]);
+        setTracksError(response.message || "Unable to load career tracks right now.");
+        setIsLoadingTracks(false);
+        return;
+      }
+
+      setCareerTracks(response.data);
+      setTracksError(null);
+      setIsLoadingTracks(false);
+    };
+
+    void loadCareerTracks();
+
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const maxStartIndex = Math.max(0, careerTracks.length - VISIBLE_TRACKS_COUNT);
+  const safeStartIndex = Math.min(startIndex, maxStartIndex);
+
+  const visibleCards = useMemo(
+    () => careerTracks.slice(safeStartIndex, safeStartIndex + VISIBLE_TRACKS_COUNT),
+    [careerTracks, safeStartIndex],
+  );
 
   const handleNext = () => {
-    if (startIndex + 4 < careerPaths.length) {
-      setStartIndex(startIndex + 1);
-    }
+    setStartIndex(Math.min(safeStartIndex + 1, maxStartIndex));
   };
 
   const handlePrev = () => {
-    if (startIndex > 0) {
-      setStartIndex(startIndex - 1);
-    }
+    setStartIndex(Math.max(safeStartIndex - 1, 0));
   };
 
   const handleStartQuiz = async () => {
@@ -193,7 +210,7 @@ export default function CareerDiscoveryPage() {
             }}
           >
             {/* Left Arrow */}
-            {startIndex > 0 && (
+            {safeStartIndex > 0 && (
               <div
                 onClick={handlePrev}
                 style={{
@@ -217,20 +234,78 @@ export default function CareerDiscoveryPage() {
                 marginTop: "-2vh",
               }}
             >
-              {visibleCards.map((path, idx) => (
-                <ChoiceCard
-                  key={idx}
-                  title={path.title}
-                  description={path.desc}
-                  image={path.image}
-                  buttonVariant="primary-inverted"
-                  buttonLabel="Learn More"
-                />
-              ))}
+              {isLoadingTracks ? (
+                <div
+                  style={{
+                    gridColumn: "1 / -1",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#D7E3FF",
+                    fontFamily: "var(--font-jura)",
+                    fontSize: "1rem",
+                  }}
+                >
+                  Loading career tracks...
+                </div>
+              ) : null}
+
+              {!isLoadingTracks && tracksError ? (
+                <div
+                  style={{
+                    gridColumn: "1 / -1",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#FFD3D3",
+                    textAlign: "center",
+                    fontFamily: "var(--font-jura)",
+                    fontSize: "1rem",
+                    paddingInline: "2vw",
+                  }}
+                >
+                  {tracksError}
+                </div>
+              ) : null}
+
+              {!isLoadingTracks && !tracksError && !visibleCards.length ? (
+                <div
+                  style={{
+                    gridColumn: "1 / -1",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#D7E3FF",
+                    fontFamily: "var(--font-jura)",
+                    fontSize: "1rem",
+                  }}
+                >
+                  No career tracks are available yet.
+                </div>
+              ) : null}
+
+              {!isLoadingTracks && !tracksError
+                ? visibleCards.map((track) => {
+                    const blogPath = buildTrackBlogPath(track);
+
+                    return (
+                      <ChoiceCard
+                        key={track.id}
+                        title={track.name}
+                        description={track.description || TRACK_DESCRIPTION_FALLBACK}
+                        image={CARD_IMAGE_PATH}
+                        buttonVariant="primary-inverted"
+                        buttonLabel="Learn More"
+                        blogPath={blogPath}
+                        onClick={() => router.push(blogPath)}
+                      />
+                    );
+                  })
+                : null}
             </div>
 
             {/* Right Arrow */}
-            {startIndex + 3 < careerPaths.length && (
+            {safeStartIndex < maxStartIndex && (
               <div
                 onClick={handleNext}
                 style={{

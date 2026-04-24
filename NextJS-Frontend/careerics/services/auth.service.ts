@@ -25,6 +25,18 @@ export interface RegisterPayload {
   displayName: string;
 }
 
+function buildSafeUsername(email: string): string {
+  const localPart = (email.split("@")[0] || "").trim().toLowerCase();
+  const sanitizedBase = localPart
+    .replace(/[^a-z0-9_]/g, "_")
+    .replace(/_+/g, "_")
+    .replace(/^_+|_+$/g, "");
+  const base = sanitizedBase.slice(0, 20) || "user";
+  const suffix = Math.random().toString(36).slice(2, 8);
+
+  return `${base}_${suffix}`;
+}
+
 function getSafeInternalCallbackPath(callbackUrl?: string): string | null {
   if (!callbackUrl) return null;
   return callbackUrl.startsWith("/") ? callbackUrl : null;
@@ -38,20 +50,34 @@ export const authService = {
    * "Confirm email" is enabled in your Supabase dashboard.
    */
   async signUp({ email, password, displayName }: RegisterPayload) {
-    const username = (email.split("@")[0] || "user").trim().toLowerCase();
+    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedDisplayName = displayName.trim();
+    const fallbackName = normalizedEmail.split("@")[0] || "User";
+    const username = buildSafeUsername(normalizedEmail);
+
     const { data, error } = await supabase.auth.signUp({
-      email,
+      email: normalizedEmail,
       password,
       options: {
         // Store extra profile info in Supabase user_metadata
         data: {
-          display_name: displayName,
-          full_name: displayName,
+          display_name: normalizedDisplayName || fallbackName,
+          full_name: normalizedDisplayName || fallbackName,
           username,
         },
       },
     });
-    if (error) throw error;
+
+    if (error) {
+      if (error.message === "Database error saving new user") {
+        throw new Error(
+          "We could not create your profile details yet. Please retry, and if it still fails try a different email."
+        );
+      }
+
+      throw error;
+    }
+
     return data;
   },
 

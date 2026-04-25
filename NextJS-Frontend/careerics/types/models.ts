@@ -232,6 +232,7 @@ export interface RoadmapSectionRead {
   title: string;
   description?: string;
   order: number;
+  courses_count?: number;
   steps: RoadmapStepRead[];
 }
 
@@ -248,6 +249,32 @@ export interface RoadmapListItem {
   description?: string;
   sections_count: number;
   steps_count: number;
+}
+
+export interface RoadmapCourse {
+  id: string;
+  provider: string;
+  title: string;
+  url: string;
+  description?: string | null;
+  language?: string | null;
+  is_free?: boolean | null;
+  rating?: number | null;
+  provider_course_id?: string | null;
+  rank_in_provider?: number | null;
+}
+
+export interface RoadmapCoursesSection {
+  section_id: string;
+  section_title: string;
+  order: number;
+  courses: RoadmapCourse[];
+}
+
+export interface RoadmapCoursesRead {
+  roadmap_id: string;
+  roadmap_title: string;
+  sections: RoadmapCoursesSection[];
 }
 
 export interface UserRoadmapBookmark {

@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import RootLayout from "@/app/features/layout";
 import SkillFilters, {
   type SkillFilterTrackOption,
   type SkillFilterType,
@@ -26,6 +25,9 @@ import type {
   RoadmapListItem,
   RoadmapRead,
 } from "@/types";
+import { CardsContainer } from "@/components/ui/cards-container";
+import { RectangularCard } from "@/components/ui/rectangular-card";
+import { ActivityCard } from "@/components/ui/activity-card";
 
 type AssessmentTarget = {
   id: string;
@@ -949,35 +951,28 @@ export default function SkillAssessment() {
   return (
     <div
       style={{
-        width: "100vw",
-        height: "100vh",
-        padding: "2vh 2vw",
-        boxSizing: "border-box",
-        backgroundColor: "#000",
+        width: "100%",
+        height: "100%",
         overflow: "hidden",
       }}
     >
-      <RootLayout
+      <div
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(5, 1fr)",
-          gridTemplateRows: "repeat(6, 1fr)",
-          columnGap: "1.5vw",
-          rowGap: "1vh",
+          gridTemplateRows: "repeat(8, 1fr)",
+          columnGap: "25px",
+          rowGap: "20px",
           height: "100%",
           width: "100%",
-          borderRadius: "3vh",
-          padding: "1vh 2vw",
-          boxSizing: "border-box",
-          marginTop: "0",
-          zIndex: 1,
+          padding: "40px",
         }}
       >
         <div
           style={{
-            gridArea: "2/ 1 / 2 / 3",
+            gridArea: "1/ 1 / 4 / 3",
             backgroundColor: "#1C427B",
-            borderRadius: "2vh",
+            borderRadius: "4vh",
             padding: "3vh 2vw",
             display: "flex",
             flexDirection: "column",
@@ -998,137 +993,141 @@ export default function SkillAssessment() {
           />
         </div>
 
-        <div
+
+        <CardsContainer
+          Title="Skill you are currently learning"
+          variant="horizontal"
           style={{
-            gridArea: "1 / 3 / 3 / 6",
-            alignSelf: "stretch",
-            display: "flex",
-            flexDirection: "column",
-            paddingTop: "2vh",
+            backgroundColor: "#142143",
+            width: "100%",
+            gridArea: "1 / 3 / 4 / 6",
           }}
         >
-          <LearningSkillsCard
-            title="Skill you are learning now"
-            items={learningItems}
-            selectedId={selectedLearningTargetId}
-            focusedId={selectedLearningTargetId}
-            onSelect={(targetId: string) => {
-              const target = learningTargets.find((item) => item.id === targetId);
-              if (target) {
-                openConfirmForTarget(target);
-              }
-            }}
-            style={{
-              width: "100%",
-              height: "75%",
-              padding: "2vh 2vw",
-              borderRadius: "2vh",
-              boxSizing: "border-box",
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "center",
-              backgroundColor: "#142143",
-            }}
-          />
-          {bookmarkedTargetsHint ? (
-            <p
-              style={{
-                marginTop: "0.8vh",
-                marginLeft: "0.2vw",
-                color: "#E6FFB2",
-                fontSize: "0.82vw",
-                fontWeight: 600,
+          {learningItems.map((item) => (
+            <RectangularCard
+              key={item.id}
+              Title={item.label}
+              theme="light"
+              selectable
+              selected={selectedLearningTargetId === item.id}
+              onSelect={() => {
+                const target = learningTargets.find(
+                  (t) => t.id === item.id
+                );
+
+                if (target) {
+                  openConfirmForTarget(target);
+                }
               }}
-            >
-              {bookmarkedTargetsHint}
-            </p>
-          ) : null}
-        </div>
+              style={{
+                height: "fit-content",
+              }}
+            />
+          ))}
+        </CardsContainer>
 
-        <div
+        <CardsContainer
+          Title="More Skills to test"
+          variant="vertical"
+          Columns={3}
           style={{
-            gridArea: "3 / 1 / 8 / 4",
-            alignSelf: "stretch",
+            gridArea: "4 / 1 / 9 / 4",
+            backgroundColor: "#142143",
           }}
         >
-          <MoreSkillsCard
-            skills={moreSkills}
-            selected={selectedMoreName}
-            onSelect={(skillName: string) => {
-              const selected = filteredSkills.find((skill) => skill.skill_name === skillName);
-              if (!selected) {
-                return;
-              }
+          {moreSkills.map((skill) => {
+            const isSelected = selectedMoreName === skill;
 
-              setSelectedMoreSkillId(selected.id);
-              openConfirmForTarget({
-                id: selected.id,
-                label: selected.skill_name,
-                sessionType: "skills",
-              });
-            }}
-            style={{
-              height: "100%",
-              width: "100%",
-              borderRadius: "2vh",
-              boxSizing: "border-box",
-              backgroundColor: "#142143",
-            }}
-          />
-        </div>
+            return (
+              <RectangularCard
+                key={skill}
+                Title={skill}
+                theme="dark"
+                selectable={true}
+                selected={isSelected}
+                onSelect={() => {
+                  const selected = filteredSkills.find(
+                    (s) => s.skill_name === skill
+                  );
 
-        <div
+                  if (!selected) return;
+
+                  setSelectedMoreSkillId(selected.id);
+
+                  openConfirmForTarget({
+                    id: selected.id,
+                    label: selected.skill_name,
+                    sessionType: "skills",
+                  });
+                }}
+                style={{
+                  width: "100%",
+                }}
+              />
+            );
+          })}
+        </CardsContainer>
+
+
+        <CardsContainer
+          Title="Past Tests"
+          variant="vertical"
+          Columns={1}
           style={{
-            gridArea: "3 / 4 / 8 / 6",
-            alignSelf: "stretch",
+            gridArea: "4 / 4 / 9 / 6",
+            backgroundColor: "#142143",
           }}
         >
-          <PastTestsCard
-            tests={allPastTests}
-            style={{
-              height: "100%",
-              width: "100%",
-              borderRadius: "2vh",
-              boxSizing: "border-box",
-              backgroundColor: "#142143",
-            }}
-          />
-        </div>
-      </RootLayout>
+          {allPastTests.map((test) => (
+            <ActivityCard
+              key={test.id}
+              title={test.title}
+              score={test.score}
+              variant="progress"
+              provider=""
+            />
+          ))}
+        </CardsContainer>
 
-      {error ? (
-        <div
-          style={{
-            position: "fixed",
-            bottom: "20px",
-            left: "50%",
-            transform: "translateX(-50%)",
-            backgroundColor: "rgba(127, 29, 29, 0.92)",
-            color: "#fee2e2",
-            padding: "10px 16px",
-            borderRadius: "12px",
-            zIndex: 1001,
-            fontSize: "13px",
-            maxWidth: "70vw",
-          }}
-        >
-          {error}
-        </div>
-      ) : null}
-
-      {isConfirmOpen && pendingTarget && (
-        <SkillConfirmPopup
-          skillName={pendingTargetName}
-          isLoading={isStarting}
-          onCancel={() => {
-            if (!isStarting) {
-              setIsConfirmOpen(false);
-              setPendingTarget(null);
-            }
-          }}
-          onConfirm={() => handleStartAssessment(pendingTarget)}
-        />
-      )}
     </div>
+
+      {
+    error ? (
+      <div
+        style={{
+          position: "fixed",
+          bottom: "20px",
+          left: "50%",
+          transform: "translateX(-50%)",
+          backgroundColor: "rgba(127, 29, 29, 0.92)",
+          color: "#fee2e2",
+          padding: "10px 16px",
+          borderRadius: "12px",
+          zIndex: 1001,
+          fontSize: "13px",
+          maxWidth: "70vw",
+        }}
+      >
+        {error}
+      </div>
+    ) : null
+  }
+
+  {
+    isConfirmOpen && pendingTarget && (
+      <SkillConfirmPopup
+        skillName={pendingTargetName}
+        isLoading={isStarting}
+        onCancel={() => {
+          if (!isStarting) {
+            setIsConfirmOpen(false);
+            setPendingTarget(null);
+          }
+        }}
+        onConfirm={() => handleStartAssessment(pendingTarget)}
+      />
+    )
+  }
+    </div >
   );
 }

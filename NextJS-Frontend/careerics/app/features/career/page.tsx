@@ -1,10 +1,11 @@
 "use client";
 import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import ChoiceCard from "@/components/ui/choice-card-home";
+import ChoiceCard from "@/components/ui/choice-card-career";
 import { useAuth } from "@/providers/auth-provider";
 import { careerService } from "@/services";
 import type { APICareerTrack } from "@/types";
+import { CareerCardsContainer } from "@/components/ui/career-cards-container";
 
 const CARD_IMAGE_PATH = "/Landing/Rectangle.svg";
 const VISIBLE_TRACKS_COUNT = 4;
@@ -71,11 +72,11 @@ export default function CareerDiscoveryPage() {
   );
 
   const handleNext = () => {
-    setStartIndex(Math.min(safeStartIndex + 1, maxStartIndex));
+    setStartIndex(Math.min(safeStartIndex + 4, maxStartIndex));
   };
 
   const handlePrev = () => {
-    setStartIndex(Math.max(safeStartIndex - 1, 0));
+    setStartIndex(Math.max(safeStartIndex - 4, 0));
   };
 
   const handleStartQuiz = async () => {
@@ -134,7 +135,9 @@ export default function CareerDiscoveryPage() {
             style={{
               backgroundColor: "#142143",
               borderRadius: "4vh",
-              padding: "3vh",
+              paddingBlock: "1rem",
+              paddingLeft: "3rem",
+              paddingRight: "2rem",
               color: "white",
               display: "flex",
               justifyContent: "space-between",
@@ -161,7 +164,7 @@ export default function CareerDiscoveryPage() {
                   opacity: 0.8,
                 }}
               >
-                Choose your favorite hobbies and activities, then answer a few personalized questions.<br/>
+                Choose your favorite hobbies and activities, then answer a few personalized questions.<br />
                 Just like that you’ll get your best fit career choices
               </p>
 
@@ -179,144 +182,89 @@ export default function CareerDiscoveryPage() {
         </div>
 
         {/* Career Paths */}
-        <div
+        <CareerCardsContainer
+          isScrollable
+          Title="Discover more career paths"
+          leftOnclick={handlePrev}
+          rightOnclick={handleNext}
           style={{
             gridArea: "3 / 1 / 8 / 7",
             backgroundColor: "#1C427B",
             borderRadius: "4vh",
-            padding: "3vh 2vw",
-            display: "flex",
-            flexDirection: "column",
+            gap:0
           }}
         >
-          <h2
-            style={{
-              color: "white",
-              fontSize: "3.5vh",
-              marginBottom: "3vh",
-              fontFamily: "var(--font-nova-square)",
-            }}
-          >
-            Discover more career paths
-          </h2>
 
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "1vw",
-              flex: 1,
-            }}
-          >
-            {/* Left Arrow */}
-            {safeStartIndex > 0 && (
-              <div
-                onClick={handlePrev}
-                style={{
-                  color: "white",
-                  fontSize: "3vh",
-                  cursor: "pointer",
-                }}
-              >
-                ❮
-              </div>
-            )}
-
-            {/* Cards */}
+          {isLoadingTracks ? (
             <div
               style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(4, 1fr)",
-                gap: "1vh",
-                flex: 1,
-                height: "100%",
+                gridColumn: "1 / -1",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#D7E3FF",
+                fontFamily: "var(--font-jura)",
+                fontSize: "1rem",
               }}
             >
-              {isLoadingTracks ? (
-                <div
-                  style={{
-                    gridColumn: "1 / -1",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "#D7E3FF",
-                    fontFamily: "var(--font-jura)",
-                    fontSize: "1rem",
-                  }}
-                >
-                  Loading career tracks...
-                </div>
-              ) : null}
-
-              {!isLoadingTracks && tracksError ? (
-                <div
-                  style={{
-                    gridColumn: "1 / -1",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "#FFD3D3",
-                    textAlign: "center",
-                    fontFamily: "var(--font-jura)",
-                    fontSize: "1rem",
-                    paddingInline: "2vw",
-                  }}
-                >
-                  {tracksError}
-                </div>
-              ) : null}
-
-              {!isLoadingTracks && !tracksError && !visibleCards.length ? (
-                <div
-                  style={{
-                    gridColumn: "1 / -1",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "#D7E3FF",
-                    fontFamily: "var(--font-jura)",
-                    fontSize: "1rem",
-                  }}
-                >
-                  No career tracks are available yet.
-                </div>
-              ) : null}
-
-              {!isLoadingTracks && !tracksError
-                ? visibleCards.map((track) => {
-                    const blogPath = buildTrackBlogPath(track);
-
-                    return (
-                      <ChoiceCard
-                        key={track.id}
-                        title={track.name}
-                        description={track.description || TRACK_DESCRIPTION_FALLBACK}
-                        image={CARD_IMAGE_PATH}
-                        buttonVariant="primary-inverted"
-                        buttonLabel="Learn More"
-                        blogPath={blogPath}
-                        onClick={() => router.push(blogPath)}
-                      />
-                    );
-                  })
-                : null}
+              Loading career tracks...
             </div>
+          ) : null}
 
-            {/* Right Arrow */}
-            {safeStartIndex < maxStartIndex && (
-              <div
-                onClick={handleNext}
-                style={{
-                  color: "white",
-                  fontSize: "3vh",
-                  cursor: "pointer",
-                }}
-              >
-                ❯
-              </div>
-            )}
-          </div>
-        </div>
+          {!isLoadingTracks && tracksError ? (
+            <div
+              style={{
+                gridColumn: "1 / -1",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#FFD3D3",
+                textAlign: "center",
+                fontFamily: "var(--font-jura)",
+                fontSize: "1rem",
+                paddingInline: "2vw",
+              }}
+            >
+              {tracksError}
+            </div>
+          ) : null}
+
+          {!isLoadingTracks && !tracksError && !visibleCards.length ? (
+            <div
+              style={{
+                gridColumn: "1 / -1",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#d7ffdd",
+                fontFamily: "var(--font-jura)",
+                fontSize: "1rem",
+              }}
+            >
+              No career tracks are available yet.
+            </div>
+          ) : null}
+
+          {!isLoadingTracks && !tracksError
+            ? visibleCards.map((track) => {
+              const blogPath = buildTrackBlogPath(track);
+
+              return (
+                <ChoiceCard
+                  key={track.id}
+                  title={track.name}
+                  description={track.description || TRACK_DESCRIPTION_FALLBACK}
+                  image={CARD_IMAGE_PATH}
+                  buttonVariant="primary-inverted"
+                  buttonLabel="Learn More"
+                  onClick={() => router.push(blogPath)}
+                />
+              );
+            })
+            : null}
+
+
+        </CareerCardsContainer>
       </div>
     </div>
   );

@@ -1,8 +1,11 @@
 "use client";
 
-import ChoiceCard from "@/components/ui/choice-card-home";
+import ChoiceCard from "@/components/ui/home/choice-card-home";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CareersCard, RecentActivityCard, JourneyProgressCard, NextPhaseCard, CurrentPhaseCard } from "@/components/ui/dashboardCards";
+import { RecentActivityCard} from "@/components/ui/home/recent-activity";
+import { JourneyProgressCard } from "@/components/ui/home/journey-progress-card";
+import { PhaseCard } from "@/components/ui/home/phase-card";
+import { CareerCardsContainer } from "@/components/ui/career-cards-container";
 import { useAuth } from "@/providers/auth-provider";
 import { careerService, interviewService, reportsService, skillAssessmentService } from "@/services";
 import {
@@ -374,8 +377,7 @@ export default function HomePage() {
         gridRowGap: "20px",
       }}
     >
-      <CareersCard
-        careers={careerData}
+      <CareerCardsContainer
         style={{ gridArea: "1 / 1 / 3 / 4" }}
       >
         {careerData.map((career) => (
@@ -391,7 +393,7 @@ export default function HomePage() {
             type={career.type || ""}
           />
         ))}
-      </CareersCard>
+      </CareerCardsContainer>
 
       <RecentActivityCard
         activities={dashboardData.activities}
@@ -403,15 +405,17 @@ export default function HomePage() {
         style={{ gridArea: "3 / 1 / 5 / 2" }}
       />
 
-      <CurrentPhaseCard
-        percentage={dashboardData.currentPhase}
+      <PhaseCard
+        type="current"
+        phaseNumber={String(dashboardData.currentPhase)}
         style={{ gridArea: "3 / 2 / 5 / 2" }}
       />
 
-      <NextPhaseCard
-        style={{ gridArea: "3 / 3 / 5 / 6" }}
-        desc={dashboardData.nextPhaseDesc}
+      <PhaseCard
+        type="next"
         phaseNumber={String(dashboardData.nextPhase)}
+        desc={dashboardData.nextPhaseDesc || "No next phase description available."}
+        style={{ gridArea: "3 / 3 / 5 / 6" }}
       />
     </div>
   );

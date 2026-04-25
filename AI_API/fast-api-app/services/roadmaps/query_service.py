@@ -4,7 +4,7 @@ from uuid import UUID
 from sqlalchemy import distinct, func
 from sqlalchemy.orm import Session
 
-from db.models import Roadmap, RoadmapSection, RoadmapStep
+from db.models import Roadmap, RoadmapCourse, RoadmapSection, RoadmapStep
 from schemas import (
     RoadmapListItemSchema,
     RoadmapReadSchema,
@@ -41,7 +41,12 @@ def list_roadmaps_service(db: Session) -> List[RoadmapListItemSchema]:
     ]
 
 
-def _build_roadmap_read(roadmap: Roadmap, sections: List[RoadmapSection], steps_by_section: dict) -> RoadmapReadSchema:
+def _build_roadmap_read(
+    roadmap: Roadmap,
+    sections: List[RoadmapSection],
+    steps_by_section: dict,
+    courses_count_by_section: dict,
+) -> RoadmapReadSchema:
     sorted_sections = sorted(sections, key=lambda item: (item.order, str(item.id)))
 
     section_payload = []
@@ -55,6 +60,7 @@ def _build_roadmap_read(roadmap: Roadmap, sections: List[RoadmapSection], steps_
                 title=section.title,
                 description=section.description or "",
                 order=section.order,
+                courses_count=int(courses_count_by_section.get(section.id, 0)),
                 steps=[
                     RoadmapStepReadSchema(
                         id=step.id,
@@ -102,7 +108,23 @@ def get_roadmap_by_id_service(db: Session, roadmap_id: UUID) -> RoadmapReadSchem
     for step in steps:
         steps_by_section.setdefault(step.section_id, []).append(step)
 
-    return _build_roadmap_read(roadmap, sections, steps_by_section)
+    courses_count_by_section = {}
+    if section_ids:
+        course_counts = (
+            db.query(
+                RoadmapCourse.section_id.label("section_id"),
+                func.count(RoadmapCourse.id).label("courses_count"),
+            )
+            .filter(RoadmapCourse.section_id.in_(section_ids))
+            .group_by(RoadmapCourse.section_id)
+            .all()
+        )
+        courses_count_by_section = {
+            row.section_id: int(row.courses_count or 0)
+            for row in course_counts
+        }
+
+    return _build_roadmap_read(roadmap, sections, steps_by_section, courses_count_by_section)
 
 
 def get_roadmap_by_title_service(db: Session, title: str) -> RoadmapReadSchema | None:

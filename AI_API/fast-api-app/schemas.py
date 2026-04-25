@@ -527,6 +527,33 @@ class RoadmapReadSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class RoadmapCourseReadSchema(BaseModel):
+    id: UUID
+    provider: str
+    title: str
+    url: str
+    description: Optional[str] = None
+    language: Optional[str] = None
+    is_free: Optional[bool] = None
+    rating: Optional[float] = None
+    provider_course_id: Optional[str] = None
+    rank_in_provider: Optional[int] = None
+    model_config = ConfigDict(from_attributes=True)
+
+
+class RoadmapSectionCoursesReadSchema(BaseModel):
+    section_id: UUID
+    section_title: str
+    order: int
+    courses: List[RoadmapCourseReadSchema] = Field(default_factory=list)
+
+
+class RoadmapCoursesReadSchema(BaseModel):
+    roadmap_id: UUID
+    roadmap_title: str
+    sections: List[RoadmapSectionCoursesReadSchema] = Field(default_factory=list)
+
+
 class RoadmapListItemSchema(BaseModel):
     id: UUID
     title: str

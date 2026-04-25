@@ -740,3 +740,81 @@ class JobUserInteraction(Base):
         Index("idx_job_user_interactions_user_saved", "user_id", "is_saved"),
         Index("idx_job_user_interactions_user_viewed_at", "user_id", "viewed_at"),
     )
+
+
+# ###########################################################################################################################
+# COURSES
+# ###########################################################################################################################
+
+# =========================
+# COURSES
+# =========================
+class Course(Base):
+    __tablename__ = "courses"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    platform = Column(String, nullable=True)
+    title = Column(String, nullable=False, index=True)
+    instructor = Column(String, nullable=True)
+    tags = Column(ARRAY(Text), nullable=True)
+    duration = Column(String, nullable=True)
+    url = Column(Text, nullable=False, unique=True)
+    category = Column(String, nullable=True, index=True)
+    level = Column(String, nullable=True, index=True)
+    price = Column(String, nullable=True)
+    language = Column(String, nullable=True)
+
+    created_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+        index=True
+    )
+    updated_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False
+    )
+
+    user_progress = relationship("CourseUserProgress", back_populates="course", cascade="all, delete-orphan")
+
+    __table_args__ = (
+        Index("idx_course_category_level", "category", "level"),
+        Index("idx_course_created_at", "created_at"),
+    )
+
+
+# =========================
+# COURSE USER PROGRESS
+# =========================
+class CourseUserProgress(Base):
+    __tablename__ = "course_user_progress"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    course_id = Column(UUID(as_uuid=True), ForeignKey("courses.id", ondelete="CASCADE"), nullable=False)
+    status = Column(String, nullable=False)
+    started_at = Column(DateTime(timezone=True), nullable=True)
+    completed_at = Column(DateTime(timezone=True), nullable=True)
+    saved_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=True)
+    created_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False
+    )
+    updated_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False
+    )
+
+    course = relationship("Course", back_populates="user_progress")
+    user = relationship("User")
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "course_id", name="unique_user_course"),
+        Index("idx_course_user_progress_user_status", "user_id", "status"),
+        Index("idx_course_user_progress_saved_at", "saved_at"),
+    )

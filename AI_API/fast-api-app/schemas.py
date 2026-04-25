@@ -706,3 +706,65 @@ class UserJobsListResponse(BaseModel):
     limit: int
     jobs: List[JobPostResponse]
 
+
+# =====================================================
+# COURSE SCHEMAS
+# =====================================================
+
+class CourseBase(BaseModel):
+    platform: Optional[str] = None
+    title: str
+    instructor: Optional[str] = None
+    tags: Optional[List[str]] = None
+    duration: Optional[str] = None
+    url: str
+    category: Optional[str] = None
+    level: Optional[str] = None
+    price: Optional[str] = None
+    language: Optional[str] = None
+
+
+class CourseCreate(CourseBase):
+    pass
+
+
+class CourseResponse(CourseBase):
+    id: UUID
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    model_config = ConfigDict(from_attributes=True)
+
+
+CourseStatus = Literal["saved", "enrolled", "completed"]
+
+
+class CourseStatusUpdateRequest(BaseModel):
+    status: CourseStatus
+
+
+class CourseProgressResponse(BaseModel):
+    id: UUID
+    course_id: UUID
+    user_id: UUID
+    status: CourseStatus
+    started_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    saved_at: Optional[datetime] = None
+    created_at: datetime
+    updated_at: datetime
+    model_config = ConfigDict(from_attributes=True)
+
+
+class BulkCourseImportResult(BaseModel):
+    inserted: int
+    skipped: int
+    total_processed: int
+    duplicates: List[str]
+
+
+class UserCoursesListResponse(BaseModel):
+    total: int
+    skip: int
+    limit: int
+    courses: List[CourseResponse]
+

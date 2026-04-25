@@ -6,7 +6,8 @@ import CustomDropdown from "@/components/ui/dropdown-menu";
 import { StepFlow } from "@/components/ui/roadmap-flow";
 import { useAuth } from "@/providers/auth-provider";
 import { roadmapService } from "@/services";
-import type { ApiResponse, RoadmapListItem, RoadmapRead } from "@/types";
+import { getUnifiedBookmarks, setUnifiedBookmarks } from "@/lib/unified-bookmarks";
+import type { ApiResponse, RoadmapListItem, RoadmapRead, UserRoadmapBookmark } from "@/types";
 
 type CachedApiRequest<T> = {
   expiresAt: number;
@@ -43,7 +44,8 @@ export default function RoadmapPage() {
     DEFAULT_PATH_OPTION,
   );
   const [activeStep, setActiveStep] = useState<number | null>(null);
-  const [bookmarkedRoadmapIds, setBookmarkedRoadmapIds] = useState<string[]>([]);
+  const [backendRoadmapBookmarks, setBackendRoadmapBookmarks] = useState<UserRoadmapBookmark[]>([]);
+  const [hasLoadedRoadmapBookmarks, setHasLoadedRoadmapBookmarks] = useState(false);
   const [selectedRoadmapDetails, setSelectedRoadmapDetails] = useState<RoadmapRead | null>(null);
 
   const roadmapByIdCacheRef = useRef<Map<string, CachedApiRequest<RoadmapRead>>>(new Map());
@@ -82,6 +84,10 @@ export default function RoadmapPage() {
     return new Map(roadmaps.map((roadmap) => [roadmap.id, roadmap.title] as const));
   }, [roadmaps]);
 
+  const bookmarkedRoadmapIds = useMemo(() => {
+    return backendRoadmapBookmarks.map((bookmark) => bookmark.roadmap_id);
+  }, [backendRoadmapBookmarks]);
+
   const selectedRoadmapId = useMemo(() => {
     const validSelection =
       selectedRoadmapPreferenceId !== DEFAULT_PATH_OPTION &&
@@ -102,9 +108,12 @@ export default function RoadmapPage() {
     return roadmaps[0]?.id || DEFAULT_PATH_OPTION;
   }, [bookmarkedRoadmapIds, roadmaps, selectedRoadmapPreferenceId]);
 
-  const bookmarkedRoadmaps = useMemo(() => {
-    return bookmarkedRoadmapIds.map((id) => ({ id, title: roadmapTitleById.get(id) || "Roadmap" }));
-  }, [bookmarkedRoadmapIds, roadmapTitleById]);
+  const bookmarkCardData = useMemo(() => {
+    return backendRoadmapBookmarks.map((bookmark) => ({
+      id: bookmark.roadmap_id,
+      title: roadmapTitleById.get(bookmark.roadmap_id) || "Roadmap",
+    }));
+  }, [backendRoadmapBookmarks, roadmapTitleById]);
 
   const selectedRoadmap = useMemo(() => {
     return options.find((option) => option.id === selectedRoadmapId) || options[0];
@@ -165,24 +174,32 @@ export default function RoadmapPage() {
 
     const loadBookmarks = async () => {
       if (!user?.id) {
-        setBookmarkedRoadmapIds([]);
+        setBackendRoadmapBookmarks([]);
+        setHasLoadedRoadmapBookmarks(true);
         return;
       }
+
+      setHasLoadedRoadmapBookmarks(false);
+      setBackendRoadmapBookmarks([]);
 
       const response = await roadmapService.getUserRoadmapBookmarks(user.id);
       if (!alive) {
         return;
       }
 
-      if (!response.success || !response.data?.bookmarks) {
-        setBookmarkedRoadmapIds([]);
-        return;
+      if (response.success && response.data?.bookmarks) {
+        const uniqueBookmarks = Array.from(
+          new Map(
+            response.data.bookmarks.map((bookmark) => {
+              return [String(bookmark.roadmap_id), bookmark] as const;
+            }),
+          ).values(),
+        ).slice(0, MAX_BOOKMARKS);
+
+        setBackendRoadmapBookmarks(uniqueBookmarks);
       }
 
-      const uniqueIds = Array.from(
-        new Set(response.data.bookmarks.map((bookmark) => String(bookmark.roadmap_id))),
-      );
-      setBookmarkedRoadmapIds(uniqueIds.slice(0, MAX_BOOKMARKS));
+      setHasLoadedRoadmapBookmarks(true);
     };
 
     void loadBookmarks();
@@ -191,6 +208,29 @@ export default function RoadmapPage() {
       alive = false;
     };
   }, [isAuthLoading, user?.id]);
+
+  useEffect(() => {
+    if (isAuthLoading || !user?.id || !hasLoadedRoadmapBookmarks) {
+      return;
+    }
+
+    const existingUnifiedBookmarks = getUnifiedBookmarks(user.id);
+    const careerBookmarks = existingUnifiedBookmarks.filter((bookmark) => bookmark.kind === "career");
+
+    const roadmapBookmarks = backendRoadmapBookmarks.map((bookmark) => {
+      const roadmap = roadmaps.find((item) => item.id === bookmark.roadmap_id);
+
+      return {
+        kind: "roadmap" as const,
+        entity_id: bookmark.roadmap_id,
+        title: roadmap?.title || "Roadmap",
+        description: roadmap?.description ?? null,
+        saved_at: bookmark.created_at,
+      };
+    });
+
+    setUnifiedBookmarks([...roadmapBookmarks, ...careerBookmarks], user.id);
+  }, [backendRoadmapBookmarks, hasLoadedRoadmapBookmarks, isAuthLoading, roadmaps, user?.id]);
 
   useEffect(() => {
     let alive = true;
@@ -226,10 +266,12 @@ export default function RoadmapPage() {
   };
 
   const toggleLocalBookmark = (roadmapId: string) => {
-    setBookmarkedRoadmapIds((previous) => {
-      const exists = previous.includes(roadmapId);
+    const savedAt = new Date().toISOString();
+
+    setBackendRoadmapBookmarks((previous) => {
+      const exists = previous.some((bookmark) => bookmark.roadmap_id === roadmapId);
       if (exists) {
-        return previous.filter((id) => id !== roadmapId);
+        return previous.filter((bookmark) => bookmark.roadmap_id !== roadmapId);
       }
 
       if (previous.length >= MAX_BOOKMARKS) {
@@ -237,7 +279,7 @@ export default function RoadmapPage() {
         return previous;
       }
 
-      return [roadmapId, ...previous];
+      return [{ roadmap_id: roadmapId, created_at: savedAt }, ...previous];
     });
   };
 
@@ -264,8 +306,8 @@ export default function RoadmapPage() {
       return;
     }
 
-    setBookmarkedRoadmapIds((previous) => {
-      const withoutCurrent = previous.filter((id) => id !== roadmapId);
+    setBackendRoadmapBookmarks((previous) => {
+      const withoutCurrent = previous.filter((bookmark) => bookmark.roadmap_id !== roadmapId);
       if (!response.data.bookmarked) {
         return withoutCurrent;
       }
@@ -274,7 +316,7 @@ export default function RoadmapPage() {
         return previous;
       }
 
-      return [roadmapId, ...withoutCurrent];
+      return [{ roadmap_id: roadmapId, created_at: new Date().toISOString() }, ...withoutCurrent];
     });
   };
 
@@ -318,8 +360,8 @@ export default function RoadmapPage() {
         />
 
         {/* Bookmarked Display */}
-        {bookmarkedRoadmaps.length > 0 ? (
-          bookmarkedRoadmaps.map((bookmark) => (
+        {bookmarkCardData.length > 0 ? (
+          bookmarkCardData.map((bookmark) => (
             <div
               key={bookmark.id}
               style={{

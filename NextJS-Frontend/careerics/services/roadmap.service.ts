@@ -16,6 +16,7 @@ import { fastapiApi } from "@/lib/api";
 import type {
   CurrentRoadmapLearning,
   ApiResponse,
+  RoadmapCoursesRead,
   RoadmapListItem,
   RoadmapProgressSummary,
   RoadmapRead,
@@ -32,6 +33,10 @@ export const roadmapService = {
 
   getRoadmapById(roadmapId: string): Promise<ApiResponse<RoadmapRead>> {
     return fastapiApi.get<RoadmapRead>(`/roadmaps/${roadmapId}`);
+  },
+
+  getRoadmapCourses(roadmapId: string): Promise<ApiResponse<RoadmapCoursesRead>> {
+    return fastapiApi.get<RoadmapCoursesRead>(`/roadmaps/${roadmapId}/courses`);
   },
 
   getRoadmapByTitle(title: string): Promise<ApiResponse<RoadmapRead>> {

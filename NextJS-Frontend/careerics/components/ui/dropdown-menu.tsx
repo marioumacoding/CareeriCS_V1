@@ -128,6 +128,11 @@ export default function CustomDropdown({
               "0px 8px 18px rgba(0,0,0,0.08)",
             overflow: "hidden",
             zIndex: 999,
+            height: "300px",
+            overflowY: "auto",
+            scrollbarWidth: "thin",
+            scrollbarColor:
+              "rgba(0,0,0,0.2) transparent",
           }}
         >
           {options.length > 0 ? (

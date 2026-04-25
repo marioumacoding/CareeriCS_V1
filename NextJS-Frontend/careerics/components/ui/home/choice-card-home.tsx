@@ -112,11 +112,11 @@ export default function ChoiceCard({
         <p
           style={{
             fontSize: "1.2rem",
-            width: "100%",
+            width: isBookmark?"10ch":"100%",
             marginRight: "auto",
             marginTop: "0",
             position: "relative",
-            marginBottom: isBookmark ? "2rem" : 0,
+            marginBottom: 0,
 
           }}
         >

@@ -1020,7 +1020,7 @@ export default function SkillAssessment() {
                 }
               }}
               style={{
-                height: "fit-content",
+                height:"100%",
               }}
             />
           ))}

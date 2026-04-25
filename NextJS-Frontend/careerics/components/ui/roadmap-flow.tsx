@@ -159,13 +159,14 @@ export const StepFlow: React.FC<StepFlowProps> = ({
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
+                textAlign: "center",
 
                 background:
                   isHovered || isSelected
                     ? "var(--hover-green)"
                     : "#C1CBE6",
 
-                fontWeight: "bold",
+                fontSize: "0.9rem",
                 zIndex: 2,
                 cursor: isNavigatable ? "pointer" : "default",
               }}

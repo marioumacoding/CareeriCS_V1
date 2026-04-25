@@ -77,6 +77,7 @@ export const CareerCardsContainer = ({
                         display: "grid",
                         position: "relative",
                         height: "100%",
+                        width: "100%",
                         gap: "20px",
 
                         gridTemplateColumns: isScrollable

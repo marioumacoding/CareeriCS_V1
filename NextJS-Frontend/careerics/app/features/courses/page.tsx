@@ -174,7 +174,7 @@ export default function CoursesPage() {
             selected={selectedCourseId === course.id}
             onSelect={() => handleCurrentCourseClick(course)}
             style={{
-              height: "fit-content",
+              height: "100%",
             }}
           />
         ))}

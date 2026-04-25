@@ -159,6 +159,8 @@ const Folder = ({ children }: FolderProps) => {
           borderBottomLeftRadius: "30px",
           borderBottomRightRadius: "30px",
           overflow: "hidden",
+          width: "100%",
+          height: "100%",
         }}
       >
         {children}

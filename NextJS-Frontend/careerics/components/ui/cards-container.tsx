@@ -51,16 +51,17 @@ export const CardsContainer = ({
             style={{
                 backgroundColor: "#1C427B",
                 borderRadius: "4vh",
-                paddingInline: "1rem",
                 paddingTop: "1rem",
-                paddingBottom: "0.5rem",
+                paddingLeft: "1rem",
+                paddingRight: variant === "vertical" ? "1rem" : "0.5rem",
+                paddingBottom: variant ==="horizontal" ? "1rem" : "0.5rem",
                 color: "white",
                 height: "100%",
                 width: "100%",
                 display: "flex",
                 flexDirection:
                     variant === "horizontal" ? "row" : "column",
-                overflow: "hidden",
+                overflow:"hidden",
                 ...style,
             }}
         >
@@ -72,6 +73,7 @@ export const CardsContainer = ({
                     flexDirection: "column",
                     flex: 1,
                     overflow: "hidden",
+                    gap:"0.5rem"
                 }}
             >
 
@@ -80,7 +82,6 @@ export const CardsContainer = ({
                     style={{
                         fontSize: "1.2rem",
                         fontFamily: "var(--font-nova-square)",
-                        marginBottom: "1rem",
                     }}
                 >
                     {Title}
@@ -88,93 +89,108 @@ export const CardsContainer = ({
 
                 {/* Scroll Area */}
                 <div
-                    ref={scrollRef}
-                    style={
-                        variant === "vertical"
-                            ? {
-                                display: "grid",
-                                gridTemplateColumns: `repeat(${Columns}, 1fr)`,
-                                gap: "1rem",
-                                overflowY: "auto",
-                                scrollbarWidth: "none",
-                                flex: 1,
 
-                                alignContent: "start",
-                                justifyContent: "start",
-                                rowGap: "1rem",
-                            }
-                            : {
-                                display: "flex",
-                                gap: "1.5rem",
-                                overflowX: "auto",
-                                scrollbarWidth: "none",
-                                flex: 1,
-                            }
-                    }
+                    style={{
+                        display: "flex",
+                        minWidth: 0,
+                        minHeight: 0,
+                        flex: 1,
+                        flexDirection: variant==="vertical" ? "column" : "row",
+                    }}
                 >
 
-                    {isEmpty ? (
-                        <div
-                            style={{
-                                gridColumn:
-                                    variant === "vertical"
-                                        ? `span ${Columns}`
-                                        : undefined,
-                                display: "flex",
-                                justifyContent: "center",
-                                alignItems: "center",
-                                height: "100%",
-                                width: "100%",
-                                fontFamily: "var(--font-jura)",
-                                fontSize: "0.95rem",
-                                opacity: 0.8,
-                            }}
-                        >
-                            Loading...
-                        </div>
-                    ) : (
-                        children
-                    )}
+                    <div
+                        ref={scrollRef}
+                        style={
+                            variant === "vertical"
+                                ? {
+                                    display: "grid",
+                                    gridTemplateColumns: `repeat(${Columns}, 1fr)`,
+                                    gap: "1rem",
+                                    overflowY: "auto",
+                                    scrollbarWidth: "none",
+                                    flex: 1,
+
+                                    alignContent: "start",
+                                    justifyContent: "start",
+                                    rowGap: "1rem",
+                                }
+                                : {
+                                    display: "flex",
+                                    gap: "1.5rem",
+                                    overflowX: "auto",
+                                    scrollbarWidth: "none",
+                                    flex: 1,
+                                }
+                        }
+                    >
+
+                        {isEmpty ? (
+                            <div
+                                style={{
+                                    gridColumn:
+                                        variant === "vertical"
+                                            ? `span ${Columns}`
+                                            : undefined,
+                                    display: "flex",
+                                    justifyContent: "center",
+                                    alignItems: "center",
+                                    height: "100%",
+                                    width: "100%",
+                                    fontFamily: "var(--font-jura)",
+                                    fontSize: "0.95rem",
+                                    opacity: 0.8,
+                                }}
+                            >
+                                Loading...
+                            </div>
+                        ) : (
+                            children
+                        )}
+                    </div>
+                    {/* Scroll Buttons */}
+                    <div
+                        style={
+                            variant === "vertical"
+                                ? {
+                                    display: "flex",
+                                    justifyContent: "flex-end",
+                                    gap: "1rem",
+                                    marginTop: "auto",
+                                    userSelect: "none",
+                                    marginRight: "0.5rem",
+                                }
+                                : {
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    paddingLeft: "0.5rem",
+                                    userSelect: "none",
+                                    width: "fit-content",
+                                    marginLeft: "auto",
+                                    height: "100%",
+                                    justifyContent: "center",
+                                }
+                        }
+                    >
+
+                        <Arrow
+                            direction="prev"
+                            variant={variant}
+                            onClick={() => scroll("prev")}
+                        />
+
+                        <Arrow
+                            direction="next"
+                            variant={variant}
+                            onClick={() => scroll("next")}
+                        />
+
+
+                    </div>
 
                 </div>
 
             </div>
-
-            {/* Scroll Buttons */}
-            <div
-                style={
-                    variant === "vertical"
-                        ? {
-                            display: "flex",
-                            justifyContent: "flex-end",
-                            gap: "1rem",
-                            marginTop: "auto",
-                            userSelect: "none",
-                        }
-                        : {
-                            display: "flex",
-                            flexDirection: "column",
-                            justifyContent: "space-between",
-                            paddingLeft: "0.5rem",
-                            userSelect: "none",
-                        }
-                }
-            >
-
-                <Arrow
-                    direction="prev"
-                    variant={variant}
-                    onClick={() => scroll("prev")}
-                />
-
-                <Arrow
-                    direction="next"
-                    variant={variant}
-                    onClick={() => scroll("next")}
-                />
-
-            </div>
-
         </div>
     );
 };

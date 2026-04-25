@@ -466,6 +466,7 @@ class RoadmapSection(Base):
 
     roadmap = relationship("Roadmap", back_populates="section")
     steps = relationship("RoadmapStep", back_populates="section", cascade="all, delete-orphan")
+    courses = relationship("RoadmapCourse", back_populates="section", cascade="all, delete-orphan")
     assessment = relationship("RoadmapAssessmentResult", back_populates="section")
 
     __table_args__ = (
@@ -491,6 +492,46 @@ class RoadmapStep(Base):
 
     __table_args__ = (
         UniqueConstraint("section_id", "order", name="uq_roadmap_steps_section_order"),
+    )
+
+
+# =========================
+# ROADMAP COURSE
+# =========================
+class RoadmapCourse(Base):
+    __tablename__ = "roadmap_courses"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    section_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("roadmap_sections.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    provider = Column(String, nullable=False)
+    title = Column(String, nullable=False)
+    url = Column(String, nullable=False)
+    normalized_url = Column(String, nullable=False)
+    description = Column(Text, nullable=True)
+    language = Column(String, nullable=True)
+    is_free = Column(Boolean, nullable=True)
+    rating = Column(Float, nullable=True)
+    provider_course_id = Column(String, nullable=True)
+    rank_in_provider = Column(Integer, nullable=True)
+    source_payload = Column(JSONB, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    section = relationship("RoadmapSection", back_populates="courses")
+
+    __table_args__ = (
+        UniqueConstraint("section_id", "normalized_url", name="uq_roadmap_courses_section_normalized_url"),
+        Index("ix_roadmap_courses_section_id", "section_id"),
+        Index("ix_roadmap_courses_provider", "provider"),
     )
 
 

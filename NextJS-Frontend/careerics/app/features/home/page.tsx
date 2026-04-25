@@ -303,19 +303,21 @@ export default function HomePage() {
     setBookmarks(getUnifiedBookmarks(user?.id));
   }, [isAuthLoading, user?.id]);
 
+  // Load bookmarks after auth completes
   useEffect(() => {
-    const timerId = window.setTimeout(() => {
-      loadBookmarks();
-    }, 0);
+    if (isAuthLoading) {
+      return;
+    }
 
-    return () => {
-      window.clearTimeout(timerId);
-    };
-  }, [loadBookmarks]);
+    loadBookmarks();
+  }, [isAuthLoading, loadBookmarks]);
 
+  // Listen for external bookmark updates
   useEffect(() => {
     const handleBookmarksUpdated = () => {
-      loadBookmarks();
+      if (!isAuthLoading) {
+        setBookmarks(getUnifiedBookmarks(user?.id));
+      }
     };
 
     window.addEventListener(UNIFIED_BOOKMARKS_UPDATED_EVENT, handleBookmarksUpdated as EventListener);
@@ -328,7 +330,7 @@ export default function HomePage() {
       );
       window.removeEventListener("storage", handleBookmarksUpdated);
     };
-  }, [loadBookmarks]);
+  }, [user?.id, isAuthLoading]);
 
   const careerData: CareerCardItem[] = useMemo(() => {
     if (bookmarks.length > 0) {
@@ -356,8 +358,8 @@ export default function HomePage() {
       {
         title: "No Bookmarks Yet",
         desc: "Save roadmap or career suggestions and they will appear here.",
-        href: "/features/roadmap",
-        buttonLabel: "Explore",
+        href: "/features/career",
+        buttonLabel: "Take Career Quiz",
         type: "bookmark",
       },
     ];

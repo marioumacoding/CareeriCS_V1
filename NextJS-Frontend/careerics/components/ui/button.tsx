@@ -42,8 +42,8 @@ const variantStyles: Record<ButtonVariant, { default: CSSProperties; hover: CSSP
     hover: { backgroundColor: "var(--hover-grey)" }
   },
   outline: {
-    default: { backgroundColor: "transparent", border: "0.1vh solid #d4d4d8", color: "#18181b" },
-    hover: { backgroundColor: "#f4f4f5" }
+    default: { backgroundColor: "transparent", border: "0.7vh solid white", color: "white" },
+    hover: { backgroundColor: "#f4f4f5", color: "black" }
   },
   ghost: {
     default: { backgroundColor: "transparent", color: "#18181b" },
@@ -103,7 +103,6 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
             fontFamily: "var(--font-nova-square)",
             padding: "0vh",
             marginTop: "1vh",
-            marginLeft: "5vh",
             ...style
           }}
         >

@@ -1,14 +1,13 @@
 from sqlalchemy.orm import Session
 from uuid import uuid4
-from db.models import CareerSession 
+from db.models import CareerSession
 
 
-
-def create_session(db: Session, user_id: str) -> CareerSession:
+def create_session(db: Session, user_id: str, status: str | None = None) -> CareerSession:
     session = CareerSession(
         id=uuid4(),
         user_id=user_id,
-        status="in_progress"
+        status=status or "in_progress"
     )
     db.add(session)
     db.commit()

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 type CardType = "horizontal" | "square" | "vertical";
 
@@ -7,6 +8,7 @@ type CardProps = {
   title?: React.ReactNode;
   description?: React.ReactNode;
   color?: string;
+  link?: string;
 };
 
 const layouts = {
@@ -52,15 +54,17 @@ export default function FeatureCard({
   title = "",
   description = "",
   color = "#ffffff",
+  link = "#",
 }: CardProps) {
   const [hover, setHover] = useState(false);
-
+  const router = useRouter();
   const layout = layouts[type];
 
   return (
     <div
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
+      onClick={() => router.push(link)}
       style={{
         width: "100%",
         aspectRatio: layout.aspectRatio,

@@ -39,7 +39,7 @@ const CourseCard = ({ course }: { course: any }) => {
     <div style={{
       width: "280px", minHeight: "120px", height: "auto",
       backgroundColor: isDone ? "#3D3D3D" : "#BABABA", 
-      borderRadius: "40px", padding: "20px",
+      borderRadius: "40px", padding: "10px",
       display: "flex", alignItems: "stretch", position: "relative",
     }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "70px", flexShrink: 0 }}>
@@ -74,13 +74,21 @@ const CourseCard = ({ course }: { course: any }) => {
 export default function CourseLibraryPage() {
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Logic to calculate counts
   const totalTopics = PAGE_DATA.sections.length;
   const totalCourses = PAGE_DATA.sections.reduce((acc, sec) => acc + sec.items.length, 0);
   const completedCount = PAGE_DATA.sections.reduce((acc, sec) => acc + sec.items.filter(item => item.isDone).length, 0);
 
   return (
-    <div style={{ width: "100%", height: "100vh", padding: "40px 60px", color: "white", boxSizing: "border-box", display: "flex", flexDirection: "column", fontFamily: "var(--font-nova-square)" }}>
+ 
+    <div style={{ 
+      width: "100%", 
+      padding: "20px 40px", 
+      color: "white", 
+      boxSizing: "border-box", 
+      display: "flex", 
+      flexDirection: "column", 
+      fontFamily: "var(--font-nova-square)" 
+    }}>
       
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "25px" }}>
@@ -93,7 +101,7 @@ export default function CourseLibraryPage() {
                 type="text" placeholder="search" value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 style={{ 
-                  width: "100%", backgroundColor: "rgba(255,255,255,0.05)", 
+                  width: "100%", backgroundColor: "rgba(234, 18, 18, 0.05)", 
                   border: "1px solid rgb(255, 255, 255)", borderRadius: "20px", 
                   padding: "8px 45px 8px 15px", color: "white", outline: "none"
                 }} 
@@ -134,13 +142,11 @@ export default function CourseLibraryPage() {
 
       <hr style={{ border: "none", height: "1px", backgroundColor: "rgba(255,255,255,0.1)", marginBottom: "35px" }} />
 
-      {/* Course Sections List (Rendering PAGE_DATA Directly) */}
-      <div style={{ flex: 1, overflowY: "auto", scrollbarWidth: "none", display: "flex", flexDirection: "column", gap: "45px" }}>
-        <style>{`div::-webkit-scrollbar { display: none; }`}</style>
-        
+      {/* Course Sections List */}
+      <div style={{ display: "flex", flexDirection: "column", gap: "45px" }}>
         {PAGE_DATA.sections.map((section) => (
           <div key={section.category}>
-            <h3 style={{ fontSize: "20px", marginBottom: "25px", fontWeight: "400" }}>{section.category}</h3>
+            <h3 style={{ fontSize: "20px", marginBottom: "40px", fontWeight: "400" }}>{section.category}</h3>
             <div style={{ display: "flex", flexWrap: "wrap", gap: "25px" }}>
               {section.items.map((course) => (
                 <CourseCard key={course.id} course={course} />

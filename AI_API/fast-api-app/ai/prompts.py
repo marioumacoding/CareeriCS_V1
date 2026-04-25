@@ -127,18 +127,63 @@ def skill_assessment_questions_prompt(skill_name: str, num_questions: int) -> st
 # ============================================================
 # Career Quiz Evaluation
 # ============================================================
-def career_quiz_evaluation_prompt(q_and_a: list[dict], selected_cards: list[dict], tracks: list[dict]):
+def career_quiz_evaluation_prompt(
+    selected_cards,
+    answers,
+    tracks
+):
     return (
-        "You are a career counselor \n"
-        "Based on the following questions and answers from a career quiz, and the selected cards representing hobbies and technical skills, recommend three career tracks that would be a good fit for the user. \n\n"
-        "Questions and Answers:\n"        + "\n".join([f"Q: {item['question']} A: {item['answer']}" for item in q_and_a]) + "\n\n"
-        "Selected Cards:\n" + "\n".join([f"{card['type']}: {card['name']}" for card in selected_cards]) + "\n\n"
-        "Available Career Tracks:\n" + "\n".join([f"{track.name} id: {track.id}" for track in tracks]) + "\n\n"
-        "Based on the above information, recommend three career tracks that would be a good fit for the user and explain why for each recommendation."
-        "follow this exact schema for the output: \n"
+        "You are an expert career recommendation engine.\n"
+        "Your job is to analyze a structured career assessment and recommend the best career tracks.\n\n"
+
+        "INPUT STRUCTURE:\n"
+        "- Selected Cards: represent chosen technical skills and interests.\n"
+        "- Answers: represent 1–5 rating responses for each card question.\n"
+        "- Career Tracks: available career options to match against.\n\n"
+
+        "SCORING RULES:\n"
+        "- Ratings range from 1 (very weak) to 5 (very strong).\n"
+        "- High ratings indicate strong alignment.\n"
+        "- Combine technical + interest signals when evaluating fit.\n"
+        "- Prioritize consistent high scores across multiple questions.\n\n"
+
+        "SELECTED CARDS:\n"
+        + "\n".join([
+            f"{card['type']}: {card['name']}"
+            for card in selected_cards
+        ]) + "\n\n"
+
+        "QUESTION RESPONSES:\n"
+        + "\n".join([
+            f"{item['card_name']} | {item['question_text']} | rating={item['answer']}"
+            for item in answers
+        ]) + "\n\n"
+
+        "AVAILABLE CAREER TRACKS:\n"
+        + "\n".join([
+            f"{track.name} | id={track.id} | description={track.description}"
+            for track in tracks
+        ]) + "\n\n"
+
+        "EVALUATION INSTRUCTIONS:\n"
+        "- Identify strongest technical skill patterns.\n"
+        "- Identify strongest interest patterns.\n"
+        "- Match both against career tracks.\n"
+        "- Compute an implicit fit score from 0 to 100.\n"
+        "- Only recommend tracks with strong evidence.\n\n"
+
+        "OUTPUT REQUIREMENTS:\n"
+        "- Return EXACTLY 3 career tracks.\n"
+        "- Each item must include:\n"
+        "  • track_id (UUID)\n"
+        "  • score (integer 0–100 representing fit percentage)\n\n"
+
+        "OUTPUT FORMAT MUST MATCH THIS SCHEMA EXACTLY:\n"
         f"{json.dumps(career_quiz_evaluation_schema, indent=2)}\n\n"
-        "IMPORTANT:\n"
+
+        "IMPORTANT RULES:\n"
+        "- Output must be a JSON ARRAY (not a single object)\n"
         "- No markdown\n"
-        "- No extra text\n"
-        "- Output must be valid JSON"
+        "- No explanation text\n"
+        "- Only valid JSON output\n"
     )

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { interviewService } from "@/services/interview.service";
+import { normalizeInterviewAudioUrl } from "@/lib/interview-media";
 
 const INTERVIEW_TEST_QUESTION_LIMIT = 3;
 
@@ -12,6 +13,7 @@ export interface UIQuestion {
   id: number;
   text: string;
   questionId: string;
+  audioUrl: string;
 }
 
 interface RecordingOverrides {
@@ -20,6 +22,7 @@ interface RecordingOverrides {
   q?: string;
   questionId?: string | null;
   followup?: string | null;
+  followupAudio?: string | null;
   followupId?: string | null;
   followupMode?: boolean | null;
 }
@@ -59,6 +62,7 @@ export function useInterviewFlow() {
   const questionId = searchParams.get("questionId") || "";
   const answerId = searchParams.get("answerId") || "";
   const followupText = searchParams.get("followup") || "";
+  const followupAudio = searchParams.get("followupAudio") || "";
   const followupId = searchParams.get("followupId") || "";
   const followupMode = searchParams.get("followupMode") === "1";
 
@@ -93,6 +97,7 @@ export function useInterviewFlow() {
         id: index + 1,
         text: q.question_text,
         questionId: q.id,
+        audioUrl: normalizeInterviewAudioUrl(q.question_audio, "questions"),
       }));
 
       // Temporary test cap requested to speed up end-to-end validation.
@@ -137,6 +142,12 @@ export function useInterviewFlow() {
         next.delete("followup");
       } else if (typeof overrides.followup === "string") {
         next.set("followup", overrides.followup);
+      }
+
+      if (overrides.followupAudio === null) {
+        next.delete("followupAudio");
+      } else if (typeof overrides.followupAudio === "string") {
+        next.set("followupAudio", overrides.followupAudio);
       }
 
       if (overrides.followupId === null) {
@@ -218,6 +229,7 @@ export function useInterviewFlow() {
     questionId,
     answerId,
     followupText,
+    followupAudio,
     followupId,
     followupMode,
     currentQ,

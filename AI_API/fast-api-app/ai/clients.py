@@ -1,9 +1,9 @@
 import os
 import shutil
 import tempfile
+from typing import Any, Callable
 from openai import OpenAI
 from dotenv import load_dotenv
-from transformers import pipeline
 from huggingface_hub import InferenceClient
 
 load_dotenv()
@@ -55,29 +55,60 @@ _bootstrap_ffmpeg_path()
 DS_TOKEN = os.getenv("DS_TOKEN")
 HF_TOKEN = os.getenv("HF_TOKEN")
 
-DS_Client = OpenAI(
-    base_url="https://router.huggingface.co/v1",
-    api_key=DS_TOKEN,
+
+class _LazyObject:
+    def __init__(self, factory: Callable[[], Any]) -> None:
+        self._factory = factory
+        self._instance: Any = None
+
+    def _get(self) -> Any:
+        if self._instance is None:
+            self._instance = self._factory()
+        return self._instance
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._get(), name)
+
+    def __call__(self, *args: Any, **kwargs: Any) -> Any:
+        return self._get()(*args, **kwargs)
+
+
+def _build_pipeline(task: str, model: str):
+    # Import transformers only when a specific pipeline is first used.
+    from transformers import pipeline
+
+    return pipeline(
+        task,
+        model=model,
+        framework="pt",
+    )
+
+
+DS_Client = _LazyObject(
+    lambda: OpenAI(
+        base_url="https://router.huggingface.co/v1",
+        api_key=DS_TOKEN,
+    )
 )
 
-minimax_client = OpenAI(
-    base_url="https://router.huggingface.co/v1",
-    api_key=HF_TOKEN,
+minimax_client = _LazyObject(
+    lambda: OpenAI(
+        base_url="https://router.huggingface.co/v1",
+        api_key=HF_TOKEN,
+    )
 )
 
-whisper_client = InferenceClient(
-    provider="hf-inference",
-    api_key=HF_TOKEN,
+whisper_client = _LazyObject(
+    lambda: InferenceClient(
+        provider="hf-inference",
+        api_key=HF_TOKEN,
+    )
 )
 
-ser_client = pipeline(
-    "audio-classification",
-    model="superb/hubert-large-superb-er",
-    framework="pt",
+ser_client = _LazyObject(
+    lambda: _build_pipeline("audio-classification", "superb/hubert-large-superb-er")
 )
 
-sentiment_client = pipeline(
-    "sentiment-analysis",
-    model="distilbert/distilbert-base-uncased-finetuned-sst-2-english",
-    framework="pt",
+sentiment_client = _LazyObject(
+    lambda: _build_pipeline("sentiment-analysis", "distilbert/distilbert-base-uncased-finetuned-sst-2-english")
 )

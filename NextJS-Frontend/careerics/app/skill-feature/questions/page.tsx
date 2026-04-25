@@ -7,6 +7,7 @@ import { skillAssessmentService } from "@/services";
 import type {
   APIAssessmentQuestion,
   APIAssessmentQuestionResult,
+  APIAssessmentSessionType,
   APISubmitAssessmentResponse,
 } from "@/types";
 
@@ -26,13 +27,23 @@ function getProficiencyLevel(score: number): "Advanced" | "Intermediate" | "Begi
   return "Beginner";
 }
 
+function normalizeSessionType(rawType: string | null): APIAssessmentSessionType {
+  if (rawType === "roadmap" || rawType === "section" || rawType === "step") {
+    return rawType;
+  }
+  return "skills";
+}
+
 export default function AssessmentPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, isLoading: isAuthLoading } = useAuth();
 
-  const skillId = searchParams.get("skillId") || "";
-  const skillName = searchParams.get("skillName") || "Skill Assessment";
+  const legacySkillId = searchParams.get("skillId") || "";
+  const legacySkillName = searchParams.get("skillName") || "";
+  const targetId = searchParams.get("targetId") || legacySkillId;
+  const targetName = searchParams.get("targetName") || legacySkillName || "Skill Assessment";
+  const sessionType = normalizeSessionType(searchParams.get("sessionType"));
   const resumeSessionId = searchParams.get("sessionId") || "";
   const parsedNumQuestions = Number(searchParams.get("numQuestions") || "7");
   const numQuestions = Number.isFinite(parsedNumQuestions) && parsedNumQuestions > 0
@@ -95,7 +106,7 @@ export default function AssessmentPage() {
   };
 
   const startNewSession = async () => {
-    if (!user?.id || !skillId) return;
+    if (!user?.id || !targetId) return;
 
     setIsInitializing(true);
     setError("");
@@ -104,8 +115,9 @@ export default function AssessmentPage() {
     setResultsData(null);
 
     const response = await skillAssessmentService.startSession(user.id, {
-      skill_id: skillId,
+      target_id: targetId,
       num_questions: numQuestions,
+      session_type: sessionType,
     });
 
     if (!response.success || !response.data?.session_id || !response.data.questions?.length) {
@@ -127,11 +139,18 @@ export default function AssessmentPage() {
     persistAssessmentState(nextSessionId, nextQuestions, {}, 1, 1);
 
     const params = new URLSearchParams({
-      skillId,
-      skillName,
+      targetId,
+      targetName,
+      sessionType,
       numQuestions: String(numQuestions),
       sessionId: nextSessionId,
     });
+
+    if (sessionType === "skills") {
+      params.set("skillId", targetId);
+      params.set("skillName", targetName);
+    }
+
     router.replace(`/skill-feature/questions?${params.toString()}`);
 
     setIsInitializing(false);
@@ -142,7 +161,7 @@ export default function AssessmentPage() {
       return;
     }
 
-    const initKey = `${user?.id || ""}:${skillId}:${resumeSessionId}:${numQuestions}`;
+    const initKey = `${user?.id || ""}:${sessionType}:${targetId}:${resumeSessionId}:${numQuestions}`;
     if (initKeyRef.current === initKey) return;
     initKeyRef.current = initKey;
 
@@ -152,36 +171,31 @@ export default function AssessmentPage() {
       return;
     }
 
-    if (!skillId) {
+    if (!targetId) {
       setIsInitializing(false);
-      setError("Missing skill identifier. Please select a skill first.");
+      setError("Missing assessment target. Please select a topic or skill first.");
       return;
     }
 
     const initialize = async () => {
       if (resumeSessionId) {
-        const wantsResume = window.confirm("We found an existing session. Do you want to resume it?");
-        if (wantsResume) {
-          const cached = sessionStorage.getItem(`${STORAGE_PREFIX}${resumeSessionId}`);
-          if (cached) {
-            try {
-              const parsed = JSON.parse(cached) as CachedAssessmentState;
-              if (parsed.sessionId && parsed.questions?.length) {
-                setSessionId(parsed.sessionId);
-                setQuestions(parsed.questions);
-                setUserAnswers(parsed.userAnswers || {});
-                setCurrentQuestion(parsed.currentQuestion || 1);
-                setExpandedId(parsed.currentQuestion || 1);
-                setUnlockedStepId(parsed.unlockedStepId || 1);
-                setIsInitializing(false);
-                return;
-              }
-            } catch {
-              // Ignore malformed cache and fall through to restart.
+        const cached = sessionStorage.getItem(`${STORAGE_PREFIX}${resumeSessionId}`);
+        if (cached) {
+          try {
+            const parsed = JSON.parse(cached) as CachedAssessmentState;
+            if (parsed.sessionId && parsed.questions?.length) {
+              setSessionId(parsed.sessionId);
+              setQuestions(parsed.questions);
+              setUserAnswers(parsed.userAnswers || {});
+              setCurrentQuestion(parsed.currentQuestion || 1);
+              setExpandedId(parsed.currentQuestion || 1);
+              setUnlockedStepId(parsed.unlockedStepId || 1);
+              setIsInitializing(false);
+              return;
             }
+          } catch {
+            // Ignore malformed cache and fall through to restart.
           }
-
-          setError("Previous session cache is not available. Starting a new session.");
         }
       }
 
@@ -189,7 +203,7 @@ export default function AssessmentPage() {
     };
 
     void initialize();
-  }, [isAuthLoading, numQuestions, resumeSessionId, skillId, skillName, user?.id]);
+  }, [isAuthLoading, numQuestions, resumeSessionId, sessionType, targetId, targetName, user?.id]);
 
   useEffect(() => {
     if (!sessionId || !questions.length) return;
@@ -291,15 +305,14 @@ export default function AssessmentPage() {
           setCurrentQuestion(id);
         }
       }}
-      closeIconSrc="/auth/Close.svg"
-      closeRoute="/features/skill"
-      title={skillName}
+      title={targetName}
     >
       <div style={{
-        width: "100%", height: "100vh", display: "flex", flexDirection: "column",
+        width: "100%", height: "100%", display: "flex", flexDirection: "column",
         alignItems: "center", justifyContent: "center", position: "relative",
         padding: "10px 100px", boxSizing: "border-box",
-      }}>
+      }}
+      >
         
         {isInitializing ? (
           <div style={{ textAlign: "center", color: "white" }}>

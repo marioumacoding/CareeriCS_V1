@@ -310,7 +310,7 @@ class SAQuestionOut(SAQuestionBase):
 class StartAssessmentRequest(BaseModel):
     target_id: UUID
     num_questions: int = Field(gt=4, le=20)  # max 20 questions
-    session_type: str
+    session_type: Literal["skills", "roadmap", "section", "step"]
 
 
 class AssessmentQuestionResponse(BaseModel):
@@ -330,7 +330,11 @@ class StartAssessmentResponse(BaseModel):
 class AssessmentSessionSummary(BaseModel):
     id: UUID
     user_id: UUID
-    skill_id: UUID
+    type: str
+    skill_id: Optional[UUID] = None
+    roadmap_id: Optional[UUID] = None
+    section_id: Optional[UUID] = None
+    step_id: Optional[UUID] = None
     total_questions: int
     score: int
     status: str
@@ -479,6 +483,22 @@ class RoadmapListItemSchema(BaseModel):
     steps_count: int
 
 
+class UserRoadmapBookmarkReadSchema(BaseModel):
+    roadmap_id: UUID
+    created_at: datetime
+    model_config = ConfigDict(from_attributes=True)
+
+
+class UserRoadmapBookmarkListSchema(BaseModel):
+    user_id: UUID
+    bookmarks: List[UserRoadmapBookmarkReadSchema] = Field(default_factory=list)
+
+
+class UserRoadmapBookmarkToggleSchema(BaseModel):
+    roadmap_id: UUID
+    bookmarked: bool
+
+
 class StepProgressUpsertRequestSchema(BaseModel):
     completion_status: str = Field(pattern="^(not_started|in_progress|completed)$")
     score: Optional[int] = None
@@ -527,18 +547,31 @@ class UserRoadmapProgressListSchema(BaseModel):
     roadmaps: List[UserRoadmapProgressItemSchema] = Field(default_factory=list)
 
 
+class CurrentRoadmapLearningSchema(BaseModel):
+    roadmap_id: UUID
+    roadmap_title: str
+    section_id: Optional[UUID] = None
+    section_title: Optional[str] = None
+    step_id: Optional[UUID] = None
+    step_title: Optional[str] = None
+    progress_percent: int
+
+
 # =====================================================
 # CAREER QUIZ SCHEMAS
 # =====================================================
 class CareerSessionBase(BaseModel):
     user_id: UUID
-    status: str
+    status: str = "in_progress"
 
-class CareerSessionCreate(CareerSessionBase):
-    pass
+class CareerSessionCreate(BaseModel):
+    user_id: UUID
+    status: Optional[str] = "in_progress"
 
 class CareerSessionRead(CareerSessionBase):
     id: UUID
+    started_at: Optional[datetime] = None
+    submitted_at: Optional[datetime] = None
     model_config = ConfigDict(from_attributes=True)
 
 class CareerSessionStatusUpdate(BaseModel):
@@ -546,7 +579,7 @@ class CareerSessionStatusUpdate(BaseModel):
 
 class CareerAnswerBase(BaseModel):
     question_id: UUID
-    answer: str
+    answer: int = Field(ge=1, le=5)
 
 class CareerAnswerCreate(BaseModel):
     answers: List[CareerAnswerBase]
@@ -555,7 +588,7 @@ class CareerAnswerRead(BaseModel):
     id: UUID
     session_id: UUID
     question_id: UUID
-    answer: str
+    answer: int
 
     class Config:
         from_attributes = True
@@ -573,7 +606,7 @@ class CareerQuestionResponse(BaseModel):
 
 # Questions for a single card
 class CardQuestions(BaseModel):
-    card_id: str
+    card_id: UUID
     questions: List[str]
 
 # Payload for multiple cards
@@ -592,20 +625,26 @@ class CareerCardRead(CareerCardBase):
     model_config = ConfigDict(from_attributes=True)
 
 class CareerCardSelectionItem(BaseModel):
-    id: str
+    id: UUID
     type: Literal["hobby", "technical"]
 
 class CareerCardSelectionMultiple(BaseModel):
     cards: List[CareerCardSelectionItem]
 
 class CareerSelectedCardRead(BaseModel):
-    type: str
+    type: Literal["hobby", "technical"]
     id: UUID
     name: str
     model_config = ConfigDict(from_attributes=True)
 
+class CareerTrackScoreRead(BaseModel):
+    track_id: UUID
+    track_name: str
+    track_description: Optional[str] = None
+    score: int = Field(ge=0, le=100)
+
 class CareerEvaluationRead(BaseModel):
-    track_scores: List[Dict[str, Any]]
+    track_scores: List[CareerTrackScoreRead]
 
 
 # =====================================================
@@ -664,4 +703,66 @@ class UserJobsListResponse(BaseModel):
     skip: int
     limit: int
     jobs: List[JobPostResponse]
+
+
+# =====================================================
+# COURSE SCHEMAS
+# =====================================================
+
+class CourseBase(BaseModel):
+    platform: Optional[str] = None
+    title: str
+    instructor: Optional[str] = None
+    tags: Optional[List[str]] = None
+    duration: Optional[str] = None
+    url: str
+    category: Optional[str] = None
+    level: Optional[str] = None
+    price: Optional[str] = None
+    language: Optional[str] = None
+
+
+class CourseCreate(CourseBase):
+    pass
+
+
+class CourseResponse(CourseBase):
+    id: UUID
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    model_config = ConfigDict(from_attributes=True)
+
+
+CourseStatus = Literal["saved", "enrolled", "completed"]
+
+
+class CourseStatusUpdateRequest(BaseModel):
+    status: CourseStatus
+
+
+class CourseProgressResponse(BaseModel):
+    id: UUID
+    course_id: UUID
+    user_id: UUID
+    status: CourseStatus
+    started_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    saved_at: Optional[datetime] = None
+    created_at: datetime
+    updated_at: datetime
+    model_config = ConfigDict(from_attributes=True)
+
+
+class BulkCourseImportResult(BaseModel):
+    inserted: int
+    skipped: int
+    total_processed: int
+    duplicates: List[str]
+
+
+class UserCoursesListResponse(BaseModel):
+    total: int
+    skip: int
+    limit: int
+    courses: List[CourseResponse]
 

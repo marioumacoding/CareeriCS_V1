@@ -51,13 +51,13 @@ export default function CVPop({
       
       <div style={{
         backgroundColor: "#E6FFB2",
-        width: "550px",
-        padding: "40px",
+        width: "fit-content",
+        padding: "4vh",
         borderRadius: "40px",
         position: "relative",
         display: "flex",
         flexDirection: "column",
-        gap: "30px",
+        gap: "2vh",
         fontFamily: "var(--font-nova-square)"
       }} onClick={(e) => e.stopPropagation()}>
         
@@ -73,13 +73,14 @@ export default function CVPop({
           color: "#000"
         }}>✕</button>
 
-        <h2 style={{ fontSize: "32px", margin: 0, color: "#000" }}>Replace your information</h2>
+        <h2 style={{ fontSize: "1.1rem", margin: 0, color: "#000" }}>Replace your information</h2>
         
         <hr style={{ border: "none", borderTop: "2px solid rgb(0, 0, 0)", margin: 0 }} />
 
         {/* Info Row */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span style={{ fontSize: "20px", fontWeight: 500 }}>The last extracted version</span>
+          <span style={{ fontSize: "0.9rem", fontWeight: 500 }}>The last extracted version</span>
+        </div>
           <div style={{ 
             backgroundColor: "white", 
             color: "#8E8E8E", 
@@ -87,13 +88,13 @@ export default function CVPop({
             borderRadius: "14px", 
             fontSize: "16px",
             minWidth: "120px",
-            textAlign: "center"
+            textAlign: "center",
+            marginLeft:"1vh",
           }}>{lastVersion}</div>
-        </div>
 
         {/* Upload Section */}
         <div style={{ display: "flex", flexDirection: "column", gap: "15px", alignItems: "flex-start" }}>
-          <span style={{ fontSize: "20px", fontWeight: 500 }}>Upload new CV</span>
+          <span style={{ fontSize: "1.1rem", fontWeight: 500 }}>Upload new CV</span>
           
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: "100%", gap: "20px" }}>
             {/* Hidden Input */}
@@ -108,7 +109,7 @@ export default function CVPop({
             <img 
               src="/cv/upload.svg" 
               alt="Upload" 
-              style={{ width: "100px", opacity: 0.6 }} 
+              style={{ height: "12vh" }} 
             />
 
             <button 
@@ -117,9 +118,10 @@ export default function CVPop({
                 backgroundColor: "#8E8E8E",
                 color: "white",
                 border: "none",
-                padding: "14px 45px",
+                paddingBlock: "1.5vh",
+                paddingInline:"3vw",
                 borderRadius: "15px",
-                fontSize: "18px",
+                fontSize: "1.1rem",
                 fontWeight: 600,
                 cursor: "pointer",
                 transition: "0.3s opacity"

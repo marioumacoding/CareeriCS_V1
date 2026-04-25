@@ -31,16 +31,17 @@ export default function CoursesPage() {
   }));
 
   return (
-    <div style={{ width: "100%", height: "100vh", padding: "20px", boxSizing: "border-box" }}>
-      <RootLayout
+    
+      <div
         style={{
           display: "grid",
-          gridTemplateColumns: "1.5fr 1.5fr 1fr 1fr", 
-          gridTemplateRows: "min-content min-content 1fr 1fr", 
-          gridColumnGap: "15px",
-          gridRowGap: "15px",
+          gridTemplateColumns: "repeat(6,1fr)", 
+          gridTemplateRows: "repeat(6,1fr)", 
+          gridColumnGap: "25px",
+          gridRowGap: "20px",
           height: "100%", 
           width: "100%",
+          padding:"40px"
         }}
       >
         <CurrentCoursesCard 
@@ -48,21 +49,20 @@ export default function CoursesPage() {
           courses={dynamicCurrentCourses}
           selected={selectedCourse}
           onSelect={setSelectedCourse}
-          style={{ gridArea: "1 / 1 / 3 / 5", marginTop: "50px" }}
+          style={{ gridArea: "1 / 1 / 3 / 7" }}
         />
 
         <FieldsDiscoverCard 
           fields={fields}
           selected={selectedField}
           onSelect={setSelectedField}
-          style={{ gridArea: "3 / 1 / 5 / 3", height: "100%" }}
+          style={{ gridArea: "3 / 1 / 7 / 5"}}
         />
 
         <CompletedCoursesCard 
           courses={completedCourses}
-          style={{ gridArea: "3 / 3 / 5 / 5", height: "100%" }}
+          style={{ gridArea: "3 / 5 / 7 / 7 " }}
         />
-      </RootLayout>
-    </div>
+      </div>
   );
 }

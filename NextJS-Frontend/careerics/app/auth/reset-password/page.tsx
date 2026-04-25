@@ -19,7 +19,6 @@ export default function ResetPassword() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [submitHover, setSubmitHover] = useState(false);
 
   async function handleReset(e: React.FormEvent) {
     e.preventDefault();
@@ -38,12 +37,7 @@ export default function ResetPassword() {
   }
 
   return (
-    <AuthLayout
-      CardTitle="Reset Password"
-      Message="Remember your password"
-      Link="/auth/login"
-      LinkText="Sign In Here"
-    >
+    
       <form
         onSubmit={handleReset}
       >
@@ -74,11 +68,10 @@ export default function ResetPassword() {
         />
        
         <Button
-          style={{ marginBlock: "2vh", paddingInline: "12vh" }}
+          style={{ marginTop: "2vh", paddingInline: "12vh" }}
         >
           {loading ? "Sending..." : "Send Reset Link"}
         </Button>
       </form>
-    </AuthLayout>
   );
 }

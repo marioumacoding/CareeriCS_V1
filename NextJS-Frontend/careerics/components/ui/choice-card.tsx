@@ -3,35 +3,42 @@
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import React, { CSSProperties, ReactNode } from "react";
+import Image from "next/image";
 
 interface ChoiceCardProps {
   icon?: string;
+  image?: string;
   title?: string;
   description?: string;
   route?: string;
   style?: CSSProperties;
   children?: ReactNode;
   isWideCard?: boolean;
-  onClick?: () => void; // 1. Already here, good!
+  onClick?: () => void;
+  disabled?: boolean;
+  buttonLabel?: string;
   buttonVariant?: "primary" | "secondary" | "primary-inverted";
 }
 
 export default function ChoiceCard({
   icon,
+  image,
   title,
   description,
   route,
   style,
   buttonVariant,
-  onClick, // 2. ADDED: Destructure onClick here
+  onClick,
+  disabled = false,
+  buttonLabel = "Start",
 }: ChoiceCardProps) {
   const router = useRouter();
 
   const handleButtonClick = () => {
     if (onClick) {
-      onClick(); // Run popup logic
+      onClick();
     } else if (route) {
-      router.push(route); // Run navigation logic
+      router.push(route);
     }
   };
 
@@ -42,51 +49,50 @@ export default function ChoiceCard({
         width: "100%",
         height: "100%",
         backgroundColor: "var(--dark-blue)",
-        borderRadius: "2vh",
+        borderRadius: "4vh",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        padding: "3vh",
-        boxSizing: "border-box",
+        justifyContent:"space-between",
+        paddingTop:"5vh",
+        paddingBottom: "3vh",
+        paddingInline:"3vw",
         overflow: "hidden",
-        gap: "1vh",
         ...style
       }}
     >
       <div
         style={{
-          display: "grid",
-          gridTemplateColumns: "10fr 1fr 10fr",
-          height: "40%",
-          justifyItems: "center",
+          display: "flex",
+          width:"100%",
           alignItems: "center",
-          flexGrow: 0,
-          flexShrink: 0,
           marginBottom: "auto",
+          justifyContent:"space-between",
         }}
       >
-        <img
-          src={icon}
-          alt={title}
-          style={{
-            width: "70%",
-          }} />
+        
+          <img
+            src={image || icon || ""}
+            alt={title || "career icon"}
+            style={{
+              height:"12vh"
+            }}
+          />
 
         <div
           style={{
             height: "80%",
             backgroundColor: "white",
             width: "0.1vh",
-            margin: 0,
           }}
         />
 
         <p
           style={{
-            margin: 0,
             color: "white",
-            fontSize: "clamp(0.8rem,1.7vw,1.5rem)",
+            fontSize: "1.4rem",
             fontFamily: "var(--font-nova-square)",
+            width: "min-content",
           }}
         >
           {title}
@@ -109,16 +115,17 @@ export default function ChoiceCard({
       <Button
         type="button"
         variant={buttonVariant}
-        // 3. UPDATED: Call handleButtonClick instead of router.push directly
-        onClick={handleButtonClick} 
+        onClick={handleButtonClick}
+        disabled={disabled}
         style={{
           flexGrow: 0,
           flexShrink: 0,
           paddingInline: "5vw",
-          marginTop: "auto"
+          marginTop: "auto",
+          paddingBlock:"2.5vh",
         }}
       >
-        Start
+        {buttonLabel}
       </Button>
     </div>
   );

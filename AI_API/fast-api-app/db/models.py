@@ -59,6 +59,7 @@ class User(Base):
     sessions = relationship("Session", back_populates="user", cascade="all, delete-orphan")
     reports = relationship("Report", back_populates="user",cascade="all, delete-orphan")
     assessment = relationship("RoadmapAssessmentResult", back_populates="user", cascade="all, delete-orphan")
+    bookmarks = relationship("UserRoadmapBookmark", back_populates="user", cascade="all, delete-orphan")
     career_sessions = relationship("CareerSession", back_populates="user", cascade="all, delete-orphan")
 
 
@@ -318,7 +319,8 @@ class AssessmentSession(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), nullable=False)
-    skill_id = Column(UUID(as_uuid=True), ForeignKey("skills.id"), nullable=False)
+    # Keep optional because section/step/roadmap assessments don't always have a direct skill FK.
+    skill_id = Column(UUID(as_uuid=True), ForeignKey("skills.id"), nullable=True)
     roadmap_id = Column(UUID(as_uuid=True), ForeignKey("roadmaps.id"), nullable=True)
     section_id = Column(UUID(as_uuid=True), ForeignKey("roadmap_sections.id"), nullable=True)
     step_id = Column(UUID(as_uuid=True), ForeignKey("roadmap_steps.id"), nullable=True)
@@ -426,6 +428,28 @@ class Roadmap(Base):
 
     section = relationship("RoadmapSection", back_populates="roadmap", cascade="all, delete-orphan")
     assessment = relationship("RoadmapAssessmentResult", back_populates="roadmap")
+    bookmarks = relationship("UserRoadmapBookmark", back_populates="roadmap", cascade="all, delete-orphan")
+
+
+# =========================
+# ROADMAP BOOKMARK
+# =========================
+class UserRoadmapBookmark(Base):
+    __tablename__ = "user_roadmap_bookmarks"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    roadmap_id = Column(UUID(as_uuid=True), ForeignKey("roadmaps.id", ondelete="CASCADE"), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    user = relationship("User", back_populates="bookmarks")
+    roadmap = relationship("Roadmap", back_populates="bookmarks")
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "roadmap_id", name="uq_user_roadmap_bookmarks_user_roadmap"),
+        Index("ix_user_roadmap_bookmarks_user_id", "user_id"),
+        Index("ix_user_roadmap_bookmarks_roadmap_id", "roadmap_id"),
+    )
 
 
 # =========================
@@ -720,4 +744,82 @@ class JobUserInteraction(Base):
         UniqueConstraint("job_post_id", "user_id", name="uq_job_user_interaction_user_job"),
         Index("idx_job_user_interactions_user_saved", "user_id", "is_saved"),
         Index("idx_job_user_interactions_user_viewed_at", "user_id", "viewed_at"),
+    )
+
+
+# ###########################################################################################################################
+# COURSES
+# ###########################################################################################################################
+
+# =========================
+# COURSES
+# =========================
+class Course(Base):
+    __tablename__ = "courses"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    platform = Column(String, nullable=True)
+    title = Column(String, nullable=False, index=True)
+    instructor = Column(String, nullable=True)
+    tags = Column(ARRAY(Text), nullable=True)
+    duration = Column(String, nullable=True)
+    url = Column(Text, nullable=False, unique=True)
+    category = Column(String, nullable=True, index=True)
+    level = Column(String, nullable=True, index=True)
+    price = Column(String, nullable=True)
+    language = Column(String, nullable=True)
+
+    created_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+        index=True
+    )
+    updated_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False
+    )
+
+    user_progress = relationship("CourseUserProgress", back_populates="course", cascade="all, delete-orphan")
+
+    __table_args__ = (
+        Index("idx_course_category_level", "category", "level"),
+        Index("idx_course_created_at", "created_at"),
+    )
+
+
+# =========================
+# COURSE USER PROGRESS
+# =========================
+class CourseUserProgress(Base):
+    __tablename__ = "course_user_progress"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    course_id = Column(UUID(as_uuid=True), ForeignKey("courses.id", ondelete="CASCADE"), nullable=False)
+    status = Column(String, nullable=False)
+    started_at = Column(DateTime(timezone=True), nullable=True)
+    completed_at = Column(DateTime(timezone=True), nullable=True)
+    saved_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=True)
+    created_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False
+    )
+    updated_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False
+    )
+
+    course = relationship("Course", back_populates="user_progress")
+    user = relationship("User")
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "course_id", name="unique_user_course"),
+        Index("idx_course_user_progress_user_status", "user_id", "status"),
+        Index("idx_course_user_progress_saved_at", "saved_at"),
     )

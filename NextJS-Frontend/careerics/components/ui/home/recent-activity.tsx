@@ -3,7 +3,6 @@
 import React, { useRef } from "react";
 import Image from "next/image";
 
-// --- 1. Helper: CircleScoreSVG ---
 const CircleScoreSVG = ({
   score,
   size = 30,
@@ -70,54 +69,6 @@ const CircleScoreSVG = ({
   );
 };
 
-// --- Card 1: CareersCard ---
-export const CareersCard = ({ children, style }: any) => {
-  
-  
-  return (
-    <div
-      style={{
-        backgroundColor: "#1C427B",
-        borderRadius: "3vh",
-        paddingTop: "3vh",
-        paddingLeft: "4vh",
-        paddingRight: "4vh",
-        paddingBottom: "7vh",
-        color: "white",
-        height: "100%",
-        ...style,
-      }}
-    >
-      <h3
-        style={{
-          fontSize: "1.1rem",
-          fontFamily: "var(--font-nova-square)",
-          fontWeight: "200",
-          position: "relative",
-          marginBottom: "1vh",
-        }}
-      >
-        Your Careers
-      </h3>
-
-      <div
-        style={{
-          display: "grid",
-          position: "relative",
-          height: "100%",
-          gap: "20px",
-          paddingBottom:"2vh",
-          gridTemplateColumns:"repeat(3,1fr)"
-        }}
-      >
-
-        {children}
-      </div>
-    </div>
-  );
-};
-
-// --- Card 2: Recent Activity ---
 export const RecentActivityCard = ({ activities, style }: any) => {
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -228,7 +179,7 @@ export const RecentActivityCard = ({ activities, style }: any) => {
           display: "flex",
           width: "fit-content",
           marginLeft: "auto",
-          marginTop:"auto",
+          marginTop: "auto",
         }} >
 
         <div
@@ -267,171 +218,3 @@ export const RecentActivityCard = ({ activities, style }: any) => {
     </div>
   );
 };
-
-// --- Card 3: Journey Progress ---
-export const JourneyProgressCard = ({ percentage = 10, style }: any) => {
-
-
-  return (
-    <div
-      style={{
-        backgroundColor: "#142143",
-        borderRadius: " 3vh",
-        paddingTop: "3vh",
-        color: "white",
-        alignContent: "center",
-        justifyItems: "center",
-        ...style,
-        overflow: "hidden",
-        display:"flex",
-        flexDirection:"column",
-        alignItems:"center",
-      }}
-    >
-      <h3
-        style={{
-          fontSize: "1.1rem",
-          marginBottom: "1vh",
-          fontFamily: "var(--font-nova-square)",
-        }}
-      >
-        Journey Progress
-      </h3>
-
-      <img
-        src={`/journeyProgress/${percentage}.svg`}
-        alt="Progress"
-        style={{
-          position: "relative",
-          height: "70%"
-        }}
-      />
-
-    </div>
-  );
-};
-// --- Card 3: Current Phase ---
-export const CurrentPhaseCard = ({ percentage = 10, style }: any) => {
-
-
-  return (
-    <div
-      style={{
-        backgroundColor: "#142143",
-        borderRadius: " 3vh",
-        paddingTop: "3vh",
-        color: "white",
-        alignContent: "center",
-        justifyItems: "center",
-        ...style,
-        overflow: "hidden",
-        display:"flex",
-        flexDirection:"column",
-        alignItems:"center"
-      }}
-    >
-      <h3
-        style={{
-          fontSize: "1.1rem",
-          fontFamily: "var(--font-nova-square)",
-          marginBottom:"auto",
-        }}
-      >
-        Current Phase
-      </h3>
-
-      <img
-        src={`/phases/currentPhase/${percentage}.svg`}
-        alt="Progress"
-        style={{
-          position: "relative",
-          marginLeft: "auto",
-          width: "100%",
-        }}
-      />
-
-    </div>
-  );
-};
-
-// --- Card 4: NextPhaseCard ---
-type NextPhaseCardProps = {
-  style?: React.CSSProperties;
-  desc: string;
-  phaseNumber: string;
-};
-
-export const NextPhaseCard = ({ style, desc, phaseNumber }: NextPhaseCardProps) => (
-  <div
-    style={{
-      backgroundColor: "#142143",
-      borderRadius: "3vh",
-      color: "white",
-      display: "flex",
-      justifyContent: "space-between",
-      height: "100%",
-      paddingLeft: "3vw",
-      overflow:"clip",
-      ...style,
-    }}
-  >
-
-
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "flex-start",
-        width: "fit-content"
-      }}
-    >
-      <h3
-        style={{
-          fontSize: "1.1rem",
-          marginBottom: "10px",
-          fontFamily: "var(--font-nova-square)",
-          marginTop: "3vh",
-        }}
-      >
-        Next Phase
-      </h3>
-
-      <p
-        style={{
-          fontSize: "0.9rem",
-          opacity: 0.7,
-          lineHeight: "1.4",
-          margin: 0,
-          width: "25ch"
-        }}
-      >
-        {desc}
-      </p>
-    </div>
-
-    <div
-      style={{
-        height: "100%",
-        position: "relative",
-        width: "fit-content",
-        display: "flex",
-        alignItems: "center"
-      }}
-    >
-      <div
-        style={{
-          backgroundColor: "white",
-          height: "100%",
-          width: "0.4vh",
-
-        }} />
-      <img
-        src={`/phases/${phaseNumber}.svg`}
-        alt="phase"
-        style={{ position: "relative", height: "100%", marginLeft: "auto" }}
-      />
-
-    </div>
-
-  </div>
-);

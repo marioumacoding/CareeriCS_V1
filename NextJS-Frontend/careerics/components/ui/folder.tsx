@@ -154,17 +154,10 @@ const Folder = ({ children }: FolderProps) => {
         style={{
           zIndex: 2,
           backgroundColor: "var(--bg-grey)",
-          marginRight: "1rem",
-          borderRadius: "50px",
-          flex: 1,
-          minHeight: 0,
           borderTopLeftRadius: "0px",
           borderTopRightRadius: "30px",
           borderBottomLeftRadius: "30px",
           borderBottomRightRadius: "30px",
-          display: "flex",
-          justifyContent: "flex-start",
-          alignItems: "stretch",
           overflow: "hidden",
         }}
       >

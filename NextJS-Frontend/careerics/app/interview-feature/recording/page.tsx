@@ -608,21 +608,29 @@ export default function RecordingPage() {
                 ? "Ready to submit"
                 : ""}
 
-              <video
-                ref={previewVideoRef}
-                autoPlay={status === "recording"}
-                muted
-                playsInline
-                controls={status !== "recording"}
-                src={status !== "recording" ? (recordedPreviewUrl ?? undefined) : undefined}
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "cover",
-                  borderRadius: "24px",
-                  display: status === "recording" || recordedPreviewUrl ? "block" : "none",
-                }}
-              />
+              <div
+  style={{
+    width: "100%",
+    height: "100%",
+    transform: status === "recording" ? "scaleX(-1)" : "none",
+  }}
+>
+  <video
+    ref={previewVideoRef}
+    autoPlay={status === "recording"}
+    muted
+    playsInline
+    controls={status !== "recording"}
+    src={status !== "recording" ? recordedPreviewUrl ?? undefined : undefined}
+    style={{
+      width: "100%",
+      height: "100%",
+      objectFit: "cover",
+      borderRadius: "24px",
+      display: status === "recording" || recordedPreviewUrl ? "block" : "none",
+    }}
+  />
+</div>
             </div>
           }
           controlsContent={controls}

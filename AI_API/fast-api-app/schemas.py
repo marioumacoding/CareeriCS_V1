@@ -66,6 +66,7 @@ class SessionUpdate(BaseModel):
 class SessionRead(SessionBase):
     id: UUID
     user_id: UUID
+    created_at: Optional[datetime] = None
     emotion_evaluation: Optional[Dict] = None
     tone_evaluation: Optional[Dict] = None
     sentiment_evaluation: Optional[Dict] = None
@@ -449,6 +450,56 @@ class BulkRoadmapImportResponseSchema(BaseModel):
     results: List[RoadmapImportItemResultSchema]
 
 
+class CourseIngestionProviderRawItemSchema(BaseModel):
+    provider: Literal["coursera", "udemy", "udacity"]
+    title: str
+    url: str
+    description: Optional[str] = None
+    language: Optional[str] = None
+    is_free: Optional[bool] = None
+    rating: Optional[float] = None
+    provider_course_id: Optional[str] = None
+    rank_in_provider: Optional[int] = None
+    source_payload: Dict[str, Any] = Field(default_factory=dict)
+
+
+class RoadmapCourseIngestionRequestSchema(BaseModel):
+    section_ids: Optional[List[UUID]] = None
+    section_limit: Optional[int] = Field(default=None, gt=0)
+    top_k_per_provider: int = Field(default=3, ge=1, le=10)
+
+
+class CourseIngestionProviderSummarySchema(BaseModel):
+    provider: Literal["coursera", "udemy", "udacity"]
+    fetched: int = 0
+    created: int = 0
+    updated: int = 0
+    skipped: int = 0
+    failed: int = 0
+    errors: List[str] = Field(default_factory=list)
+
+
+class RoadmapCourseIngestionSectionSummarySchema(BaseModel):
+    section_id: UUID
+    section_title: str
+    roadmap_id: UUID
+    roadmap_title: str
+    created: int = 0
+    updated: int = 0
+    skipped: int = 0
+    failed: int = 0
+    providers: List[CourseIngestionProviderSummarySchema] = Field(default_factory=list)
+
+
+class RoadmapCourseIngestionResponseSchema(BaseModel):
+    sections_processed: int = 0
+    created: int = 0
+    updated: int = 0
+    skipped: int = 0
+    failed: int = 0
+    results: List[RoadmapCourseIngestionSectionSummarySchema] = Field(default_factory=list)
+
+
 class RoadmapStepReadSchema(BaseModel):
     id: UUID
     title: str
@@ -463,6 +514,7 @@ class RoadmapSectionReadSchema(BaseModel):
     title: str
     description: Optional[str] = ""
     order: int
+    courses_count: int = 0
     steps: List[RoadmapStepReadSchema] = Field(default_factory=list)
     model_config = ConfigDict(from_attributes=True)
 
@@ -473,6 +525,33 @@ class RoadmapReadSchema(BaseModel):
     description: Optional[str] = ""
     sections: List[RoadmapSectionReadSchema] = Field(default_factory=list)
     model_config = ConfigDict(from_attributes=True)
+
+
+class RoadmapCourseReadSchema(BaseModel):
+    id: UUID
+    provider: str
+    title: str
+    url: str
+    description: Optional[str] = None
+    language: Optional[str] = None
+    is_free: Optional[bool] = None
+    rating: Optional[float] = None
+    provider_course_id: Optional[str] = None
+    rank_in_provider: Optional[int] = None
+    model_config = ConfigDict(from_attributes=True)
+
+
+class RoadmapSectionCoursesReadSchema(BaseModel):
+    section_id: UUID
+    section_title: str
+    order: int
+    courses: List[RoadmapCourseReadSchema] = Field(default_factory=list)
+
+
+class RoadmapCoursesReadSchema(BaseModel):
+    roadmap_id: UUID
+    roadmap_title: str
+    sections: List[RoadmapSectionCoursesReadSchema] = Field(default_factory=list)
 
 
 class RoadmapListItemSchema(BaseModel):
@@ -635,6 +714,12 @@ class CareerSelectedCardRead(BaseModel):
     type: Literal["hobby", "technical"]
     id: UUID
     name: str
+    model_config = ConfigDict(from_attributes=True)
+
+class CareerTrackRead(BaseModel):
+    id: UUID
+    name: str
+    description: Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
 
 class CareerTrackScoreRead(BaseModel):

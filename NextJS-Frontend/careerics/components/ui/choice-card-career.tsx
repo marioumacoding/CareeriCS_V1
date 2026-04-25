@@ -45,16 +45,15 @@ export default function ChoiceCard({
     <div
       style={{
         position: "relative",
-        width: "100%",
-        height: "100%",
         backgroundColor: "#16213e", 
         borderRadius: "9px", 
         display: "flex",
         flexDirection: "column",
         alignItems: "flex-start", 
         justifyContent: "space-between", 
-        padding: "1rem", 
-        boxSizing: "border-box",
+        padding: "1.2rem", 
+        flex: 1,
+        minHeight: 0,
         ...style
       }}
     >
@@ -72,10 +71,11 @@ export default function ChoiceCard({
           src={image || icon || ""}
           alt={title || "career icon"}
           style={{
-            height: "9vh", // Sabetna el height fl icon aw khalleh 6vh
-            width: "auto",
-            objectFit: "contain"
-          }}
+              width: "2.5rem",
+              height: "auto",
+              display: "block",
+              marginBottom:"0.5rem",
+            }}
         />
       </div>
 
@@ -83,11 +83,10 @@ export default function ChoiceCard({
       <h3
         style={{
           color: "white",
-          fontSize: "1rem", 
+          fontSize: "1.2rem", 
           fontFamily: "var(--font-nova-square)",
           textAlign: "left",
-          maxWidth: "min-content",
-          marginLeft: "0.5vw",
+          maxWidth:"20ch",
         }}
       >
         {title}
@@ -98,14 +97,13 @@ export default function ChoiceCard({
         style={{
           color: "rgba(255,255,255,0.7)",
           textAlign: "left",
-          fontSize: "0.7rem",
+          fontSize: "0.8rem",
           margin: "0 0 1vh 0",
           lineHeight: "1",
           flexGrow: 1, 
           display: "flex",
           alignItems: "center", 
           width: "100%",
-          marginLeft: "0.5vw",
         }}
       >
         {description}

@@ -25,33 +25,79 @@ export interface RegisterPayload {
   displayName: string;
 }
 
+export interface AuthService {
+  signUp: (payload: RegisterPayload) => Promise<{
+    user: import("@supabase/supabase-js").User | null;
+    session: import("@supabase/supabase-js").Session | null;
+  }>;
+  signIn: (payload: LoginPayload) => Promise<{
+    user: import("@supabase/supabase-js").User | null;
+    session: import("@supabase/supabase-js").Session | null;
+  }>;
+  signOut: () => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
+  updatePassword: (newPassword: string) => Promise<void>;
+  signInWithGoogle: (callbackUrl?: string) => Promise<void>;
+  me: () => Promise<ApiResponse<User>>;
+}
+
+function buildSafeUsername(email: string): string {
+  const localPart = (email.split("@")[0] || "").trim().toLowerCase();
+  const sanitizedBase = localPart
+    .replace(/[^a-z0-9_]/g, "_")
+    .replace(/_+/g, "_")
+    .replace(/^_+|_+$/g, "");
+  const base = sanitizedBase.slice(0, 20) || "user";
+  const suffix = Math.random().toString(36).slice(2, 8);
+
+  return `${base}_${suffix}`;
+}
+
+const DEFAULT_POST_AUTH_PATH = "/features/home";
+
 function getSafeInternalCallbackPath(callbackUrl?: string): string | null {
   if (!callbackUrl) return null;
-  return callbackUrl.startsWith("/") ? callbackUrl : null;
+  if (!callbackUrl.startsWith("/")) return null;
+  if (callbackUrl.startsWith("/auth/")) return null;
+  return callbackUrl;
 }
 
 // ── Service ─────────────────────────────────────────────────────
-export const authService = {
+export const authService: AuthService = {
   /**
    * Sign up a new user with Supabase.
    * Supabase will send a confirmation email automatically if
    * "Confirm email" is enabled in your Supabase dashboard.
    */
   async signUp({ email, password, displayName }: RegisterPayload) {
-    const username = (email.split("@")[0] || "user").trim().toLowerCase();
+    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedDisplayName = displayName.trim();
+    const fallbackName = normalizedEmail.split("@")[0] || "User";
+    const username = buildSafeUsername(normalizedEmail);
+
     const { data, error } = await supabase.auth.signUp({
-      email,
+      email: normalizedEmail,
       password,
       options: {
         // Store extra profile info in Supabase user_metadata
         data: {
-          display_name: displayName,
-          full_name: displayName,
+          display_name: normalizedDisplayName || fallbackName,
+          full_name: normalizedDisplayName || fallbackName,
           username,
         },
       },
     });
-    if (error) throw error;
+
+    if (error) {
+      if (error.message === "Database error saving new user") {
+        throw new Error(
+          "We could not create your profile details yet. Please retry, and if it still fails try a different email."
+        );
+      }
+
+      throw error;
+    }
+
     return data;
   },
 
@@ -106,10 +152,10 @@ export const authService = {
    * Redirects the browser to Google's consent screen.
    */
   async signInWithGoogle(callbackUrl?: string) {
-    const callbackPath = getSafeInternalCallbackPath(callbackUrl);
+    const callbackPath =
+      getSafeInternalCallbackPath(callbackUrl) ?? DEFAULT_POST_AUTH_PATH;
     const redirectUrl = new URL(`${window.location.origin}/auth/callback`);
-
-    if (callbackPath) {
+    if (callbackPath !== DEFAULT_POST_AUTH_PATH) {
       redirectUrl.searchParams.set("callbackUrl", callbackPath);
     }
 
@@ -130,4 +176,4 @@ export const authService = {
   me(): Promise<ApiResponse<User>> {
     return dotnetApi.get<User>("/users/me");
   },
-} as const;
+};

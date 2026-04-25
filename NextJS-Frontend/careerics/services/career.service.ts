@@ -10,14 +10,49 @@ import type {
   APICareerSelectedCardRead,
   APICareerSessionCreate,
   APICareerSessionRead,
+  APICareerTrack,
   ApiResponse,
 } from "@/types";
 
+let cachedCareerTracks: APICareerTrack[] | null = null;
+let careerTracksPromise: Promise<ApiResponse<APICareerTrack[]>> | null = null;
+
 export const careerService = {
+  listTracks(): Promise<ApiResponse<APICareerTrack[]>> {
+    if (cachedCareerTracks) {
+      return Promise.resolve({
+        data: cachedCareerTracks,
+        success: true,
+      });
+    }
+
+    if (careerTracksPromise) {
+      return careerTracksPromise;
+    }
+
+    careerTracksPromise = fastapiApi.get<APICareerTrack[]>("/career/tracks/").then((response) => {
+      if (response.success && response.data) {
+        cachedCareerTracks = response.data;
+      }
+
+      return response;
+    }).finally(() => {
+      careerTracksPromise = null;
+    });
+
+    return careerTracksPromise;
+  },
+
   createSession(
     payload: APICareerSessionCreate,
   ): Promise<ApiResponse<APICareerSessionRead>> {
     return fastapiApi.post<APICareerSessionRead>("/career/sessions/", payload);
+  },
+
+  getUserSessions(
+    userId: string,
+  ): Promise<ApiResponse<APICareerSessionRead[]>> {
+    return fastapiApi.get<APICareerSessionRead[]>(`/career/sessions/user/${userId}`);
   },
 
   getCardsByType(

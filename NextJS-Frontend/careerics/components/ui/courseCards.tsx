@@ -1,5 +1,6 @@
 "use client";
 import React, { useRef } from 'react';
+import type { RoadmapCourse } from "@/types";
 
 // --- Card 1: Courses you are currently taking (Checkmark Logic Only) ---
 export const CurrentCoursesCard = ({ courses, selected, onSelect, style }: any) => {
@@ -255,6 +256,117 @@ export const CompletedCoursesCard = ({ courses, style }: any) => {
           />
         </div>
       </div>
+    </div>
+  );
+};
+
+export const CourseCards = ({
+  courses,
+  onCourseClick,
+}: {
+  courses: RoadmapCourse[];
+  onCourseClick?: (course: RoadmapCourse) => void;
+}) => {
+  if (!courses.length) {
+    return (
+      <div
+        style={{
+          color: "rgba(255,255,255,0.7)",
+          fontSize: "14px",
+          fontFamily: "var(--font-jura)",
+        }}
+      >
+        No courses available for this section yet.
+      </div>
+    );
+  }
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexWrap: "wrap",
+        gap: "25px",
+      }}
+    >
+      {courses.map((course) => {
+        return (
+          <button
+            key={course.id}
+            type="button"
+            onClick={() => onCourseClick?.(course)}
+            style={{
+              width: "280px",
+              minHeight: "120px",
+              height: "auto",
+              backgroundColor: "#BABABA",
+              borderRadius: "40px",
+              padding: "10px",
+              display: "flex",
+              alignItems: "stretch",
+              position: "relative",
+              textAlign: "left",
+              border: "none",
+              cursor: onCourseClick ? "pointer" : "default",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: "70px",
+                flexShrink: 0,
+              }}
+            >
+              <img src="/cv/rectangle 98.svg" alt="icon" style={{ width: "60px" }} />
+            </div>
+
+            <div
+              style={{
+                width: "1.5px",
+                backgroundColor: "rgb(0, 0, 0)",
+                margin: "0 20px",
+                alignSelf: "stretch",
+                flexShrink: 0,
+              }}
+            />
+
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "center",
+                gap: "6px",
+                flex: 1,
+                minWidth: 0,
+              }}
+            >
+              <h4
+                style={{
+                  margin: 0,
+                  color: "#0b0b0b",
+                  fontSize: "15px",
+                  fontWeight: "600",
+                }}
+              >
+                {course.title}
+              </h4>
+
+              <p
+                style={{
+                  margin: 0,
+                  color: "rgb(0, 0, 0)",
+                  fontSize: "12px",
+                  fontWeight: "500",
+                }}
+              >
+                -by {course.provider}
+              </p>
+            </div>
+          </button>
+        );
+      })}
     </div>
   );
 };

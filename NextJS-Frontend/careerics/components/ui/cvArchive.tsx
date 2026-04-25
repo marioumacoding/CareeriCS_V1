@@ -158,9 +158,8 @@ export const PastTestsCard = ({ tests, style }: any) => {
             backgroundColor: "rgba(193, 203, 230, 0.95)", borderRadius: "18px", padding: "5px 10px", 
             display: "flex", justifyContent: "space-between", alignItems: "center", color: "#1A213D"
           }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-              <div style={{ fontWeight: "800", fontSize: "14px", fontFamily: 'var(--font-nova-square)' }}>Test-{test.id}</div>
-              <div style={{ fontSize: "11px", fontWeight: "500", opacity: 0.8, fontFamily: 'var(--font-nova-square)' }}>On {test.title}</div>
+            <div style={{ fontWeight: "800", fontSize: "14px", fontFamily: 'var(--font-nova-square)' }}>
+              {test.title}
             </div>
             
             {/* Dynamic Circle Score (ALWAYS GREEN) */}

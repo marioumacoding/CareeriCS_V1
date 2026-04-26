@@ -6,7 +6,7 @@ type Variant = "download" | "retake" | "progress";
 
 type Props = {
     title: string;
-    provider: string;
+    provider?: string;
     id?: string;
     date?: string;
     score?: number;
@@ -34,13 +34,13 @@ export const ActivityCard = ({
     return (
         <div
             style={{
-                backgroundColor: "rgba(193, 203, 230, 0.95)",
-                borderRadius: isDownload ? "18px" : "2vh",
-                padding: isDownload ? "5px 10px" : "0.6rem",
+                backgroundColor: "#C1CBE6",
+                borderRadius: "2vh",
+                padding: "0.6rem",
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
-                color: isDownload ? "#1A213D" : "black",
+                color: "black",
                 fontFamily: "var(--font-nova-square)",
                 width: "100%",
                 height: "fit-content",
@@ -52,7 +52,7 @@ export const ActivityCard = ({
                 <div
                     style={{
                         fontWeight: "bold",
-                        fontSize: isDownload ? "0.8rem" : "0.8rem",
+                        fontSize: "0.8rem",
                     }}
                 >
                     {title ?? id}
@@ -64,10 +64,10 @@ export const ActivityCard = ({
                     }}
                 >
                     {isProgress
-                       ?`on ${skill ?? "unknown skill"}`
-                        :isRetake
-                        ?`By ${provider ?? "unknown provider"}`
-                        :`Created on ${date}`
+                        ? `on ${skill ?? "unknown skill"}`
+                        : isRetake
+                            ? `By ${provider ?? "unknown provider"}`
+                            : `Created on ${date}`
                     }
                 </div>
             </div>

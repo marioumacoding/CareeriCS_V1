@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Activity, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import RootLayout from "@/app/features/layout";
 import ArchiveCard from "@/components/ui/archive-card";
@@ -8,6 +8,8 @@ import ChoiceCard from "@/components/ui/choice-card";
 import TipCard from "@/components/ui/tipcard";
 import { interviewService } from "@/services/interview.service";
 import { useAuth } from "@/providers/auth-provider";
+import { CardsContainer } from "@/components/ui/cards-container";
+import { ActivityCard } from "@/components/ui/activity-card";
 
 const INTERVIEW_TYPE = "hr";
 
@@ -165,10 +167,22 @@ export default function Interview() {
         style={{ gridArea: "1 / 2 / 3 / 3" }}
       />
 
-      <ArchiveCard
-        items={archive}
+      <CardsContainer
+        Title="Interviews Archive"
+        variant="vertical"
+        Columns={1}
+        centerTitle
         style={{ gridArea: "1 / 3 / 3 / 4" }}
-      />
+      >
+        {archive.map((item) => (
+          <ActivityCard
+            key={item.id}
+            title={item.id}
+            date={item.date}
+            variant="download"
+          />
+        ))}
+      </CardsContainer>
 
       <TipCard
         title="Tip of the day"

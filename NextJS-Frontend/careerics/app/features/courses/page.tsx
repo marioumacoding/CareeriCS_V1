@@ -148,8 +148,8 @@ export default function CoursesPage() {
     <div
       style={{
         display: "grid",
-        gridTemplateColumns: "repeat(6,1fr)",
-        gridTemplateRows: "repeat(6,1fr)",
+        gridTemplateColumns: "repeat(2, 1fr) repeat(2, 2fr)",
+          gridTemplateRows: "1.5fr repeat(5, 1fr)",
         gridColumnGap: "25px",
         gridRowGap: "20px",
         height: "100%",
@@ -160,7 +160,7 @@ export default function CoursesPage() {
       <CardsContainer
         Title="Courses you are currently taking"
         variant="horizontal"
-        style={{ gridArea: "1 /1 /3 /7", width: "100%" }}
+        style={{ gridArea: "1 /1 /3 /5", width: "100%" }}
       >
         {dynamicCurrentCourses.map((course) => (
           <RectangularCard
@@ -184,7 +184,7 @@ export default function CoursesPage() {
         Title="Discover roadmaps"
         Columns={3}
         variant="vertical"
-        style={{ gridArea: "3 / 1 / 7 / 5", backgroundColor: "#142143" }}
+        style={{ gridArea: "3 / 1 / 7 / 4", backgroundColor: "#142143" }}
       >
         {isLoadingRoadmaps ? <LoadingState label="Loading roadmaps..." /> : null}
 
@@ -240,7 +240,8 @@ export default function CoursesPage() {
         Title="Completed Courses"
         variant="vertical"
         Columns={1}
-        style={{ gridArea: "3 / 5 / 7 / 7", width: "100%", backgroundColor: "#142143" }}
+        centerTitle
+        style={{ gridArea: "3 / 4 / 7 / 5", width: "100%", backgroundColor: "#142143" }}
       >
         {completedCourses.map((course) => (
           <ActivityCard

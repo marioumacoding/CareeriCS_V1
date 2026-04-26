@@ -8,6 +8,8 @@ import CVPop from "@/components/ui/cvPopup";
 import { cvService, reportsService } from "@/services";
 import { useAuth } from "@/providers/auth-provider";
 import type { APIReport } from "@/types";
+import { CardsContainer } from "@/components/ui/cards-container";
+import { ActivityCard } from "@/components/ui/activity-card";
 
 function formatReportDate(dateIso: string): string {
   const parsedDate = new Date(dateIso);
@@ -165,12 +167,23 @@ export default function CVCrafting() {
           style={{ gridArea: "1 / 3 / 5 / 5" }}
         />
 
-        <ArchiveCard
-          items={archiveItems}
-          title="Old Versions"
-          onDownload={handleDownloadReport}
+        <CardsContainer
+          Title="Old Versions"
           style={{ gridArea: "1 / 5 / 7 / 7", backgroundColor: "var(--medium-blue)" }}
-        />
+          variant="vertical"
+          Columns={1}
+          centerTitle
+        >
+          {archiveItems.map((item) => (
+            <ActivityCard
+              key={item.id}
+              title={item.label}
+              date={item.date}
+              onClick={() => handleDownloadReport(item)}
+              variant="download"
+            />
+          ))}
+        </CardsContainer>
 
         {/* CV Extractor Row */}
         <div style={{

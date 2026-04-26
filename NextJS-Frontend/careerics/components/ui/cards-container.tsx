@@ -8,6 +8,7 @@ type Props = {
     Title?: string;
     Columns?: number; // used only in vertical
     variant?: Variant;
+    centerTitle?: boolean;
 };
 
 export const CardsContainer = ({
@@ -16,6 +17,7 @@ export const CardsContainer = ({
     Title = "Title",
     Columns = 4,
     variant = "vertical",
+    centerTitle = false,
 }: Props) => {
 
     const scrollRef = useRef<HTMLDivElement>(null);
@@ -54,14 +56,14 @@ export const CardsContainer = ({
                 paddingTop: "1rem",
                 paddingLeft: "1rem",
                 paddingRight: variant === "vertical" ? "1rem" : "0.5rem",
-                paddingBottom: variant ==="horizontal" ? "1rem" : "0.5rem",
+                paddingBottom: variant === "horizontal" ? "1rem" : "0.5rem",
                 color: "white",
                 height: "100%",
                 width: "100%",
                 display: "flex",
                 flexDirection:
                     variant === "horizontal" ? "row" : "column",
-                overflow:"hidden",
+                overflow: "hidden",
                 ...style,
             }}
         >
@@ -73,7 +75,7 @@ export const CardsContainer = ({
                     flexDirection: "column",
                     flex: 1,
                     overflow: "hidden",
-                    gap:"0.5rem"
+                    gap: "0.5rem"
                 }}
             >
 
@@ -82,6 +84,7 @@ export const CardsContainer = ({
                     style={{
                         fontSize: "1.2rem",
                         fontFamily: "var(--font-nova-square)",
+                        textAlign: centerTitle ? "center" : "left",
                     }}
                 >
                     {Title}
@@ -95,7 +98,7 @@ export const CardsContainer = ({
                         minWidth: 0,
                         minHeight: 0,
                         flex: 1,
-                        flexDirection: variant==="vertical" ? "column" : "row",
+                        flexDirection: variant === "vertical" ? "column" : "row",
                     }}
                 >
 
@@ -121,6 +124,7 @@ export const CardsContainer = ({
                                     overflowX: "auto",
                                     scrollbarWidth: "none",
                                     flex: 1,
+                                    alignItems: "center"
                                 }
                         }
                     >

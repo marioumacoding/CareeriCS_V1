@@ -13,6 +13,7 @@ export const RectangularCard = ({
     selectable = false,
     selected = false,
     onSelect,
+    font = "jura",
 }: {
     style?: React.CSSProperties;
     Title?: string;
@@ -23,6 +24,7 @@ export const RectangularCard = ({
     selectable?: boolean;
     selected?: boolean;
     onSelect?: () => void;
+    font?: string;
 }) => {
     const [isHovered, setIsHovered] = useState(false);
 
@@ -82,7 +84,7 @@ export const RectangularCard = ({
                 gap: "1rem",
                 padding: "1rem",
                 width: "fit-content",
-
+                
                 ...style,
             }}
         >
@@ -95,29 +97,29 @@ export const RectangularCard = ({
                     justifyContent: "center",
                 }}
             >
-                <h3
+                <p
                     style={{
                         color: textColor,
                         fontSize: "0.8rem",
-                        fontFamily: "var(--font-jura)",
                         maxWidth: "30ch",
                         textAlign: "center",
                         whiteSpace: variant === "radio" ? "nowrap" : "normal",
                         marginRight:"auto",
                         fontWeight: "800",
+                        fontFamily:font==="jura"?"var(--font-jura)":"var(--font-nova-square)",
                     }}
                 >
                     {Title}
-                </h3>
+                </p>
 
                 {isSubtextVisible && (
                     <p
                         style={{
                             color: textColor,
                             fontSize: "0.875rem",
-                            fontFamily: "var(--font-jura)",
                             whiteSpace: "nowrap",
                             marginRight:"auto",
+                            fontFamily:font==="jura"?"var(--font-jura)":"var(--font-nova-square)",
                         }}
                     >
                         {subtext}

@@ -959,8 +959,8 @@ export default function SkillAssessment() {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(5, 1fr)",
-          gridTemplateRows: "repeat(8, 1fr)",
+          gridTemplateColumns: "repeat(2, 1fr) repeat(2, 2fr)",
+          gridTemplateRows: "1.5fr repeat(5, 1fr)",
           columnGap: "25px",
           rowGap: "20px",
           height: "100%",
@@ -970,7 +970,7 @@ export default function SkillAssessment() {
       >
         <div
           style={{
-            gridArea: "1/ 1 / 4 / 3",
+            gridArea: "1/ 1 / 3 / 3",
             backgroundColor: "#1C427B",
             borderRadius: "4vh",
             padding: "3vh 2vw",
@@ -1000,7 +1000,7 @@ export default function SkillAssessment() {
           style={{
             backgroundColor: "#142143",
             width: "100%",
-            gridArea: "1 / 3 / 4 / 6",
+            gridArea: "1 / 3 / 3 / 5",
           }}
         >
           {learningItems.map((item) => (
@@ -1020,7 +1020,7 @@ export default function SkillAssessment() {
                 }
               }}
               style={{
-                height:"100%",
+                height:"fit-content",
               }}
             />
           ))}
@@ -1031,7 +1031,7 @@ export default function SkillAssessment() {
           variant="vertical"
           Columns={3}
           style={{
-            gridArea: "4 / 1 / 9 / 4",
+            gridArea: "3 / 1 / 7 / 4",
             backgroundColor: "#142143",
           }}
         >
@@ -1073,8 +1073,9 @@ export default function SkillAssessment() {
           Title="Past Tests"
           variant="vertical"
           Columns={1}
+          centerTitle
           style={{
-            gridArea: "4 / 4 / 9 / 6",
+            gridArea: "3 / 4 / 7 / 5",
             backgroundColor: "#142143",
           }}
         >
@@ -1084,7 +1085,6 @@ export default function SkillAssessment() {
               title={test.title}
               score={test.score}
               variant="progress"
-              provider=""
             />
           ))}
         </CardsContainer>

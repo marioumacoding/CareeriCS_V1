@@ -144,6 +144,7 @@ const Sidebar = () => {
             whiteSpace: "nowrap",
             overflow: "hidden",
             textOverflow: "ellipsis",
+            cursor:"pointer"
           }}
         >
           {profileName}

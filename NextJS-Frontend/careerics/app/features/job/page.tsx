@@ -37,7 +37,8 @@ const recentlyJobs = [
       
       {/* Area 1: grid-area: 1 / 1 / 3 / 4 */}
       <div style={{ gridArea: "1 / 1 / 2 / 4" }}>
-        <BookmarkCard />
+        <BookmarkCard
+         />
       </div>
 
       {/* Area 2: grid-area: 1 / 4 / 3 / 6 */}

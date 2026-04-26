@@ -8,10 +8,12 @@ const LevelCard: React.FC = () => {
       borderRadius: "20px", // Zawedna el radius sghayar 3ashan yeb2a smoother
       padding: "10px 12px", // Zawedna el padding 3ashan el content yakhod ra7to
       height: "120%", 
+      width: "fit-content", 
       display: "flex", 
       flexDirection: "column", // El main container lissa column 3ashan el button ta7t
       justifyContent: "space-between", // Bey-bu3ed el row fo2 3an el button ta7t
       gap: "5px",
+      aspectRatio: "1/1",
       boxSizing: "border-box"
     }}>
       

@@ -654,17 +654,13 @@ class CareerEvaluationRead(BaseModel):
 class JobPostBase(BaseModel):
     job_title: str
     company_name: Optional[str] = None
-    job_url: str
+    job_url: Optional[str] = None
     source: Optional[str] = None
-    city: Optional[str] = None
-    country: Optional[str] = None
-    location_raw: Optional[str] = None
+    location: Optional[str] = None
     posted_date: Optional[date] = None
-    description: Optional[str] = None
     career_level: Optional[str] = None
     work_type: Optional[str] = None
     employment_type: Optional[str] = None
-    raw_json: Optional[Dict[str, Any]] = None
     description_about_role: Optional[str] = None
     description_key_responsibilities: Optional[str] = None
     description_requirements: Optional[str] = None
@@ -672,14 +668,12 @@ class JobPostBase(BaseModel):
 
 
 class JobPostCreate(JobPostBase):
-    scraped_at: Optional[datetime] = None
+    pass
 
 
 class JobBulkImportItem(JobPostBase):
-    location: Optional[str] = None
     skills: Optional[List[str]] = None
     posted_date: Optional[str] = None
-    scraped_at: Optional[datetime] = None
     model_config = ConfigDict(extra="allow")
 
 
@@ -689,9 +683,10 @@ class JobBulkImportRequest(BaseModel):
 
 class JobPostResponse(JobPostBase):
     id: UUID
-    scraped_at: Optional[datetime] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+    skills: List[str] = Field(default_factory=list)
+    match_percentage: Optional[float] = None
     model_config = ConfigDict(from_attributes=True)
 
 

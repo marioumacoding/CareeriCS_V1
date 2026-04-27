@@ -5,7 +5,7 @@ from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session
 
-from db.models import JobPostSkill, JobSkill
+from db.models import JobPostSkill, Skill
 
 
 def clean_text(text: Optional[str]) -> Optional[str]:
@@ -30,6 +30,10 @@ def normalize_and_attach_skills(
     job_post_id: UUID,
     skills: Optional[List[str]],
 ) -> Dict[str, int]:
+    """
+    Attach skills from unified Skill table to a job post.
+    Creates new skills if they don't exist (case-insensitive).
+    """
     skills_created = 0
     skills_linked = 0
 
@@ -42,31 +46,34 @@ def normalize_and_attach_skills(
     )
 
     for skill in normalized_skills:
-        # Case-insensitive lookup to avoid duplicates with different casing.
+        # Case-insensitive lookup in unified Skill table to avoid duplicates
         skill_id = db.execute(
-            select(JobSkill.id).where(func.lower(JobSkill.name) == skill)
+            select(Skill.id).where(func.lower(Skill.skill_name) == skill)
         ).scalar_one_or_none()
 
         if skill_id is None:
+            # Create new skill if it doesn't exist
             created_result = db.execute(
-                pg_insert(JobSkill)
-                .values(name=skill)
-                .on_conflict_do_nothing(index_elements=[JobSkill.name])
+                pg_insert(Skill)
+                .values(skill_name=skill)
+                .on_conflict_do_nothing(index_elements=['skill_name'])
             )
             if (created_result.rowcount or 0) > 0:
                 skills_created += 1
 
+            # Fetch the skill_id (either just created or already existing)
             skill_id = db.execute(
-                select(JobSkill.id).where(func.lower(JobSkill.name) == skill)
+                select(Skill.id).where(func.lower(Skill.skill_name) == skill)
             ).scalar_one_or_none()
 
         if skill_id is None:
             continue
 
+        # Link skill to job post
         link_result = db.execute(
             pg_insert(JobPostSkill)
             .values(job_post_id=job_post_id, skill_id=skill_id)
-            .on_conflict_do_nothing(index_elements=[JobPostSkill.job_post_id, JobPostSkill.skill_id])
+            .on_conflict_do_nothing()
         )
         if (link_result.rowcount or 0) > 0:
             skills_linked += 1

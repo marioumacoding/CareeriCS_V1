@@ -174,6 +174,8 @@ class Skill(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     skill_name = Column(String, nullable=False, unique=True)
     
+    user_skills = relationship("UserSkill", back_populates="skill")
+    job_post_skills = relationship("JobPostSkill", back_populates="skill")
 
 # =========================
 # USER SKILLS
@@ -191,7 +193,7 @@ class UserSkill(Base):
     score = Column(Integer, nullable=True)
 
     user = relationship("User", back_populates="skills")
-    skill = relationship("Skill")
+    skill = relationship("Skill", back_populates="user_skills")
 
     __table_args__ = (
         UniqueConstraint("user_id", "skill_id", name="uq_user_skill"),
@@ -674,31 +676,26 @@ class JobPost(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     job_title = Column(String, nullable=False, index=True)
     company_name = Column(String, nullable=True, index=True)
-    job_url = Column(String, nullable=False, unique=True)
+    job_url = Column(String, nullable=True, unique=True)
     source = Column(String, nullable=True)
-    city = Column(String, nullable=True)
-    country = Column(String, nullable=True)
-    location_raw = Column(String, nullable=True)
+    location = Column(Text, nullable=True)
     posted_date = Column(Date, nullable=True)
-    scraped_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=True)
-    description = Column(Text, nullable=True)
     career_level = Column(String, nullable=True)
     work_type = Column(String, nullable=True)
     employment_type = Column(String, nullable=True)
-    raw_json = Column(JSONB, nullable=True)
     description_about_role = Column(Text, nullable=True)
     description_key_responsibilities = Column(Text, nullable=True)
     description_requirements = Column(Text, nullable=True)
     description_nice_to_have = Column(Text, nullable=True)
 
     created_at = Column(
-        DateTime(timezone=True),
+        DateTime(timezone=False),
         server_default=func.now(),
         nullable=False,
         index=True
     )
     updated_at = Column(
-        DateTime(timezone=True),
+        DateTime(timezone=False),
         server_default=func.now(),
         onupdate=func.now(),
         nullable=False
@@ -711,37 +708,20 @@ class JobPost(Base):
     __table_args__ = (
         Index("idx_job_post_title_company", "job_title", "company_name"),
         Index("idx_job_post_created_at", "created_at"),
-        CheckConstraint("lower(work_type) IN ('remote','hybrid','on-site','onsite')", name="ck_job_posts_work_type"),
-        CheckConstraint(
-            "lower(employment_type) IN ('full-time','part-time','contract','freelance','temporary')",
-            name="ck_job_posts_employment_type",
-        ),
     )
 
 
 # =========================
-# JOB SKILLS
-# =========================
-class JobSkill(Base):
-    __tablename__ = "job_skills"
-
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    name = Column(String, nullable=False, unique=True)
-
-    job_posts = relationship("JobPostSkill", back_populates="skill", cascade="all, delete-orphan")
-
-
-# =========================
-# JOB POSTS <-> SKILLS
+# JOB POSTS <-> SKILLS (uses unified Skill table)
 # =========================
 class JobPostSkill(Base):
     __tablename__ = "job_post_skills"
 
     job_post_id = Column(UUID(as_uuid=True), ForeignKey("job_posts.id", ondelete="CASCADE"), primary_key=True)
-    skill_id = Column(UUID(as_uuid=True), ForeignKey("job_skills.id", ondelete="CASCADE"), primary_key=True)
+    skill_id = Column(UUID(as_uuid=True), ForeignKey("skills.id", ondelete="CASCADE"), primary_key=True)
 
     job_post = relationship("JobPost", back_populates="skills")
-    skill = relationship("JobSkill", back_populates="job_posts")
+    skill = relationship("Skill", back_populates="job_post_skills")
 
 
 # =========================
@@ -754,8 +734,10 @@ class JobUserInteraction(Base):
     job_post_id = Column(UUID(as_uuid=True), ForeignKey("job_posts.id"), nullable=False)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     viewed_at = Column(DateTime(timezone=True), nullable=True)
+    view_count = Column(Integer, nullable=False, default=0)
     is_saved = Column(Boolean, nullable=False, default=False)
     saved_at = Column(DateTime(timezone=True), nullable=True)
+    last_interaction_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     created_at = Column(
         DateTime(timezone=True),
         server_default=func.now(),

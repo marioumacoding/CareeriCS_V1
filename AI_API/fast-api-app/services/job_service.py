@@ -8,12 +8,73 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from db.models import JobApplication, JobPost, JobPostSkill, JobSkill, JobUserInteraction, User
+from db.models import JobApplication, JobPost, JobPostSkill, Skill, JobUserInteraction, User, UserSkill
 from services.job_ingestion_helpers import clean_text, normalize_and_attach_skills, normalize_skill_name
 
-
-JOB_APPLICATION_STATUSES = {"applied", "interview", "offer", "rejected", "saved"}
 logger = logging.getLogger(__name__)
+
+
+def get_job_skills(db: Session, job_post_id: UUID) -> List[str]:
+    """Fetch skill names for a job post."""
+    skills = db.query(Skill.skill_name).join(
+        JobPostSkill, JobPostSkill.skill_id == Skill.id
+    ).filter(JobPostSkill.job_post_id == job_post_id).all()
+    return [skill[0] for skill in skills]
+
+
+def get_user_skills(db: Session, user_id: UUID) -> List[str]:
+    """Fetch skill names for a user."""
+    skills = db.query(Skill.skill_name).join(
+        UserSkill, UserSkill.skill_id == Skill.id
+    ).filter(UserSkill.user_id == user_id).all()
+    return [skill[0] for skill in skills]
+
+
+def calculate_job_match_percentage(db: Session, user_id: UUID, job_post_id: UUID) -> float:
+    """
+    Calculate percentage match between user skills and job skills.
+    Returns 0.0 to 100.0
+    """
+    job_skills = set(get_job_skills(db, job_post_id))
+    user_skills = set(get_user_skills(db, user_id))
+    
+    if not job_skills:
+        return 0.0
+    
+    matched_skills = job_skills & user_skills
+    match_percentage = (len(matched_skills) / len(job_skills)) * 100
+    return round(match_percentage, 2)
+
+
+def enrich_job_post_with_skills(db: Session, job_post: JobPost, user_id: Optional[UUID] = None) -> Dict[str, Any]:
+    """
+    Convert JobPost object to a dict with skills array and optional match_percentage.
+    """
+    job_dict = {
+        "id": job_post.id,
+        "job_title": job_post.job_title,
+        "company_name": job_post.company_name,
+        "job_url": job_post.job_url,
+        "source": job_post.source,
+        "location": job_post.location,
+        "posted_date": job_post.posted_date,
+        "career_level": job_post.career_level,
+        "work_type": job_post.work_type,
+        "employment_type": job_post.employment_type,
+        "description_about_role": job_post.description_about_role,
+        "description_key_responsibilities": job_post.description_key_responsibilities,
+        "description_requirements": job_post.description_requirements,
+        "description_nice_to_have": job_post.description_nice_to_have,
+        "created_at": job_post.created_at,
+        "updated_at": job_post.updated_at,
+        "skills": get_job_skills(db, job_post.id),
+        "match_percentage": None,
+    }
+    
+    if user_id:
+        job_dict["match_percentage"] = calculate_job_match_percentage(db, user_id, job_post.id)
+    
+    return job_dict
 
 
 def parse_linkedin_date(value: Optional[str]) -> Optional[date]:
@@ -36,16 +97,45 @@ def parseLinkedInDate(value: Optional[str]) -> Optional[date]:
     return parse_linkedin_date(value)
 
 
+def infer_work_type(job_data: dict) -> str:
+    explicit_work_type = (job_data.get("work_type") or "").strip().lower()
+    if "hybrid" in explicit_work_type:
+        return "Hybrid"
+    if "remote" in explicit_work_type:
+        return "Remote"
+    if "on-site" in explicit_work_type or "onsite" in explicit_work_type or "on site" in explicit_work_type:
+        return "On-Site"
+
+    text_sources = [
+        job_data.get("job_title"),
+        job_data.get("title"),
+        job_data.get("location"),
+        job_data.get("description_about_role"),
+        job_data.get("about_role"),
+        job_data.get("description_key_responsibilities"),
+        job_data.get("key_responsibilities"),
+        job_data.get("description_requirements"),
+        job_data.get("requirements"),
+        job_data.get("description_nice_to_have"),
+        job_data.get("nice_to_have"),
+    ]
+    combined_text = " ".join(str(value).lower() for value in text_sources if value)
+
+    if "hybrid" in combined_text:
+        return "Hybrid"
+    if "remote" in combined_text:
+        return "Remote"
+    if "on-site" in combined_text or "onsite" in combined_text or "on site" in combined_text:
+        return "On-Site"
+
+    # Business default requested by product behavior.
+    return "On-Site"
+
+
 def normalize_job_data(job_data: dict) -> dict:
     job_title = (job_data.get("job_title") or job_data.get("title") or "").strip()
     company_name = (job_data.get("company_name") or job_data.get("company") or "").strip() or None
     job_url = (job_data.get("job_url") or job_data.get("link") or "").strip()
-
-    city = job_data.get("city")
-    country = job_data.get("country")
-    location_raw = job_data.get("location_raw")
-    if location_raw is None:
-        location_raw = job_data.get("location")
 
     skills_raw = job_data.get("skills") or []
     if not isinstance(skills_raw, list):
@@ -55,26 +145,40 @@ def normalize_job_data(job_data: dict) -> dict:
         normalized for normalized in (normalize_skill_name(skill) for skill in skills_raw) if normalized
     })
 
+    posted_date_raw = (
+        job_data.get("posted_date")
+        or job_data.get("date")
+        or job_data.get("postedAt")
+    )
+
+    description_about_role = clean_text(
+        job_data.get("description_about_role") or job_data.get("about_role")
+    )
+    description_key_responsibilities = clean_text(
+        job_data.get("description_key_responsibilities") or job_data.get("key_responsibilities")
+    )
+    description_requirements = clean_text(
+        job_data.get("description_requirements") or job_data.get("requirements")
+    )
+    description_nice_to_have = clean_text(
+        job_data.get("description_nice_to_have") or job_data.get("nice_to_have")
+    )
+
     return {
         "job_title": job_title,
         "company_name": company_name,
         "job_url": job_url,
         "source": (job_data.get("source") or "").strip() or None,
-        "city": city,
-        "country": country,
-        "location_raw": location_raw,
-        "posted_date": parse_linkedin_date(job_data.get("posted_date")),
-        "description": clean_text(job_data.get("description")),
-        "description_about_role": clean_text(job_data.get("description_about_role")),
-        "description_key_responsibilities": clean_text(job_data.get("description_key_responsibilities")),
-        "description_requirements": clean_text(job_data.get("description_requirements")),
-        "description_nice_to_have": clean_text(job_data.get("description_nice_to_have")),
-        "career_level": (job_data.get("career_level") or "").strip() or None,
-        "work_type": (job_data.get("work_type") or "").strip() or None,
-        "employment_type": (job_data.get("employment_type") or "").strip() or None,
-        "raw_json": job_data,
+        "location": (job_data.get("location") or "").strip() or None,
+        "posted_date": parse_linkedin_date(posted_date_raw),
+        "description_about_role": description_about_role,
+        "description_key_responsibilities": description_key_responsibilities,
+        "description_requirements": description_requirements,
+        "description_nice_to_have": description_nice_to_have,
+        "career_level": (job_data.get("career_level") or job_data.get("experience_level") or "").strip() or None,
+        "work_type": infer_work_type(job_data),
+        "employment_type": (job_data.get("employment_type") or job_data.get("job_type") or "").strip() or None,
         "skills": normalized_skills,
-        "scraped_at": datetime.now(UTC),
     }
 
 
@@ -116,11 +220,8 @@ def insert_job(db: Session, job_data: dict, *, commit: bool = True) -> Tuple[Opt
                     company_name=normalized["company_name"],
                     job_url=job_url,
                     source=normalized["source"],
-                    city=normalized["city"],
-                    country=normalized["country"],
-                    location_raw=normalized["location_raw"],
+                    location=normalized["location"],
                     posted_date=normalized["posted_date"],
-                    description=normalized["description"],
                     description_about_role=normalized["description_about_role"],
                     description_key_responsibilities=normalized["description_key_responsibilities"],
                     description_requirements=normalized["description_requirements"],
@@ -128,8 +229,6 @@ def insert_job(db: Session, job_data: dict, *, commit: bool = True) -> Tuple[Opt
                     career_level=normalized["career_level"],
                     work_type=normalized["work_type"],
                     employment_type=normalized["employment_type"],
-                    raw_json=normalized["raw_json"],
-                    scraped_at=normalized["scraped_at"],
                 )
                 db.add(job_post)
                 db.flush()
@@ -140,11 +239,8 @@ def insert_job(db: Session, job_data: dict, *, commit: bool = True) -> Tuple[Opt
                 company_name=normalized["company_name"],
                 job_url=job_url,
                 source=normalized["source"],
-                city=normalized["city"],
-                country=normalized["country"],
-                location_raw=normalized["location_raw"],
+                location=normalized["location"],
                 posted_date=normalized["posted_date"],
-                description=normalized["description"],
                 description_about_role=normalized["description_about_role"],
                 description_key_responsibilities=normalized["description_key_responsibilities"],
                 description_requirements=normalized["description_requirements"],
@@ -152,8 +248,6 @@ def insert_job(db: Session, job_data: dict, *, commit: bool = True) -> Tuple[Opt
                 career_level=normalized["career_level"],
                 work_type=normalized["work_type"],
                 employment_type=normalized["employment_type"],
-                raw_json=normalized["raw_json"],
-                scraped_at=normalized["scraped_at"],
             )
             db.add(job_post)
             db.flush()
@@ -258,7 +352,7 @@ def fetch_jobs_paginated(
     limit = min(limit, 100)
 
     total_count = db.query(func.count(JobPost.id)).scalar() or 0
-    jobs = db.query(JobPost).order_by(JobPost.created_at.desc(), JobPost.scraped_at.desc()).offset(skip).limit(limit).all()
+    jobs = db.query(JobPost).order_by(JobPost.created_at.desc()).offset(skip).limit(limit).all()
     return jobs, total_count
 
 
@@ -278,20 +372,24 @@ def search_jobs(
     query_obj = (
         db.query(JobPost)
         .outerjoin(JobPostSkill, JobPostSkill.job_post_id == JobPost.id)
-        .outerjoin(JobSkill, JobSkill.id == JobPostSkill.skill_id)
+        .outerjoin(Skill, Skill.id == JobPostSkill.skill_id)
         .filter(
             or_(
                 JobPost.job_title.ilike(search_pattern),
                 JobPost.company_name.ilike(search_pattern),
-                JobPost.description.ilike(search_pattern),
-                JobSkill.name.ilike(search_pattern),
+                JobPost.location.ilike(search_pattern),
+                JobPost.description_about_role.ilike(search_pattern),
+                JobPost.description_key_responsibilities.ilike(search_pattern),
+                JobPost.description_requirements.ilike(search_pattern),
+                JobPost.description_nice_to_have.ilike(search_pattern),
+                Skill.skill_name.ilike(search_pattern),
             )
         )
         .distinct()
     )
 
     total_count = query_obj.count()
-    jobs = query_obj.order_by(JobPost.created_at.desc(), JobPost.scraped_at.desc()).offset(skip).limit(limit).all()
+    jobs = query_obj.order_by(JobPost.created_at.desc()).offset(skip).limit(limit).all()
     return jobs, total_count
 
 
@@ -322,12 +420,16 @@ def mark_job_as_recently_viewed(db: Session, user_id: UUID, job_post_id: UUID) -
     try:
         if interaction:
             interaction.viewed_at = now
+            interaction.view_count = (interaction.view_count or 0) + 1
+            interaction.last_interaction_at = now
             interaction.updated_at = now
         else:
             interaction = JobUserInteraction(
                 user_id=user_id,
                 job_post_id=job_post_id,
                 viewed_at=now,
+                view_count=1,
+                last_interaction_at=now,
                 updated_at=now,
             )
             db.add(interaction)
@@ -359,6 +461,7 @@ def set_job_saved_state(db: Session, user_id: UUID, job_post_id: UUID, is_saved:
         if interaction:
             interaction.is_saved = is_saved
             interaction.saved_at = now if is_saved else None
+            interaction.last_interaction_at = now
             interaction.updated_at = now
         else:
             interaction = JobUserInteraction(
@@ -366,6 +469,7 @@ def set_job_saved_state(db: Session, user_id: UUID, job_post_id: UUID, is_saved:
                 job_post_id=job_post_id,
                 is_saved=is_saved,
                 saved_at=now if is_saved else None,
+                last_interaction_at=now,
                 updated_at=now,
             )
             db.add(interaction)
@@ -377,6 +481,9 @@ def set_job_saved_state(db: Session, user_id: UUID, job_post_id: UUID, is_saved:
         raise ValueError("Invalid job or user reference for interaction")
 
     return interaction
+
+
+JOB_APPLICATION_STATUSES = {"applied", "interviewed", "rejected", "accepted", "withdrawn"}
 
 
 def upsert_job_application(

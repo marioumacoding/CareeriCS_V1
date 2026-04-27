@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 from typing import Optional, List, Dict, Any
@@ -738,31 +738,40 @@ class CareerEvaluationRead(BaseModel):
 
 class JobPostBase(BaseModel):
     job_title: str
-    company_name: str
-    location: Optional[str] = None
-    job_url: str
+    company_name: Optional[str] = None
+    job_url: Optional[str] = None
     source: Optional[str] = None
-    posted_date: Optional[datetime] = None
-    description: Optional[str] = None
-    requirements_raw: Optional[str] = None
-    requirements_list: Optional[List[str]] = Field(default_factory=list)
-    experience: Optional[str] = None
+    location: Optional[str] = None
+    posted_date: Optional[date] = None
     career_level: Optional[str] = None
-    education_level: Optional[str] = None
-    salary: Optional[str] = None
-    categories: Optional[List[str]] = Field(default_factory=list)
-    skills: Optional[List[str]] = Field(default_factory=list)
+    work_type: Optional[str] = None
+    employment_type: Optional[str] = None
+    description_about_role: Optional[str] = None
+    description_key_responsibilities: Optional[str] = None
+    description_requirements: Optional[str] = None
+    description_nice_to_have: Optional[str] = None
 
 
 class JobPostCreate(JobPostBase):
-    scraped_at: Optional[datetime] = None
+    pass
+
+
+class JobBulkImportItem(JobPostBase):
+    skills: Optional[List[str]] = None
+    posted_date: Optional[str] = None
+    model_config = ConfigDict(extra="allow")
+
+
+class JobBulkImportRequest(BaseModel):
+    jobs: List[JobBulkImportItem]
 
 
 class JobPostResponse(JobPostBase):
     id: UUID
-    scraped_at: Optional[datetime] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+    skills: List[str] = Field(default_factory=list)
+    match_percentage: Optional[float] = None
     model_config = ConfigDict(from_attributes=True)
 
 

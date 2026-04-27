@@ -1,11 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Body, Depends, HTTPException, status, Query
 from fastapi.encoders import jsonable_encoder
 from sqlalchemy.orm import Session
-from typing import List
 from uuid import UUID
 
 from dependencies import get_db
 from schemas import (
+    JobBulkImportRequest,
     JobPostResponse,
     JobInteractionResponse,
     UserJobsListResponse,
@@ -33,7 +33,7 @@ def _parse_user_uuid(user_id: str) -> UUID:
 
 @router.post("/bulk-import", status_code=status.HTTP_201_CREATED)
 def bulk_import_jobs(
-    jobs: List[dict],
+    payload: JobBulkImportRequest = Body(...),
     db: Session = Depends(get_db)
 ):
     """
@@ -58,14 +58,16 @@ def bulk_import_jobs(
     - scraped_at: ISO format datetime when job was scraped
     """
     try:
-        created_jobs, updated_count, skipped_count, skipped_items = bulk_insert_jobs(db, jobs)
+        jobs = [job.model_dump(mode="python") for job in payload.jobs]
+        created_jobs, updated_count, skipped_count, skipped_items, results = bulk_insert_jobs(db, jobs)
         
         return {
             "created": len(created_jobs),
             "updated": updated_count,
             "skipped": skipped_count,
-            "total_processed": len(jobs),
+            "total_processed": len(payload.jobs),
             "jobs": jsonable_encoder(created_jobs),
+            "results": results,
             "skipped_items": skipped_items,
         }
     except Exception as e:

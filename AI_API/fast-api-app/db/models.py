@@ -3,6 +3,7 @@ import uuid
 from sqlalchemy import (
     TIMESTAMP,
     Column,
+    Date,
     Enum,
     Integer,
     String,
@@ -11,6 +12,7 @@ from sqlalchemy import (
     Text,
     JSON,
     DateTime,
+    CheckConstraint,
     UniqueConstraint,
     Float,
     Index
@@ -671,26 +673,23 @@ class JobPost(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     job_title = Column(String, nullable=False, index=True)
-    company_name = Column(String, nullable=False, index=True)
-    location = Column(String, nullable=True)
+    company_name = Column(String, nullable=True, index=True)
     job_url = Column(String, nullable=False, unique=True)
     source = Column(String, nullable=True)
-    posted_date = Column(DateTime(timezone=True), nullable=True)
+    city = Column(String, nullable=True)
+    country = Column(String, nullable=True)
+    location_raw = Column(String, nullable=True)
+    posted_date = Column(Date, nullable=True)
+    scraped_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=True)
     description = Column(Text, nullable=True)
-    scraped_at = Column(DateTime(timezone=True), nullable=True)
-    requirements_raw = Column(Text, nullable=True)
-    requirements_list = Column(ARRAY(String), nullable=True)
-    experience = Column(Text, nullable=True)
     career_level = Column(String, nullable=True)
-    education_level = Column(String, nullable=True)
-    salary = Column(String, nullable=True)
-    categories = Column(ARRAY(String), nullable=True)
-    skills = Column(ARRAY(String), nullable=True)
+    work_type = Column(String, nullable=True)
+    employment_type = Column(String, nullable=True)
+    raw_json = Column(JSONB, nullable=True)
     description_about_role = Column(Text, nullable=True)
     description_key_responsibilities = Column(Text, nullable=True)
     description_requirements = Column(Text, nullable=True)
     description_nice_to_have = Column(Text, nullable=True)
-    description_skills_needed = Column(Text, nullable=True)
 
     created_at = Column(
         DateTime(timezone=True),
@@ -706,11 +705,43 @@ class JobPost(Base):
     )
 
     user_interactions = relationship("JobUserInteraction", back_populates="job_post", cascade="all, delete-orphan")
+    skills = relationship("JobPostSkill", back_populates="job_post", cascade="all, delete-orphan")
+    applications = relationship("JobApplication", back_populates="job_post", cascade="all, delete-orphan")
 
     __table_args__ = (
         Index("idx_job_post_title_company", "job_title", "company_name"),
         Index("idx_job_post_created_at", "created_at"),
+        CheckConstraint("lower(work_type) IN ('remote','hybrid','on-site','onsite')", name="ck_job_posts_work_type"),
+        CheckConstraint(
+            "lower(employment_type) IN ('full-time','part-time','contract','freelance','temporary')",
+            name="ck_job_posts_employment_type",
+        ),
     )
+
+
+# =========================
+# JOB SKILLS
+# =========================
+class JobSkill(Base):
+    __tablename__ = "job_skills"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name = Column(String, nullable=False, unique=True)
+
+    job_posts = relationship("JobPostSkill", back_populates="skill", cascade="all, delete-orphan")
+
+
+# =========================
+# JOB POSTS <-> SKILLS
+# =========================
+class JobPostSkill(Base):
+    __tablename__ = "job_post_skills"
+
+    job_post_id = Column(UUID(as_uuid=True), ForeignKey("job_posts.id", ondelete="CASCADE"), primary_key=True)
+    skill_id = Column(UUID(as_uuid=True), ForeignKey("job_skills.id", ondelete="CASCADE"), primary_key=True)
+
+    job_post = relationship("JobPost", back_populates="skills")
+    skill = relationship("JobSkill", back_populates="job_posts")
 
 
 # =========================
@@ -741,9 +772,34 @@ class JobUserInteraction(Base):
     user = relationship("User")
 
     __table_args__ = (
-        UniqueConstraint("job_post_id", "user_id", name="uq_job_user_interaction_user_job"),
         Index("idx_job_user_interactions_user_saved", "user_id", "is_saved"),
         Index("idx_job_user_interactions_user_viewed_at", "user_id", "viewed_at"),
+    )
+
+
+# =========================
+# JOB APPLICATIONS
+# =========================
+class JobApplication(Base):
+    __tablename__ = "job_applications"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    job_post_id = Column(UUID(as_uuid=True), ForeignKey("job_posts.id", ondelete="CASCADE"), nullable=False)
+    status = Column(String, nullable=False)
+    applied_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=True)
+    updated_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    job_post = relationship("JobPost", back_populates="applications")
+    user = relationship("User")
+
+    __table_args__ = (
+        CheckConstraint("status IN ('applied','interview','offer','rejected','saved')", name="ck_job_applications_status"),
     )
 
 

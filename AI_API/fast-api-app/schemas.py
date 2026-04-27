@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 from typing import Optional, List, Dict, Any
@@ -653,29 +653,38 @@ class CareerEvaluationRead(BaseModel):
 
 class JobPostBase(BaseModel):
     job_title: str
-    company_name: str
-    location: Optional[str] = None
+    company_name: Optional[str] = None
     job_url: str
     source: Optional[str] = None
-    posted_date: Optional[datetime] = None
+    city: Optional[str] = None
+    country: Optional[str] = None
+    location_raw: Optional[str] = None
+    posted_date: Optional[date] = None
     description: Optional[str] = None
-    requirements_raw: Optional[str] = None
-    requirements_list: Optional[List[str]] = Field(default_factory=list)
-    experience: Optional[str] = None
     career_level: Optional[str] = None
-    education_level: Optional[str] = None
-    salary: Optional[str] = None
-    categories: Optional[List[str]] = Field(default_factory=list)
-    skills: Optional[List[str]] = Field(default_factory=list)
+    work_type: Optional[str] = None
+    employment_type: Optional[str] = None
+    raw_json: Optional[Dict[str, Any]] = None
     description_about_role: Optional[str] = None
     description_key_responsibilities: Optional[str] = None
     description_requirements: Optional[str] = None
     description_nice_to_have: Optional[str] = None
-    description_skills_needed: Optional[str] = None
 
 
 class JobPostCreate(JobPostBase):
     scraped_at: Optional[datetime] = None
+
+
+class JobBulkImportItem(JobPostBase):
+    location: Optional[str] = None
+    skills: Optional[List[str]] = None
+    posted_date: Optional[str] = None
+    scraped_at: Optional[datetime] = None
+    model_config = ConfigDict(extra="allow")
+
+
+class JobBulkImportRequest(BaseModel):
+    jobs: List[JobBulkImportItem]
 
 
 class JobPostResponse(JobPostBase):

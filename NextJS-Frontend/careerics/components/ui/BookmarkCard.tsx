@@ -1,7 +1,10 @@
-import React from 'react';
+"use client";
+import React, { use } from 'react';
 import { Button } from "@/components/ui/button";
+import { useRouter } from 'next/navigation';
 
 const BookmarkCard: React.FC = () => {
+  const router = useRouter();
   return (
     <div style={{ 
       backgroundColor: "#1e2a4a", 
@@ -42,8 +45,7 @@ const BookmarkCard: React.FC = () => {
           left: "75%",
           bottom: "10px",
         }}
-          onClick={() => console.log('Open Bookmarks')}
-          
+           onClick={() => router.push('/job-features/bookmarks')}          
         >
           Open
         </Button>

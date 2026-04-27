@@ -27,7 +27,9 @@ const RecentlyViewedCard: React.FC<{ jobs: Job[] }> = ({ jobs }) => {
       flexDirection: "column",
       justifyContent: "center",
       position: "relative",
-      overflow: "hidden" 
+      overflow: "hidden" ,
+      width: "122%",
+      left: "-23%",
     }}>
       <h3 style={{ 
         color: "white", 

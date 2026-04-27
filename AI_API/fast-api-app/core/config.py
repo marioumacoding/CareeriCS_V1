@@ -1,8 +1,10 @@
 import os
+from pathlib import Path
 from urllib.parse import quote_plus
 from dotenv import load_dotenv
 
-load_dotenv()
+_BACKEND_ROOT = Path(__file__).resolve().parents[1]
+load_dotenv(dotenv_path=_BACKEND_ROOT / ".env")
 
 
 class Settings:
@@ -30,6 +32,7 @@ class Settings:
     AUDIO_BASE = "audio"
 
     ROADMAP_IMPORT_BASE = os.getenv("ROADMAP_IMPORT_BASE")
+    ROADMAP_IMPORT_ADMIN_TOKEN = os.getenv("ROADMAP_IMPORT_ADMIN_TOKEN")
 
     AUDIO_PATHS = {
         "questions": "audio/questions",

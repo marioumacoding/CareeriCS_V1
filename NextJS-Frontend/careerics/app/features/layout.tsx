@@ -40,7 +40,8 @@ export default function RootLayout({
           <div style={{
             position: "relative",
             height: "100%",
-            margin: "0 auto", 
+            margin: "0 auto",
+            width:"100%",
             ...style,
           }}
           >

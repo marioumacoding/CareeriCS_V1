@@ -1,9 +1,25 @@
 "use client";
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import ChoiceCard from "@/components/ui/choice-card-career";
 import { useAuth } from "@/providers/auth-provider";
 import { careerService } from "@/services";
+import type { APICareerTrack } from "@/types";
+import { CareerCardsContainer } from "@/components/ui/career-cards-container";
+
+const CARD_IMAGE_PATH = "/Landing/Rectangle.svg";
+const VISIBLE_TRACKS_COUNT = 4;
+const TRACK_DESCRIPTION_FALLBACK =
+  "Explore this path and see what the day-to-day work, opportunities, and growth can look like.";
+
+function buildTrackBlogPath(track: APICareerTrack): string {
+  const params = new URLSearchParams({
+    jobTitle: track.name,
+    trackId: track.id,
+  });
+
+  return `/quiz-features/blog?${params.toString()}`;
+}
 
 export default function CareerDiscoveryPage() {
   const router = useRouter();
@@ -11,54 +27,56 @@ export default function CareerDiscoveryPage() {
 
   const [isStartingQuiz, setIsStartingQuiz] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
-
-  const careerPaths = [
-  {
-    title: "Backend Development",
-    desc: "Build secure APIs, databases, and server-side logic.",
-    image: "/Landing/Rectangle.svg",
-  },
-  {
-    title: "Frontend Development",
-    desc: "Build responsive interfaces and interactive features for users.",
-    image: "/Landing/Rectangle.svg",
-  },
-  {
-    title: "UI/UX Design",
-    desc: "Design user-friendly layouts to improve usability and navigation.",
-    image: "/Landing/Rectangle.svg",
-  },
-  {
-    title: "Data Science",
-    desc: "Analyze datasets to discover patterns and support decisions.",
-    image: "/Landing/Rectangle.svg",
-  },
-  {
-    title: "Machine Learning",
-    desc: "Create models to automate tasks and provide predictions.",
-    image: "/Landing/Rectangle.svg",
-  },
-  {
-    title: "Cybersecurity",
-    desc: "Secure systems and networks by detecting and preventing attacks.",
-    image: "/Landing/Rectangle.svg",
-  },
-];
+  const [careerTracks, setCareerTracks] = useState<APICareerTrack[]>([]);
+  const [isLoadingTracks, setIsLoadingTracks] = useState(true);
+  const [tracksError, setTracksError] = useState<string | null>(null);
 
   const [startIndex, setStartIndex] = useState(0);
 
-  const visibleCards = careerPaths.slice(startIndex, startIndex + 4);
+  useEffect(() => {
+    let alive = true;
+
+    const loadCareerTracks = async () => {
+      setIsLoadingTracks(true);
+
+      const response = await careerService.listTracks();
+      if (!alive) {
+        return;
+      }
+
+      if (!response.success || !response.data) {
+        setCareerTracks([]);
+        setTracksError(response.message || "Unable to load career tracks right now.");
+        setIsLoadingTracks(false);
+        return;
+      }
+
+      setCareerTracks(response.data);
+      setTracksError(null);
+      setIsLoadingTracks(false);
+    };
+
+    void loadCareerTracks();
+
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const maxStartIndex = Math.max(0, careerTracks.length - VISIBLE_TRACKS_COUNT);
+  const safeStartIndex = Math.min(startIndex, maxStartIndex);
+
+  const visibleCards = useMemo(
+    () => careerTracks.slice(safeStartIndex, safeStartIndex + VISIBLE_TRACKS_COUNT),
+    [careerTracks, safeStartIndex],
+  );
 
   const handleNext = () => {
-    if (startIndex + 4 < careerPaths.length) {
-      setStartIndex(startIndex + 1);
-    }
+    setStartIndex(Math.min(safeStartIndex + 4, maxStartIndex));
   };
 
   const handlePrev = () => {
-    if (startIndex > 0) {
-      setStartIndex(startIndex - 1);
-    }
+    setStartIndex(Math.max(safeStartIndex - 4, 0));
   };
 
   const handleStartQuiz = async () => {
@@ -117,7 +135,9 @@ export default function CareerDiscoveryPage() {
             style={{
               backgroundColor: "#142143",
               borderRadius: "4vh",
-              padding: "3vh",
+              paddingBlock: "1rem",
+              paddingLeft: "3rem",
+              paddingRight: "2rem",
               color: "white",
               display: "flex",
               justifyContent: "space-between",
@@ -144,7 +164,7 @@ export default function CareerDiscoveryPage() {
                   opacity: 0.8,
                 }}
               >
-                Choose your favorite hobbies and activities, then answer a few personalized questions.<br/>
+                Choose your favorite hobbies and activities, then answer a few personalized questions.<br />
                 Just like that you’ll get your best fit career choices
               </p>
 
@@ -162,88 +182,89 @@ export default function CareerDiscoveryPage() {
         </div>
 
         {/* Career Paths */}
-        <div
+        <CareerCardsContainer
+          isScrollable
+          Title="Discover more career paths"
+          leftOnclick={handlePrev}
+          rightOnclick={handleNext}
           style={{
             gridArea: "3 / 1 / 8 / 7",
             backgroundColor: "#1C427B",
             borderRadius: "4vh",
-            padding: "2vh 2vw",
-            display: "flex",
-            flexDirection: "column",
-            marginBottom: "-3vh",
+            gap:0
           }}
         >
-          <h2
-            style={{
-              color: "white",
-              fontSize: "3.5vh",
-              marginBottom: "2vh",
-              fontFamily: "var(--font-nova-square)",
-            }}
-          >
-            Discover more career paths
-          </h2>
 
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "1vw",
-              flex: 1,
-            }}
-          >
-            {/* Left Arrow */}
-            {startIndex > 0 && (
-              <div
-                onClick={handlePrev}
-                style={{
-                  color: "white",
-                  fontSize: "3vh",
-                  cursor: "pointer",
-                }}
-              >
-                ❮
-              </div>
-            )}
-
-            {/* Cards */}
+          {isLoadingTracks ? (
             <div
               style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(4, 1fr)",
-                gap: "1vh",
-                flex: 1,
-                height: "100%",
-                marginTop: "-2vh",
+                gridColumn: "1 / -1",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#D7E3FF",
+                fontFamily: "var(--font-jura)",
+                fontSize: "1rem",
               }}
             >
-              {visibleCards.map((path, idx) => (
+              Loading career tracks...
+            </div>
+          ) : null}
+
+          {!isLoadingTracks && tracksError ? (
+            <div
+              style={{
+                gridColumn: "1 / -1",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#FFD3D3",
+                textAlign: "center",
+                fontFamily: "var(--font-jura)",
+                fontSize: "1rem",
+                paddingInline: "2vw",
+              }}
+            >
+              {tracksError}
+            </div>
+          ) : null}
+
+          {!isLoadingTracks && !tracksError && !visibleCards.length ? (
+            <div
+              style={{
+                gridColumn: "1 / -1",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#d7ffdd",
+                fontFamily: "var(--font-jura)",
+                fontSize: "1rem",
+              }}
+            >
+              No career tracks are available yet.
+            </div>
+          ) : null}
+
+          {!isLoadingTracks && !tracksError
+            ? visibleCards.map((track) => {
+              const blogPath = buildTrackBlogPath(track);
+
+              return (
                 <ChoiceCard
-                  key={idx}
-                  title={path.title}
-                  description={path.desc}
-                  image={path.image}
+                  key={track.id}
+                  title={track.name}
+                  description={track.description || TRACK_DESCRIPTION_FALLBACK}
+                  image={CARD_IMAGE_PATH}
                   buttonVariant="primary-inverted"
                   buttonLabel="Learn More"
+                  onClick={() => router.push(blogPath)}
                 />
-              ))}
-            </div>
+              );
+            })
+            : null}
 
-            {/* Right Arrow */}
-            {startIndex + 3 < careerPaths.length && (
-              <div
-                onClick={handleNext}
-                style={{
-                  color: "white",
-                  fontSize: "3vh",
-                  cursor: "pointer",
-                }}
-              >
-                ❯
-              </div>
-            )}
-          </div>
-        </div>
+
+        </CareerCardsContainer>
       </div>
     </div>
   );

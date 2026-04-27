@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import RootLayout from "@/app/features/layout";
 import SkillFilters, {
   type SkillFilterTrackOption,
   type SkillFilterType,
@@ -26,6 +25,9 @@ import type {
   RoadmapListItem,
   RoadmapRead,
 } from "@/types";
+import { CardsContainer } from "@/components/ui/cards-container";
+import { RectangularCard } from "@/components/ui/rectangular-card";
+import { ActivityCard } from "@/components/ui/activity-card";
 
 type AssessmentTarget = {
   id: string;
@@ -35,10 +37,15 @@ type AssessmentTarget = {
   isCurrent?: boolean;
 };
 
-type TrackSelectionSource = "current" | "session" | "progress" | "persisted" | "default";
 type CachedApiRequest<T> = {
   expiresAt: number;
   promise: Promise<ApiResponse<T>>;
+};
+
+type SessionTitleLookup = {
+  roadmapTitleById: Map<string, string>;
+  sectionTitleById: Map<string, string>;
+  stepTitleById: Map<string, string>;
 };
 
 const LAST_ACTIVE_ROADMAP_STORAGE_KEY = "roadmap:last-active-id";
@@ -114,18 +121,23 @@ function doesSessionMatchTarget(
 function resolveSessionTitle(
   session: APIAssessmentSessionSummary,
   skillById: Map<string, APISkill>,
+  lookup?: SessionTitleLookup,
 ): string {
   const type = normalizeSessionType(session.type);
   if (type === "skills") {
     return skillById.get(session.skill_id || "")?.skill_name || "Skill Assessment";
   }
 
+  if (type === "roadmap") {
+    return lookup?.roadmapTitleById.get(session.roadmap_id || "") || "Roadmap Assessment";
+  }
+
   if (type === "section") {
-    return "General Topic";
+    return lookup?.sectionTitleById.get(session.section_id || "") || "General Topic";
   }
 
   if (type === "step") {
-    return "Specific Skill";
+    return lookup?.stepTitleById.get(session.step_id || "") || "Specific Skill";
   }
 
   return "Roadmap Assessment";
@@ -182,14 +194,15 @@ export default function SkillAssessment() {
   const [skills, setSkills] = useState<APISkill[]>([]);
   const [sessions, setSessions] = useState<APIAssessmentSessionSummary[]>([]);
   const [roadmapTracks, setRoadmapTracks] = useState<RoadmapListItem[]>([]);
-  const [selectedTrackId, setSelectedTrackId] = useState("");
+  const [selectedTrackId, setSelectedTrackId] = useState(GENERAL_SKILLS_TRACK_ID);
   const [trackHelperText, setTrackHelperText] = useState("");
   const [selectedSkillType, setSelectedSkillType] = useState<SkillFilterType>("general");
 
   const [selectedRoadmap, setSelectedRoadmap] = useState<RoadmapRead | null>(null);
-  const [currentLearning, setCurrentLearning] = useState<CurrentRoadmapLearning | null>(null);
+  const [, setCurrentLearning] = useState<CurrentRoadmapLearning | null>(null);
   const [bookmarkedCurrentTargets, setBookmarkedCurrentTargets] = useState<AssessmentTarget[]>([]);
   const [bookmarkedTargetsHint, setBookmarkedTargetsHint] = useState("");
+  const [sessionRoadmapsById, setSessionRoadmapsById] = useState<Record<string, RoadmapRead>>({});
   const [selectedSectionId, setSelectedSectionId] = useState("");
   const [selectedLearningTargetId, setSelectedLearningTargetId] = useState("");
   const [selectedMoreSkillId, setSelectedMoreSkillId] = useState("");
@@ -205,8 +218,7 @@ export default function SkillAssessment() {
     useRef<Map<string, CachedApiRequest<CurrentRoadmapLearning>>>(new Map());
   const roadmapByIdRequestCacheRef = useRef<Map<string, CachedApiRequest<RoadmapRead>>>(new Map());
 
-  const isGeneralSkillsMode = selectedTrackId === GENERAL_SKILLS_TRACK_ID;
-
+  const isGeneralSkillsMode = selectedTrackId === GENERAL_SKILLS_TRACK_ID || !selectedTrackId;
   const getCurrentLearningCached = useCallback((roadmapId?: string) => {
     if (!user?.id) {
       return Promise.resolve({
@@ -238,7 +250,7 @@ export default function SkillAssessment() {
     });
 
     return requestPromise;
-  }, [user?.id]);
+  }, [user]);
 
   const getRoadmapByIdCached = useCallback((roadmapId: string) => {
     const cacheKey = roadmapId;
@@ -267,6 +279,87 @@ export default function SkillAssessment() {
     currentLearningRequestCacheRef.current.clear();
     roadmapByIdRequestCacheRef.current.clear();
   }, [user?.id]);
+
+  useEffect(() => {
+    let alive = true;
+
+    const sessionRoadmapIds = Array.from(
+      new Set(
+        sessions
+          .filter((session) => {
+            const type = normalizeSessionType(session.type);
+            return (
+              (type === "roadmap" || type === "section" || type === "step") &&
+              Boolean(session.roadmap_id)
+            );
+          })
+          .map((session) => String(session.roadmap_id)),
+      ),
+    );
+
+    if (!sessionRoadmapIds.length) {
+      return () => {
+        alive = false;
+      };
+    }
+
+    const missingRoadmapIds = sessionRoadmapIds.filter((roadmapId) => {
+      if (selectedRoadmap?.id === roadmapId) {
+        return false;
+      }
+      return !sessionRoadmapsById[roadmapId];
+    });
+
+    if (!missingRoadmapIds.length) {
+      return () => {
+        alive = false;
+      };
+    }
+
+    const loadSessionRoadmaps = async () => {
+      const loadedEntries = await Promise.all(
+        missingRoadmapIds.map(async (roadmapId) => {
+          const response = await getRoadmapByIdCached(roadmapId);
+          if (!response.success || !response.data) {
+            return null;
+          }
+
+          return [roadmapId, response.data] as const;
+        }),
+      );
+
+      if (!alive) {
+        return;
+      }
+
+      const resolvedEntries = loadedEntries.filter(
+        (entry): entry is readonly [string, RoadmapRead] => Boolean(entry),
+      );
+      if (!resolvedEntries.length) {
+        return;
+      }
+
+      setSessionRoadmapsById((previous) => {
+        const next = { ...previous };
+        let hasChanges = false;
+
+        for (const [roadmapId, roadmap] of resolvedEntries) {
+          if (next[roadmapId] !== roadmap) {
+            next[roadmapId] = roadmap;
+            hasChanges = true;
+          }
+        }
+
+        return hasChanges ? next : previous;
+      });
+    };
+
+    void loadSessionRoadmaps();
+
+    return () => {
+      alive = false;
+    };
+  }, [getRoadmapByIdCached, selectedRoadmap?.id, sessionRoadmapsById, sessions]);
 
   useEffect(() => {
     if (isAuthLoading) {
@@ -321,113 +414,8 @@ export default function SkillAssessment() {
         return;
       }
 
-      const trackIdByNormalizedId = new Map<string, string>();
-      for (const track of tracks) {
-        const trackId = String(track.id);
-        trackIdByNormalizedId.set(normalizeEntityId(trackId), trackId);
-      }
-
-      const resolveTrackId = (candidate: unknown): string | null => {
-        return trackIdByNormalizedId.get(normalizeEntityId(candidate)) ?? null;
-      };
-
-      let preferredTrackId = String(tracks[0].id);
-      let resolvedPreferredTrack = false;
-      let selectionSource: TrackSelectionSource = "default";
-
-      if (user?.id) {
-        const currentRes = await getCurrentLearningCached();
-        if (alive && currentRes.success && currentRes.data?.roadmap_id) {
-          const resolvedCurrentTrackId = resolveTrackId(currentRes.data.roadmap_id);
-          if (resolvedCurrentTrackId) {
-            preferredTrackId = resolvedCurrentTrackId;
-            resolvedPreferredTrack = true;
-            selectionSource = "current";
-          }
-        }
-      }
-
-      if (!resolvedPreferredTrack && resolvedSessions.length) {
-        const sessionCandidates = resolvedSessions
-          .filter((session) => normalizeSessionType(session.type) !== "skills")
-          .sort((a, b) => {
-            const aInProgress = a.status === "in_progress" ? 1 : 0;
-            const bInProgress = b.status === "in_progress" ? 1 : 0;
-            if (aInProgress !== bInProgress) {
-              return bInProgress - aInProgress;
-            }
-
-            const aStartedAt = new Date(a.started_at).getTime() || 0;
-            const bStartedAt = new Date(b.started_at).getTime() || 0;
-            return bStartedAt - aStartedAt;
-          });
-
-        const matchedSession = sessionCandidates.find(
-          (session) => !!resolveTrackId(session.roadmap_id),
-        );
-
-        if (matchedSession) {
-          const resolvedSessionTrackId = resolveTrackId(matchedSession.roadmap_id);
-          if (resolvedSessionTrackId) {
-            preferredTrackId = resolvedSessionTrackId;
-            resolvedPreferredTrack = true;
-            selectionSource = "session";
-          }
-        }
-      }
-
-      if (!resolvedPreferredTrack && user?.id) {
-        const progressRes = await roadmapService.getUserRoadmapsProgress(user.id);
-        if (alive && progressRes.success && progressRes.data?.roadmaps?.length) {
-          const rankedProgress = progressRes.data.roadmaps
-            .slice()
-            .sort((a, b) => {
-              const aInProgress = a.completion_status === "in_progress" ? 1 : 0;
-              const bInProgress = b.completion_status === "in_progress" ? 1 : 0;
-              if (aInProgress !== bInProgress) {
-                return bInProgress - aInProgress;
-              }
-              return b.completion_percent - a.completion_percent;
-            });
-
-          const fallbackRoadmap = rankedProgress.find((item) => !!resolveTrackId(item.roadmap_id));
-
-          if (fallbackRoadmap) {
-            const resolvedProgressTrackId = resolveTrackId(fallbackRoadmap.roadmap_id);
-            if (resolvedProgressTrackId) {
-              preferredTrackId = resolvedProgressTrackId;
-              resolvedPreferredTrack = true;
-              selectionSource = "progress";
-            }
-          }
-        }
-      }
-
-      if (!resolvedPreferredTrack && typeof window !== "undefined") {
-        const persistedRoadmapId = window.localStorage.getItem(LAST_ACTIVE_ROADMAP_STORAGE_KEY);
-        const resolvedPersistedTrackId = resolveTrackId(persistedRoadmapId);
-        if (resolvedPersistedTrackId) {
-          preferredTrackId = resolvedPersistedTrackId;
-            resolvedPreferredTrack = true;
-          selectionSource = "persisted";
-        }
-      }
-
-      if (!resolvedPreferredTrack) {
-        selectionSource = "default";
-      }
-
-      setSelectedTrackId(preferredTrackId);
-
-      if (selectionSource === "current" || selectionSource === "progress") {
-        setTrackHelperText("Auto-selected from your current progress");
-      } else if (selectionSource === "session") {
-        setTrackHelperText("Auto-selected from your latest assessment track");
-      } else if (selectionSource === "persisted") {
-        setTrackHelperText("Auto-selected from your last active track");
-      } else {
-        setTrackHelperText("");
-      }
+      setSelectedTrackId(GENERAL_SKILLS_TRACK_ID);
+      setTrackHelperText("General Skills mode: showing all skills from the database.");
 
       setIsLoading(false);
     };
@@ -437,7 +425,7 @@ export default function SkillAssessment() {
     return () => {
       alive = false;
     };
-  }, [getCurrentLearningCached, isAuthLoading, user?.id]);
+  }, [isAuthLoading, user?.id]);
 
   useEffect(() => {
     if (
@@ -740,6 +728,36 @@ export default function SkillAssessment() {
     return map;
   }, [skills]);
 
+  const sessionTitleLookup = useMemo<SessionTitleLookup>(() => {
+    const roadmapTitleById = new Map<string, string>();
+    const sectionTitleById = new Map<string, string>();
+    const stepTitleById = new Map<string, string>();
+
+    const roadmaps = Object.values(sessionRoadmapsById);
+    if (
+      selectedRoadmap &&
+      !roadmaps.some((roadmap) => String(roadmap.id) === String(selectedRoadmap.id))
+    ) {
+      roadmaps.push(selectedRoadmap);
+    }
+
+    for (const roadmap of roadmaps) {
+      roadmapTitleById.set(roadmap.id, roadmap.title || "Roadmap Assessment");
+      for (const section of roadmap.sections) {
+        sectionTitleById.set(section.id, section.title);
+        for (const step of section.steps) {
+          stepTitleById.set(step.id, step.title);
+        }
+      }
+    }
+
+    return {
+      roadmapTitleById,
+      sectionTitleById,
+      stepTitleById,
+    };
+  }, [selectedRoadmap, sessionRoadmapsById]);
+
   const trackOptions: SkillFilterTrackOption[] = useMemo(
     () => [
       { id: GENERAL_SKILLS_TRACK_ID, title: GENERAL_SKILLS_TRACK_LABEL },
@@ -761,13 +779,6 @@ export default function SkillAssessment() {
     if (!selectedSectionId || !sortedSections.some((section) => section.id === selectedSectionId)) {
       setSelectedSectionId(sortedSections[0].id);
     }
-  }, [selectedSectionId, sortedSections]);
-
-  const selectedSection = useMemo(() => {
-    if (!sortedSections.length) {
-      return null;
-    }
-    return sortedSections.find((section) => section.id === selectedSectionId) || sortedSections[0];
   }, [selectedSectionId, sortedSections]);
 
   const learningTargets = useMemo<AssessmentTarget[]>(() => bookmarkedCurrentTargets, [bookmarkedCurrentTargets]);
@@ -792,85 +803,56 @@ export default function SkillAssessment() {
     [learningTargets],
   );
 
-  const selectedStepForFilter = useMemo(() => {
-    if (!selectedRoadmap || isGeneralSkillsMode) {
-      return null;
-    }
-
-    const stepsById = new Map(
-      sortedSections.flatMap((section) =>
-        section.steps.map((step) => [step.id, { ...step, sectionId: section.id }] as const),
-      ),
-    );
-
-    const currentStepId = currentLearning?.step_id || "";
-    if (currentStepId && stepsById.has(currentStepId)) {
-      return stepsById.get(currentStepId) || null;
-    }
-
-    const firstSectionStep = selectedSection?.steps.slice().sort((a, b) => a.order - b.order)[0];
-    if (firstSectionStep) {
-      return { ...firstSectionStep, sectionId: selectedSection?.id || "" };
-    }
-
-    const firstStep = sortedSections
-      .flatMap((section) => section.steps.slice().sort((a, b) => a.order - b.order))
-      .shift();
-    if (!firstStep) {
-      return null;
-    }
-
-    return { ...firstStep, sectionId: "" };
-  }, [currentLearning?.step_id, isGeneralSkillsMode, selectedRoadmap, selectedSection, sortedSections]);
-
-  const sectionContextTexts = useMemo(() => {
-    if (!selectedSection) {
+  const roadmapSectionContextTexts = useMemo(() => {
+    if (isGeneralSkillsMode || !sortedSections.length) {
       return [] as string[];
     }
 
-    const contextParts: string[] = [selectedSection.title];
-    if (selectedSection.description) {
-      contextParts.push(selectedSection.description);
-    }
-
-    for (const step of selectedSection.steps) {
-      contextParts.push(step.title);
-      if (step.description) {
-        contextParts.push(step.description);
+    const contextParts: string[] = [];
+    for (const section of sortedSections) {
+      contextParts.push(section.title);
+      if (section.description) {
+        contextParts.push(section.description);
       }
     }
 
     return contextParts;
-  }, [selectedSection]);
+  }, [isGeneralSkillsMode, sortedSections]);
 
-  const stepContextTexts = useMemo(() => {
-    if (!selectedStepForFilter) {
+  const roadmapStepContextTexts = useMemo(() => {
+    if (isGeneralSkillsMode || !sortedSections.length) {
       return [] as string[];
     }
 
-    const contextParts: string[] = [selectedStepForFilter.title];
-    if (selectedStepForFilter.description) {
-      contextParts.push(selectedStepForFilter.description);
-    }
+    const contextParts: string[] = [];
+    for (const section of sortedSections) {
+      for (const step of section.steps) {
+        contextParts.push(step.title);
+        if (step.description) {
+          contextParts.push(step.description);
+        }
 
-    for (const resource of selectedStepForFilter.resources || []) {
-      if (resource.title) {
-        contextParts.push(resource.title);
-      }
-      if (resource.resourceType) {
-        contextParts.push(resource.resourceType);
+        for (const resource of step.resources || []) {
+          if (resource.title) {
+            contextParts.push(resource.title);
+          }
+          if (resource.resourceType) {
+            contextParts.push(resource.resourceType);
+          }
+        }
       }
     }
 
     return contextParts;
-  }, [selectedStepForFilter]);
+  }, [isGeneralSkillsMode, sortedSections]);
 
   const filteredSkills = useMemo(() => {
     if (isGeneralSkillsMode || !selectedRoadmap) {
       return skills;
     }
 
-    const contextTexts = selectedSkillType === "general" ? sectionContextTexts : stepContextTexts;
+    const contextTexts =
+      selectedSkillType === "general" ? roadmapSectionContextTexts : roadmapStepContextTexts;
     if (!contextTexts.length) {
       return skills;
     }
@@ -879,11 +861,11 @@ export default function SkillAssessment() {
     return matched.length ? matched : skills;
   }, [
     isGeneralSkillsMode,
-    sectionContextTexts,
+    roadmapSectionContextTexts,
+    roadmapStepContextTexts,
     selectedRoadmap,
     selectedSkillType,
     skills,
-    stepContextTexts,
   ]);
 
   const moreSkills = useMemo(() => filteredSkills.map((skill) => skill.skill_name), [filteredSkills]);
@@ -904,13 +886,23 @@ export default function SkillAssessment() {
   const allPastTests = useMemo(
     () => sessions
       .filter((session) => session.status === "submitted")
+      .sort((a, b) => {
+        const aSubmittedAt = new Date(a.submitted_at || a.started_at).getTime() || 0;
+        const bSubmittedAt = new Date(b.submitted_at || b.started_at).getTime() || 0;
+        return bSubmittedAt - aSubmittedAt;
+      })
       .slice(0, 20)
-      .map((session) => ({
-        id: session.id.slice(0, 8),
-        title: resolveSessionTitle(session, skillById),
-        score: session.score,
-      })),
-    [sessions, skillById],
+      .map((session, index) => {
+        const sessionTitle = resolveSessionTitle(session, skillById, sessionTitleLookup).trim();
+        const sessionTitleKey = sessionTitle ? sessionTitle.replace(/\s+/g, "_") : "assessment";
+
+        return {
+          id: String(index + 1),
+          title: `${sessionTitleKey}_${index + 1}`,
+          score: session.score,
+        };
+      }),
+    [sessions, sessionTitleLookup, skillById],
   );
 
   const openConfirmForTarget = (target: AssessmentTarget) => {
@@ -959,35 +951,28 @@ export default function SkillAssessment() {
   return (
     <div
       style={{
-        width: "100vw",
-        height: "100vh",
-        padding: "2vh 2vw",
-        boxSizing: "border-box",
-        backgroundColor: "#000",
+        width: "100%",
+        height: "100%",
         overflow: "hidden",
       }}
     >
-      <RootLayout
+      <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(5, 1fr)",
-          gridTemplateRows: "repeat(6, 1fr)",
-          columnGap: "1.5vw",
-          rowGap: "1vh",
+          gridTemplateColumns: "repeat(2, 1fr) repeat(2, 2fr)",
+          gridTemplateRows: "1.5fr repeat(5, 1fr)",
+          columnGap: "25px",
+          rowGap: "20px",
           height: "100%",
           width: "100%",
-          borderRadius: "3vh",
-          padding: "1vh 2vw",
-          boxSizing: "border-box",
-          marginTop: "0",
-          zIndex: 1,
+          padding: "40px",
         }}
       >
         <div
           style={{
-            gridArea: "2/ 1 / 2 / 3",
+            gridArea: "1/ 1 / 3 / 3",
             backgroundColor: "#1C427B",
-            borderRadius: "2vh",
+            borderRadius: "4vh",
             padding: "3vh 2vw",
             display: "flex",
             flexDirection: "column",
@@ -1008,137 +993,141 @@ export default function SkillAssessment() {
           />
         </div>
 
-        <div
+
+        <CardsContainer
+          Title="Skill you are currently learning"
+          variant="horizontal"
           style={{
-            gridArea: "1 / 3 / 3 / 6",
-            alignSelf: "stretch",
-            display: "flex",
-            flexDirection: "column",
-            paddingTop: "2vh",
+            backgroundColor: "#142143",
+            width: "100%",
+            gridArea: "1 / 3 / 3 / 5",
           }}
         >
-          <LearningSkillsCard
-            title="Skill you are learning now"
-            items={learningItems}
-            selectedId={selectedLearningTargetId}
-            focusedId={selectedLearningTargetId}
-            onSelect={(targetId: string) => {
-              const target = learningTargets.find((item) => item.id === targetId);
-              if (target) {
-                openConfirmForTarget(target);
-              }
-            }}
-            style={{
-              width: "100%",
-              height: "75%",
-              padding: "2vh 2vw",
-              borderRadius: "2vh",
-              boxSizing: "border-box",
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "center",
-              backgroundColor: "#142143",
-            }}
-          />
-          {bookmarkedTargetsHint ? (
-            <p
-              style={{
-                marginTop: "0.8vh",
-                marginLeft: "0.2vw",
-                color: "#E6FFB2",
-                fontSize: "0.82vw",
-                fontWeight: 600,
+          {learningItems.map((item) => (
+            <RectangularCard
+              key={item.id}
+              Title={item.label}
+              theme="light"
+              selectable
+              selected={selectedLearningTargetId === item.id}
+              onSelect={() => {
+                const target = learningTargets.find(
+                  (t) => t.id === item.id
+                );
+
+                if (target) {
+                  openConfirmForTarget(target);
+                }
               }}
-            >
-              {bookmarkedTargetsHint}
-            </p>
-          ) : null}
-        </div>
+              style={{
+                height:"fit-content",
+              }}
+            />
+          ))}
+        </CardsContainer>
 
-        <div
+        <CardsContainer
+          Title="More Skills to test"
+          variant="vertical"
+          Columns={3}
           style={{
-            gridArea: "3 / 1 / 8 / 4",
-            alignSelf: "stretch",
+            gridArea: "3 / 1 / 7 / 4",
+            backgroundColor: "#142143",
           }}
         >
-          <MoreSkillsCard
-            skills={moreSkills}
-            selected={selectedMoreName}
-            onSelect={(skillName: string) => {
-              const selected = filteredSkills.find((skill) => skill.skill_name === skillName);
-              if (!selected) {
-                return;
-              }
+          {moreSkills.map((skill) => {
+            const isSelected = selectedMoreName === skill;
 
-              setSelectedMoreSkillId(selected.id);
-              openConfirmForTarget({
-                id: selected.id,
-                label: selected.skill_name,
-                sessionType: "skills",
-              });
-            }}
-            style={{
-              height: "100%",
-              width: "100%",
-              borderRadius: "2vh",
-              boxSizing: "border-box",
-              backgroundColor: "#142143",
-            }}
-          />
-        </div>
+            return (
+              <RectangularCard
+                key={skill}
+                Title={skill}
+                theme="dark"
+                selectable={true}
+                selected={isSelected}
+                onSelect={() => {
+                  const selected = filteredSkills.find(
+                    (s) => s.skill_name === skill
+                  );
 
-        <div
+                  if (!selected) return;
+
+                  setSelectedMoreSkillId(selected.id);
+
+                  openConfirmForTarget({
+                    id: selected.id,
+                    label: selected.skill_name,
+                    sessionType: "skills",
+                  });
+                }}
+                style={{
+                  width: "100%",
+                }}
+              />
+            );
+          })}
+        </CardsContainer>
+
+
+        <CardsContainer
+          Title="Past Tests"
+          variant="vertical"
+          Columns={1}
+          centerTitle
           style={{
-            gridArea: "3 / 4 / 8 / 6",
-            alignSelf: "stretch",
+            gridArea: "3 / 4 / 7 / 5",
+            backgroundColor: "#142143",
           }}
         >
-          <PastTestsCard
-            tests={allPastTests}
-            style={{
-              height: "100%",
-              width: "100%",
-              borderRadius: "2vh",
-              boxSizing: "border-box",
-              backgroundColor: "#142143",
-            }}
-          />
-        </div>
-      </RootLayout>
+          {allPastTests.map((test) => (
+            <ActivityCard
+              key={test.id}
+              title={test.title}
+              score={test.score}
+              variant="progress"
+            />
+          ))}
+        </CardsContainer>
 
-      {error ? (
-        <div
-          style={{
-            position: "fixed",
-            bottom: "20px",
-            left: "50%",
-            transform: "translateX(-50%)",
-            backgroundColor: "rgba(127, 29, 29, 0.92)",
-            color: "#fee2e2",
-            padding: "10px 16px",
-            borderRadius: "12px",
-            zIndex: 1001,
-            fontSize: "13px",
-            maxWidth: "70vw",
-          }}
-        >
-          {error}
-        </div>
-      ) : null}
-
-      {isConfirmOpen && pendingTarget && (
-        <SkillConfirmPopup
-          skillName={pendingTargetName}
-          isLoading={isStarting}
-          onCancel={() => {
-            if (!isStarting) {
-              setIsConfirmOpen(false);
-              setPendingTarget(null);
-            }
-          }}
-          onConfirm={() => handleStartAssessment(pendingTarget)}
-        />
-      )}
     </div>
+
+      {
+    error ? (
+      <div
+        style={{
+          position: "fixed",
+          bottom: "20px",
+          left: "50%",
+          transform: "translateX(-50%)",
+          backgroundColor: "rgba(127, 29, 29, 0.92)",
+          color: "#fee2e2",
+          padding: "10px 16px",
+          borderRadius: "12px",
+          zIndex: 1001,
+          fontSize: "13px",
+          maxWidth: "70vw",
+        }}
+      >
+        {error}
+      </div>
+    ) : null
+  }
+
+  {
+    isConfirmOpen && pendingTarget && (
+      <SkillConfirmPopup
+        skillName={pendingTargetName}
+        isLoading={isStarting}
+        onCancel={() => {
+          if (!isStarting) {
+            setIsConfirmOpen(false);
+            setPendingTarget(null);
+          }
+        }}
+        onConfirm={() => handleStartAssessment(pendingTarget)}
+      />
+    )
+  }
+    </div >
   );
 }

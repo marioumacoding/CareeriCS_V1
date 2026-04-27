@@ -1,11 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Body, Depends, HTTPException, status, Query
 from fastapi.encoders import jsonable_encoder
 from sqlalchemy.orm import Session
-from typing import List
 from uuid import UUID
 
 from dependencies import get_db
 from schemas import (
+    JobBulkImportRequest,
     JobPostResponse,
     JobInteractionResponse,
     UserJobsListResponse,
@@ -19,6 +19,7 @@ from services.job_service import (
     set_job_saved_state,
     fetch_user_saved_jobs,
     fetch_user_recently_viewed_jobs,
+    enrich_job_post_with_skills,
 )
 
 router = APIRouter(prefix="/jobs", tags=["Jobs"])
@@ -33,7 +34,7 @@ def _parse_user_uuid(user_id: str) -> UUID:
 
 @router.post("/bulk-import", status_code=status.HTTP_201_CREATED)
 def bulk_import_jobs(
-    jobs: List[dict],
+    payload: JobBulkImportRequest = Body(...),
     db: Session = Depends(get_db)
 ):
     """
@@ -58,14 +59,16 @@ def bulk_import_jobs(
     - scraped_at: ISO format datetime when job was scraped
     """
     try:
-        created_jobs, updated_count, skipped_count, skipped_items = bulk_insert_jobs(db, jobs)
+        jobs = [job.model_dump(mode="python") for job in payload.jobs]
+        created_jobs, updated_count, skipped_count, skipped_items, results = bulk_insert_jobs(db, jobs)
         
         return {
             "created": len(created_jobs),
             "updated": updated_count,
             "skipped": skipped_count,
-            "total_processed": len(jobs),
+            "total_processed": len(payload.jobs),
             "jobs": jsonable_encoder(created_jobs),
+            "results": results,
             "skipped_items": skipped_items,
         }
     except Exception as e:
@@ -76,6 +79,7 @@ def bulk_import_jobs(
 def list_jobs(
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
+    user_id: str = Query(None, description="Optional user ID for match scoring"),
     db: Session = Depends(get_db)
 ):
     """
@@ -84,14 +88,23 @@ def list_jobs(
     Query Parameters:
     - skip: Number of records to skip (default: 0)
     - limit: Number of records to return (default: 20, max: 100)
+    - user_id: Optional user ID to calculate skill match percentage
     """
     try:
         jobs, total_count = fetch_jobs_paginated(db, skip=skip, limit=limit)
+        user_uuid = None
+        if user_id:
+            try:
+                user_uuid = UUID(user_id)
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Invalid user ID format")
+        
+        enriched_jobs = [enrich_job_post_with_skills(db, job, user_uuid) for job in jobs]
         return {
             "total": total_count,
             "skip": skip,
             "limit": limit,
-            "jobs": jsonable_encoder(jobs)
+            "jobs": enriched_jobs
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -103,6 +116,7 @@ def search_jobs_endpoint(
     title: str | None = Query(None, min_length=1, description="Alias for query when searching by title"),
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
+    user_id: str = Query(None, description="Optional user ID for match scoring"),
     db: Session = Depends(get_db)
 ):
     """
@@ -112,6 +126,7 @@ def search_jobs_endpoint(
     - query (required): Search term
     - skip: Number of records to skip (default: 0)
     - limit: Number of records to return (default: 20, max: 100)
+    - user_id: Optional user ID to calculate skill match percentage
     """
     try:
         search_term = (query or title or "").strip()
@@ -119,12 +134,20 @@ def search_jobs_endpoint(
             raise HTTPException(status_code=400, detail="Either 'query' or 'title' is required")
 
         jobs, total_count = search_jobs(db, query=search_term, skip=skip, limit=limit)
+        user_uuid = None
+        if user_id:
+            try:
+                user_uuid = UUID(user_id)
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Invalid user ID format")
+        
+        enriched_jobs = [enrich_job_post_with_skills(db, job, user_uuid) for job in jobs]
         return {
             "query": search_term,
             "total": total_count,
             "skip": skip,
             "limit": limit,
-            "jobs": jsonable_encoder(jobs)
+            "jobs": enriched_jobs
         }
     except HTTPException:
         raise
@@ -207,11 +230,12 @@ def list_user_saved_jobs(
     """
     try:
         jobs, total_count = fetch_user_saved_jobs(db, user_id=user_id, skip=skip, limit=limit)
+        enriched_jobs = [enrich_job_post_with_skills(db, job, user_id) for job in jobs]
         return {
             "total": total_count,
             "skip": skip,
             "limit": limit,
-            "jobs": jsonable_encoder(jobs),
+            "jobs": enriched_jobs,
         }
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -231,11 +255,12 @@ def list_user_recently_viewed_jobs(
     """
     try:
         jobs, total_count = fetch_user_recently_viewed_jobs(db, user_id=user_id, skip=skip, limit=limit)
+        enriched_jobs = [enrich_job_post_with_skills(db, job, user_id) for job in jobs]
         return {
             "total": total_count,
             "skip": skip,
             "limit": limit,
-            "jobs": jsonable_encoder(jobs),
+            "jobs": enriched_jobs,
         }
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -246,10 +271,14 @@ def list_user_recently_viewed_jobs(
 @router.get("/{job_id}", response_model=JobPostResponse)
 def get_job_details(
     job_id: UUID,
+    user_id: str = Query(None, description="Optional user ID for match scoring"),
     db: Session = Depends(get_db)
 ):
     """
     Get details of a specific job post by ID.
+    
+    Query Parameters:
+    - user_id: Optional user ID to calculate skill match percentage
     """
     try:
         job = fetch_job_post_by_id(db, job_id)
@@ -258,7 +287,14 @@ def get_job_details(
                 status_code=404,
                 detail=f"Job post with ID {job_id} not found"
             )
-        return job
+        user_uuid = None
+        if user_id:
+            try:
+                user_uuid = UUID(user_id)
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Invalid user ID format")
+        
+        return enrich_job_post_with_skills(db, job, user_uuid)
     except HTTPException:
         raise
     except Exception as e:

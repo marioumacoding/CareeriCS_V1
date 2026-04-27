@@ -22,6 +22,7 @@ export default function LandingPage() {
 
         if (section) {
           const top = section.offsetTop - 120;
+          
 
           if (window.scrollY >= top) {
             current = id;

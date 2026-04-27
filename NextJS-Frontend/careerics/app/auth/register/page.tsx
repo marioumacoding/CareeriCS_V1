@@ -29,62 +29,66 @@ export default function Register() {
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [confirmPasswordError, setConfirmPasswordError] = useState<string | null>(null);
 
-  function validatePassword(value: string) {
+  function getPasswordError(value: string): string | null {
     if (value.length === 0) {
-      setPasswordError(null);
-      return;
+      return null;
     }
 
     if (value.length < 8) {
-      setPasswordError("Password must be at least 8 characters.");
-      return;
+      return "Password must be at least 8 characters.";
     }
 
     if (value.length > 72) {
-      setPasswordError("Password must not exceed 72 characters.");
-      return;
+      return "Password must not exceed 72 characters.";
     }
 
     if (/\s/.test(value)) {
-      setPasswordError("Password cannot contain spaces.");
-      return;
+      return "Password cannot contain spaces.";
     }
 
     if (!/[a-z]/.test(value)) {
-      setPasswordError("Add at least one lowercase letter.");
-      return;
+      return "Add at least one lowercase letter.";
     }
 
     if (!/[A-Z]/.test(value)) {
-      setPasswordError("Add at least one uppercase letter.");
-      return;
+      return "Add at least one uppercase letter.";
     }
 
     if (!/\d/.test(value)) {
-      setPasswordError("Add at least one number.");
-      return;
+      return "Add at least one number.";
     }
 
     if (!/[@$!%*?&]/.test(value)) {
-      setPasswordError("Add at least one special character.");
-      return;
+      return "Add at least one special character.";
     }
 
-    setPasswordError(null);
+    return null;
+  }
+
+  function validatePassword(value: string): string | null {
+    const nextError = getPasswordError(value);
+    setPasswordError(nextError);
+    return nextError;
   }
 
   function validateConfirmPassword(
     passwordValue: string,
-    confirmValue: string
-  ) {
+    confirmValue: string,
+    requireValue = false,
+  ): string | null {
     if (confirmValue.length === 0) {
-      return;
+      const message = requireValue ? "Please confirm your password." : null;
+      setConfirmPasswordError(message);
+      return message;
     }
 
     if (passwordValue !== confirmValue) {
-      setConfirmPasswordError("Passwords do not match.");
+      const message = "Passwords do not match.";
+      setConfirmPasswordError(message);
+      return message;
     } else {
       setConfirmPasswordError(null);
+      return null;
     }
   }
   // -- Handlers --
@@ -93,9 +97,33 @@ export default function Register() {
     setError(null);
     setSuccess(null);
 
+    const normalizedDisplayName = displayName.trim();
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!normalizedDisplayName) {
+      setError("Full name is required.");
+      return;
+    }
+
+    if (!normalizedEmail) {
+      setError("Email is required.");
+      return;
+    }
+
     // Required check
     if (!password) {
       setPasswordError("Password is required.");
+      return;
+    }
+
+    const nextPasswordError = validatePassword(password);
+    const nextConfirmPasswordError = validateConfirmPassword(
+      password,
+      confirmPassword,
+      true,
+    );
+
+    if (nextPasswordError || nextConfirmPasswordError) {
       return;
     }
 
@@ -103,9 +131,9 @@ export default function Register() {
     setLoading(true);
     try {
       const data = await authService.signUp({
-        email,
+        email: normalizedEmail,
         password,
-        displayName,
+        displayName: normalizedDisplayName,
       });
 
       // If Supabase has "Confirm email" enabled, user.identities will be
@@ -116,8 +144,9 @@ export default function Register() {
         // Auto-confirmed  redirect to dashboard
         router.push("/features/home");
       }
-    } catch (err: any) {
-      setError(err.message ?? "Registration failed.");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Registration failed.";
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -125,9 +154,10 @@ export default function Register() {
 
   async function handleGoogleRegister() {
     try {
-      await authService.signInWithGoogle();
-    } catch (err: any) {
-      setError(err.message ?? "Google sign-up failed.");
+      await authService.signInWithGoogle("/features/home");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Google sign-up failed.";
+      setError(message);
     }
   }
 
@@ -177,6 +207,7 @@ export default function Register() {
           const value = e.target.value;
           setPassword(value);
           validatePassword(value);
+          validateConfirmPassword(value, confirmPassword);
         }}
         required
         style={{

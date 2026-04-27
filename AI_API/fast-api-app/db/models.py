@@ -3,6 +3,7 @@ import uuid
 from sqlalchemy import (
     TIMESTAMP,
     Column,
+    Date,
     Enum,
     Integer,
     String,
@@ -11,6 +12,7 @@ from sqlalchemy import (
     Text,
     JSON,
     DateTime,
+    CheckConstraint,
     UniqueConstraint,
     Float,
     Index
@@ -172,6 +174,8 @@ class Skill(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     skill_name = Column(String, nullable=False, unique=True)
     
+    user_skills = relationship("UserSkill", back_populates="skill")
+    job_post_skills = relationship("JobPostSkill", back_populates="skill")
 
 # =========================
 # USER SKILLS
@@ -189,7 +193,7 @@ class UserSkill(Base):
     score = Column(Integer, nullable=True)
 
     user = relationship("User", back_populates="skills")
-    skill = relationship("Skill")
+    skill = relationship("Skill", back_populates="user_skills")
 
     __table_args__ = (
         UniqueConstraint("user_id", "skill_id", name="uq_user_skill"),
@@ -466,6 +470,7 @@ class RoadmapSection(Base):
 
     roadmap = relationship("Roadmap", back_populates="section")
     steps = relationship("RoadmapStep", back_populates="section", cascade="all, delete-orphan")
+    courses = relationship("RoadmapCourse", back_populates="section", cascade="all, delete-orphan")
     assessment = relationship("RoadmapAssessmentResult", back_populates="section")
 
     __table_args__ = (
@@ -491,6 +496,46 @@ class RoadmapStep(Base):
 
     __table_args__ = (
         UniqueConstraint("section_id", "order", name="uq_roadmap_steps_section_order"),
+    )
+
+
+# =========================
+# ROADMAP COURSE
+# =========================
+class RoadmapCourse(Base):
+    __tablename__ = "roadmap_courses"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    section_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("roadmap_sections.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    provider = Column(String, nullable=False)
+    title = Column(String, nullable=False)
+    url = Column(String, nullable=False)
+    normalized_url = Column(String, nullable=False)
+    description = Column(Text, nullable=True)
+    language = Column(String, nullable=True)
+    is_free = Column(Boolean, nullable=True)
+    rating = Column(Float, nullable=True)
+    provider_course_id = Column(String, nullable=True)
+    rank_in_provider = Column(Integer, nullable=True)
+    source_payload = Column(JSONB, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    section = relationship("RoadmapSection", back_populates="courses")
+
+    __table_args__ = (
+        UniqueConstraint("section_id", "normalized_url", name="uq_roadmap_courses_section_normalized_url"),
+        Index("ix_roadmap_courses_section_id", "section_id"),
+        Index("ix_roadmap_courses_provider", "provider"),
     )
 
 
@@ -671,41 +716,53 @@ class JobPost(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     job_title = Column(String, nullable=False, index=True)
-    company_name = Column(String, nullable=False, index=True)
-    location = Column(String, nullable=True)
-    job_url = Column(String, nullable=False, unique=True)
+    company_name = Column(String, nullable=True, index=True)
+    job_url = Column(String, nullable=True, unique=True)
     source = Column(String, nullable=True)
-    posted_date = Column(DateTime(timezone=True), nullable=True)
-    description = Column(Text, nullable=True)
-    scraped_at = Column(DateTime(timezone=True), nullable=True)
-    requirements_raw = Column(Text, nullable=True)
-    requirements_list = Column(ARRAY(String), nullable=True)
-    experience = Column(Text, nullable=True)
+    location = Column(Text, nullable=True)
+    posted_date = Column(Date, nullable=True)
     career_level = Column(String, nullable=True)
-    education_level = Column(String, nullable=True)
-    salary = Column(String, nullable=True)
-    categories = Column(ARRAY(String), nullable=True)
-    skills = Column(ARRAY(String), nullable=True)
+    work_type = Column(String, nullable=True)
+    employment_type = Column(String, nullable=True)
+    description_about_role = Column(Text, nullable=True)
+    description_key_responsibilities = Column(Text, nullable=True)
+    description_requirements = Column(Text, nullable=True)
+    description_nice_to_have = Column(Text, nullable=True)
 
     created_at = Column(
-        DateTime(timezone=True),
+        DateTime(timezone=False),
         server_default=func.now(),
         nullable=False,
         index=True
     )
     updated_at = Column(
-        DateTime(timezone=True),
+        DateTime(timezone=False),
         server_default=func.now(),
         onupdate=func.now(),
         nullable=False
     )
 
     user_interactions = relationship("JobUserInteraction", back_populates="job_post", cascade="all, delete-orphan")
+    skills = relationship("JobPostSkill", back_populates="job_post", cascade="all, delete-orphan")
+    applications = relationship("JobApplication", back_populates="job_post", cascade="all, delete-orphan")
 
     __table_args__ = (
         Index("idx_job_post_title_company", "job_title", "company_name"),
         Index("idx_job_post_created_at", "created_at"),
     )
+
+
+# =========================
+# JOB POSTS <-> SKILLS (uses unified Skill table)
+# =========================
+class JobPostSkill(Base):
+    __tablename__ = "job_post_skills"
+
+    job_post_id = Column(UUID(as_uuid=True), ForeignKey("job_posts.id", ondelete="CASCADE"), primary_key=True)
+    skill_id = Column(UUID(as_uuid=True), ForeignKey("skills.id", ondelete="CASCADE"), primary_key=True)
+
+    job_post = relationship("JobPost", back_populates="skills")
+    skill = relationship("Skill", back_populates="job_post_skills")
 
 
 # =========================
@@ -718,8 +775,10 @@ class JobUserInteraction(Base):
     job_post_id = Column(UUID(as_uuid=True), ForeignKey("job_posts.id"), nullable=False)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     viewed_at = Column(DateTime(timezone=True), nullable=True)
+    view_count = Column(Integer, nullable=False, default=0)
     is_saved = Column(Boolean, nullable=False, default=False)
     saved_at = Column(DateTime(timezone=True), nullable=True)
+    last_interaction_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     created_at = Column(
         DateTime(timezone=True),
         server_default=func.now(),
@@ -736,7 +795,110 @@ class JobUserInteraction(Base):
     user = relationship("User")
 
     __table_args__ = (
-        UniqueConstraint("job_post_id", "user_id", name="uq_job_user_interaction_user_job"),
         Index("idx_job_user_interactions_user_saved", "user_id", "is_saved"),
         Index("idx_job_user_interactions_user_viewed_at", "user_id", "viewed_at"),
+    )
+
+
+# =========================
+# JOB APPLICATIONS
+# =========================
+class JobApplication(Base):
+    __tablename__ = "job_applications"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    job_post_id = Column(UUID(as_uuid=True), ForeignKey("job_posts.id", ondelete="CASCADE"), nullable=False)
+    status = Column(String, nullable=False)
+    applied_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=True)
+    updated_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    job_post = relationship("JobPost", back_populates="applications")
+    user = relationship("User")
+
+    __table_args__ = (
+        CheckConstraint("status IN ('applied','interview','offer','rejected','saved')", name="ck_job_applications_status"),
+    )
+
+
+# ###########################################################################################################################
+# COURSES
+# ###########################################################################################################################
+
+# =========================
+# COURSES
+# =========================
+class Course(Base):
+    __tablename__ = "courses"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    platform = Column(String, nullable=True)
+    title = Column(String, nullable=False, index=True)
+    instructor = Column(String, nullable=True)
+    tags = Column(ARRAY(Text), nullable=True)
+    duration = Column(String, nullable=True)
+    url = Column(Text, nullable=False, unique=True)
+    category = Column(String, nullable=True, index=True)
+    level = Column(String, nullable=True, index=True)
+    price = Column(String, nullable=True)
+    language = Column(String, nullable=True)
+
+    created_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+        index=True
+    )
+    updated_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False
+    )
+
+    user_progress = relationship("CourseUserProgress", back_populates="course", cascade="all, delete-orphan")
+
+    __table_args__ = (
+        Index("idx_course_category_level", "category", "level"),
+        Index("idx_course_created_at", "created_at"),
+    )
+
+
+# =========================
+# COURSE USER PROGRESS
+# =========================
+class CourseUserProgress(Base):
+    __tablename__ = "course_user_progress"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    course_id = Column(UUID(as_uuid=True), ForeignKey("courses.id", ondelete="CASCADE"), nullable=False)
+    status = Column(String, nullable=False)
+    started_at = Column(DateTime(timezone=True), nullable=True)
+    completed_at = Column(DateTime(timezone=True), nullable=True)
+    saved_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=True)
+    created_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False
+    )
+    updated_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False
+    )
+
+    course = relationship("Course", back_populates="user_progress")
+    user = relationship("User")
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "course_id", name="unique_user_course"),
+        Index("idx_course_user_progress_user_status", "user_id", "status"),
+        Index("idx_course_user_progress_saved_at", "saved_at"),
     )

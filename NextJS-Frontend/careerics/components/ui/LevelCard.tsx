@@ -6,9 +6,8 @@ const LevelCard: React.FC = () => {
     <div style={{ 
       backgroundColor: "#142143", 
       borderRadius: "20px", // Zawedna el radius sghayar 3ashan yeb2a smoother
-      padding: "10px 12px", // Zawedna el padding 3ashan el content yakhod ra7to
-      height: "120%", 
-      width: "fit-content", 
+      padding: "1rem", // Zawedna el padding 3ashan el content yakhod ra7to
+      height: "100%", 
       display: "flex", 
       flexDirection: "column", // El main container lissa column 3ashan el button ta7t
       justifyContent: "space-between", // Bey-bu3ed el row fo2 3an el button ta7t
@@ -22,16 +21,16 @@ const LevelCard: React.FC = () => {
         display: "flex", 
         flexDirection: "row", // Ufuqi
         alignItems: "center", // M7azah vertical f nos ba3d
-        justifyContent: "center", 
-        gap: "20px", // El masafeh ben el icon wel line wel kalam
-        flexGrow: 1 // Bey-akhod el masafeh el fadya fo2
+        justifyContent: "space-between", 
+        flexGrow: 1, // Bey-akhod el masafeh el fadya fo2
+        paddingInline:"0.5rem"
       }}>
         
         {/* El Icon ka SVG (Left) */}
         <img 
           src="/cv/Rectangle 119.svg" // Et-aked enn dah el icon el sa7
           alt="Check Level Icon"
-          style={{ width: "80px", height: "80px", flexShrink: 0 }} // Zawedna el size sghayar
+          style={{ width: "60px", height: "60px", flexShrink: 0 }} // Zawedna el size sghayar
         />
 
         {/* 2. El Vertical Line (Middle) */}
@@ -50,9 +49,9 @@ const LevelCard: React.FC = () => {
             textAlign: "left", // Kalam 3al shemal
             fontFamily: 'Nova Square', 
             fontWeight: "400",
-            fontSize: "1.5rem", // Zawedna el size 3ashan yeb2a wad7
+            fontSize: "1.2rem", // Zawedna el size 3ashan yeb2a wad7
             lineHeight: "1.5", // Masafeh ben el stour sghayara
-            maxWidth: "100px", // Bey-egber el kalam yenzel row gadeed
+            maxWidth: "min-content", // Bey-egber el kalam yenzel row gadeed
             textTransform: "capitalize" // Bey-khally awel 7arf Capital
           }}>
             Check Your Level
@@ -67,9 +66,8 @@ const LevelCard: React.FC = () => {
           color: "black",
           borderRadius: "5px", // Radius Smooth
           fontFamily: 'Nova Square',
-          width: "70%",          
-          padding: "15px",
-          left: "15%",
+          width: "100%",    
+          paddingBlock:"0.5rem",
           
           
         }}

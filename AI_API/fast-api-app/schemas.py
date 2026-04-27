@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 from typing import Optional, List, Dict, Any
@@ -66,6 +66,7 @@ class SessionUpdate(BaseModel):
 class SessionRead(SessionBase):
     id: UUID
     user_id: UUID
+    created_at: Optional[datetime] = None
     emotion_evaluation: Optional[Dict] = None
     tone_evaluation: Optional[Dict] = None
     sentiment_evaluation: Optional[Dict] = None
@@ -449,6 +450,56 @@ class BulkRoadmapImportResponseSchema(BaseModel):
     results: List[RoadmapImportItemResultSchema]
 
 
+class CourseIngestionProviderRawItemSchema(BaseModel):
+    provider: Literal["coursera", "udemy", "udacity"]
+    title: str
+    url: str
+    description: Optional[str] = None
+    language: Optional[str] = None
+    is_free: Optional[bool] = None
+    rating: Optional[float] = None
+    provider_course_id: Optional[str] = None
+    rank_in_provider: Optional[int] = None
+    source_payload: Dict[str, Any] = Field(default_factory=dict)
+
+
+class RoadmapCourseIngestionRequestSchema(BaseModel):
+    section_ids: Optional[List[UUID]] = None
+    section_limit: Optional[int] = Field(default=None, gt=0)
+    top_k_per_provider: int = Field(default=3, ge=1, le=10)
+
+
+class CourseIngestionProviderSummarySchema(BaseModel):
+    provider: Literal["coursera", "udemy", "udacity"]
+    fetched: int = 0
+    created: int = 0
+    updated: int = 0
+    skipped: int = 0
+    failed: int = 0
+    errors: List[str] = Field(default_factory=list)
+
+
+class RoadmapCourseIngestionSectionSummarySchema(BaseModel):
+    section_id: UUID
+    section_title: str
+    roadmap_id: UUID
+    roadmap_title: str
+    created: int = 0
+    updated: int = 0
+    skipped: int = 0
+    failed: int = 0
+    providers: List[CourseIngestionProviderSummarySchema] = Field(default_factory=list)
+
+
+class RoadmapCourseIngestionResponseSchema(BaseModel):
+    sections_processed: int = 0
+    created: int = 0
+    updated: int = 0
+    skipped: int = 0
+    failed: int = 0
+    results: List[RoadmapCourseIngestionSectionSummarySchema] = Field(default_factory=list)
+
+
 class RoadmapStepReadSchema(BaseModel):
     id: UUID
     title: str
@@ -463,6 +514,7 @@ class RoadmapSectionReadSchema(BaseModel):
     title: str
     description: Optional[str] = ""
     order: int
+    courses_count: int = 0
     steps: List[RoadmapStepReadSchema] = Field(default_factory=list)
     model_config = ConfigDict(from_attributes=True)
 
@@ -473,6 +525,33 @@ class RoadmapReadSchema(BaseModel):
     description: Optional[str] = ""
     sections: List[RoadmapSectionReadSchema] = Field(default_factory=list)
     model_config = ConfigDict(from_attributes=True)
+
+
+class RoadmapCourseReadSchema(BaseModel):
+    id: UUID
+    provider: str
+    title: str
+    url: str
+    description: Optional[str] = None
+    language: Optional[str] = None
+    is_free: Optional[bool] = None
+    rating: Optional[float] = None
+    provider_course_id: Optional[str] = None
+    rank_in_provider: Optional[int] = None
+    model_config = ConfigDict(from_attributes=True)
+
+
+class RoadmapSectionCoursesReadSchema(BaseModel):
+    section_id: UUID
+    section_title: str
+    order: int
+    courses: List[RoadmapCourseReadSchema] = Field(default_factory=list)
+
+
+class RoadmapCoursesReadSchema(BaseModel):
+    roadmap_id: UUID
+    roadmap_title: str
+    sections: List[RoadmapSectionCoursesReadSchema] = Field(default_factory=list)
 
 
 class RoadmapListItemSchema(BaseModel):
@@ -637,6 +716,12 @@ class CareerSelectedCardRead(BaseModel):
     name: str
     model_config = ConfigDict(from_attributes=True)
 
+class CareerTrackRead(BaseModel):
+    id: UUID
+    name: str
+    description: Optional[str] = None
+    model_config = ConfigDict(from_attributes=True)
+
 class CareerTrackScoreRead(BaseModel):
     track_id: UUID
     track_name: str
@@ -653,31 +738,40 @@ class CareerEvaluationRead(BaseModel):
 
 class JobPostBase(BaseModel):
     job_title: str
-    company_name: str
-    location: Optional[str] = None
-    job_url: str
+    company_name: Optional[str] = None
+    job_url: Optional[str] = None
     source: Optional[str] = None
-    posted_date: Optional[datetime] = None
-    description: Optional[str] = None
-    requirements_raw: Optional[str] = None
-    requirements_list: Optional[List[str]] = Field(default_factory=list)
-    experience: Optional[str] = None
+    location: Optional[str] = None
+    posted_date: Optional[date] = None
     career_level: Optional[str] = None
-    education_level: Optional[str] = None
-    salary: Optional[str] = None
-    categories: Optional[List[str]] = Field(default_factory=list)
-    skills: Optional[List[str]] = Field(default_factory=list)
+    work_type: Optional[str] = None
+    employment_type: Optional[str] = None
+    description_about_role: Optional[str] = None
+    description_key_responsibilities: Optional[str] = None
+    description_requirements: Optional[str] = None
+    description_nice_to_have: Optional[str] = None
 
 
 class JobPostCreate(JobPostBase):
-    scraped_at: Optional[datetime] = None
+    pass
+
+
+class JobBulkImportItem(JobPostBase):
+    skills: Optional[List[str]] = None
+    posted_date: Optional[str] = None
+    model_config = ConfigDict(extra="allow")
+
+
+class JobBulkImportRequest(BaseModel):
+    jobs: List[JobBulkImportItem]
 
 
 class JobPostResponse(JobPostBase):
     id: UUID
-    scraped_at: Optional[datetime] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+    skills: List[str] = Field(default_factory=list)
+    match_percentage: Optional[float] = None
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -698,4 +792,66 @@ class UserJobsListResponse(BaseModel):
     skip: int
     limit: int
     jobs: List[JobPostResponse]
+
+
+# =====================================================
+# COURSE SCHEMAS
+# =====================================================
+
+class CourseBase(BaseModel):
+    platform: Optional[str] = None
+    title: str
+    instructor: Optional[str] = None
+    tags: Optional[List[str]] = None
+    duration: Optional[str] = None
+    url: str
+    category: Optional[str] = None
+    level: Optional[str] = None
+    price: Optional[str] = None
+    language: Optional[str] = None
+
+
+class CourseCreate(CourseBase):
+    pass
+
+
+class CourseResponse(CourseBase):
+    id: UUID
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    model_config = ConfigDict(from_attributes=True)
+
+
+CourseStatus = Literal["saved", "enrolled", "completed"]
+
+
+class CourseStatusUpdateRequest(BaseModel):
+    status: CourseStatus
+
+
+class CourseProgressResponse(BaseModel):
+    id: UUID
+    course_id: UUID
+    user_id: UUID
+    status: CourseStatus
+    started_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    saved_at: Optional[datetime] = None
+    created_at: datetime
+    updated_at: datetime
+    model_config = ConfigDict(from_attributes=True)
+
+
+class BulkCourseImportResult(BaseModel):
+    inserted: int
+    skipped: int
+    total_processed: int
+    duplicates: List[str]
+
+
+class UserCoursesListResponse(BaseModel):
+    total: int
+    skip: int
+    limit: int
+    courses: List[CourseResponse]
 

@@ -18,7 +18,7 @@ interface SkillFiltersProps {
   trackHelperText?: string;
 }
 
-const SkillFilters = ({
+const  SkillFilters = ({
   tracks,
   selectedTrackId,
   onTrackChange,
@@ -33,8 +33,7 @@ const SkillFilters = ({
   const getButtonStyle = (type: SkillFilterType) => ({
     flex: 1,
     padding: "1.2vh 0.5vw",
-    borderRadius: "0.8vw",
-    border: "none",
+    borderRadius: "4vh",
     backgroundColor: skillType === type ? "#E6FFB2" : "#315891",
     color: skillType === type ? "#1e293b" : "#fff",
     fontSize: "0.9vw",
@@ -49,60 +48,49 @@ const SkillFilters = ({
       style={{
         display: "flex",
         flexDirection: "column",
-        gap: "1.5vh",
         color: "white",
         height: "100%",
         justifyContent: "center",
+        padding:"1rem",
+        gap: "0.5rem  ",
       }}
     >
       <div>
-        <label style={{ fontSize: "1.5vw", display: "block", marginBottom: "0.8vh", fontWeight: "bold" }}>
+        <h3 style={{ fontSize: "1.2rem" }}>
           Track
-        </label>
+        </h3>
         <select
           value={selectedTrackId}
           onChange={(event) => onTrackChange(event.target.value)}
           disabled={disabled}
           style={{
             width: "100%",
-            padding: "1vh 1vw",
-            borderRadius: "0.8vw",
+            padding: "0.5rem",
+            borderRadius: "2vh",
             backgroundColor: "#cbd5e1",
             border: "none",
-            fontSize: "0.9vw",
+            fontSize: "0.8rem",
             outline: "none",
             cursor: disabled ? "not-allowed" : "pointer",
             color: "#000",
-            fontWeight: "500",
             opacity: disabled ? 0.7 : 1,
+            fontFamily: "var(--font-nova-square)",
+            
           }}
         >
-          <option value="">Choose a track</option>
+          <option value="">Choose a track </option>
           {tracks.map((track) => (
             <option key={track.id} value={track.id}>
               {track.title}
             </option>
           ))}
         </select>
-        {trackHelperText ? (
-          <p
-            style={{
-              margin: "0.7vh 0 0 0",
-              fontSize: "0.74vw",
-              lineHeight: 1.35,
-              color: "#E6FFB2",
-              fontWeight: 600,
-            }}
-          >
-            {trackHelperText}
-          </p>
-        ) : null}
       </div>
 
-      <div style={{ marginTop: "1vh" }}>
-        <label style={{ fontSize: "1.2vw", display: "block", marginBottom: "1vh", fontWeight: "bold" }}>
+      <div>
+        <h3 style={{ fontSize: "1.2rem"}}>
           Skill Type
-        </label>
+        </h3>
         <div style={{ display: "flex", gap: "1vw" }}>
           <button
             onClick={() => onSkillTypeChange("general")}
@@ -120,19 +108,7 @@ const SkillFilters = ({
             Specific Skill
           </button>
         </div>
-        {disableSkillTypeToggle ? (
-          <p
-            style={{
-              margin: "0.7vh 0 0 0",
-              fontSize: "0.72vw",
-              lineHeight: 1.35,
-              color: "#E6FFB2",
-              fontWeight: 600,
-            }}
-          >
-            Skill type is disabled in General Skills mode.
-          </p>
-        ) : null}
+        
       </div>
     </div>
   );

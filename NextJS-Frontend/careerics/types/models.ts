@@ -61,6 +61,7 @@ export interface APISession {
   type: string;
   status: string;
   user_id: string;
+  created_at?: string | null;
   emotion_evaluation?: Record<string, unknown> | null;
   tone_evaluation?: Record<string, unknown> | null;
   sentiment_evaluation?: Record<string, unknown> | null;
@@ -231,6 +232,7 @@ export interface RoadmapSectionRead {
   title: string;
   description?: string;
   order: number;
+  courses_count?: number;
   steps: RoadmapStepRead[];
 }
 
@@ -247,6 +249,32 @@ export interface RoadmapListItem {
   description?: string;
   sections_count: number;
   steps_count: number;
+}
+
+export interface RoadmapCourse {
+  id: string;
+  provider: string;
+  title: string;
+  url: string;
+  description?: string | null;
+  language?: string | null;
+  is_free?: boolean | null;
+  rating?: number | null;
+  provider_course_id?: string | null;
+  rank_in_provider?: number | null;
+}
+
+export interface RoadmapCoursesSection {
+  section_id: string;
+  section_title: string;
+  order: number;
+  courses: RoadmapCourse[];
+}
+
+export interface RoadmapCoursesRead {
+  roadmap_id: string;
+  roadmap_title: string;
+  sections: RoadmapCoursesSection[];
 }
 
 export interface UserRoadmapBookmark {
@@ -468,6 +496,12 @@ export interface APICareerAnswerRead {
   session_id: string;
   question_id: string;
   answer: number;
+}
+
+export interface APICareerTrack {
+  id: string;
+  name: string;
+  description?: string | null;
 }
 
 export interface APICareerTrackScore {

@@ -1,4 +1,3 @@
-import { Agent } from "undici";
 import { NextRequest, NextResponse } from "next/server";
 
 export const runtime = "nodejs";
@@ -19,10 +18,26 @@ const upstreamHeadersTimeoutMs = parseMs(
   DEFAULT_HEADERS_TIMEOUT_MS,
 );
 
-const upstreamDispatcher = new Agent({
-  headersTimeout: upstreamHeadersTimeoutMs,
-  bodyTimeout: 0,
-});
+async function fetchUpstreamWithTimeout(
+  url: string,
+  init: RequestInit & { duplex?: "half" },
+): Promise<Response> {
+  if (upstreamHeadersTimeoutMs <= 0) {
+    return fetch(url, init);
+  }
+
+  const controller = new AbortController();
+  const timeoutHandle = setTimeout(() => controller.abort(), upstreamHeadersTimeoutMs);
+
+  try {
+    return await fetch(url, {
+      ...init,
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeoutHandle);
+  }
+}
 
 const isDevelopment = process.env.NODE_ENV !== "production";
 
@@ -53,6 +68,10 @@ function toErrorMeta(error: unknown): ErrorMeta {
 function isHeadersTimeoutError(error: unknown): boolean {
   if (!(error instanceof Error)) {
     return false;
+  }
+
+  if (error.name === "AbortError" || error.name === "TimeoutError") {
+    return true;
   }
 
   const cause = (error as Error & { cause?: { code?: string } }).cause;
@@ -200,10 +219,7 @@ async function handleProxy(
   };
 
   try {
-    upstreamResponse = await fetch(url, {
-      ...baseFetchInit,
-      dispatcher: upstreamDispatcher,
-    } as RequestInit & { duplex?: "half"; dispatcher?: Agent });
+    upstreamResponse = await fetchUpstreamWithTimeout(url, baseFetchInit);
   } catch (error) {
     primaryErrorMeta = toErrorMeta(error);
 
@@ -217,11 +233,11 @@ async function handleProxy(
       );
     }
 
-    const canRetryWithoutDispatcher = !preparedRequest.requiresDuplex;
+    const canRetryRequest = !preparedRequest.requiresDuplex;
 
-    if (canRetryWithoutDispatcher) {
+    if (canRetryRequest) {
       try {
-        upstreamResponse = await fetch(url, baseFetchInit);
+        upstreamResponse = await fetchUpstreamWithTimeout(url, baseFetchInit);
       } catch (fallbackError) {
         const fallbackErrorMeta = toErrorMeta(fallbackError);
 

@@ -1,10 +1,23 @@
 import cv2
 from fastapi import HTTPException
 
-try:
-    from deepface import DeepFace  # type: ignore[import-not-found]
-except Exception:
-    DeepFace = None
+DeepFace = None
+_deepface_checked = False
+
+
+def _get_deepface():
+    global DeepFace
+    global _deepface_checked
+
+    if not _deepface_checked:
+        _deepface_checked = True
+        try:
+            from deepface import DeepFace as _DeepFace  # type: ignore[import-not-found]
+            DeepFace = _DeepFace
+        except Exception:
+            DeepFace = None
+
+    return DeepFace
 
 def extract_frames_per_second(video_path: str, target_fps: int = 2):
     cap = cv2.VideoCapture(video_path)
@@ -51,7 +64,8 @@ def emotion_evaluation(emotion_list: list[str]) -> dict:
 def fer(mp4_path: str) -> list[str]:
     try:
         # Allow the API to run even if optional FER dependencies are missing.
-        if DeepFace is None:
+        deepface_client = _get_deepface()
+        if deepface_client is None:
             return []
 
         images = extract_frames_per_second(mp4_path)
@@ -59,7 +73,7 @@ def fer(mp4_path: str) -> list[str]:
 
         for img in images:
             try:
-                result = DeepFace.analyze(
+                result = deepface_client.analyze(
                     img_path=img,
                     actions=['emotion'],
                     enforce_detection=False

@@ -375,7 +375,7 @@ return (
                   { 
                     id: 'city', 
                     type: 'select', 
-                    placeholder: 'State', 
+                    placeholder: 'City', 
                   options: stateOptions
                   }
                   ]},

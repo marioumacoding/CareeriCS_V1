@@ -28,7 +28,7 @@ const LevelCard: React.FC = () => {
         
         {/* El Icon ka SVG (Left) */}
         <img 
-          src="/cv/Rectangle 119.svg" // Et-aked enn dah el icon el sa7
+          src="/job/check.svg" // Et-aked enn dah el icon el sa7
           alt="Check Level Icon"
           style={{ width: "60px", height: "60px", flexShrink: 0 }} // Zawedna el size sghayar
         />

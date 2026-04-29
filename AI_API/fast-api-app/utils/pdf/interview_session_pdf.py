@@ -18,7 +18,7 @@ from fastapi.responses import StreamingResponse
 
 def _cover_image_path() -> Path:
     repo_root = Path(__file__).resolve().parents[4]
-    return repo_root / "NextJS-Frontend" / "careerics" / "public" / "interview" / "Tech Interview Icon.png"
+    return repo_root / "NextJS-Frontend" / "careerics" / "public" / "interview" / "Tech Interview Icon.svg"
 
 
 def _add_cover_page(elements, report_data, title_style, body_style):

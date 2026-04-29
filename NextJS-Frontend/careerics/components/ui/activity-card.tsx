@@ -88,7 +88,7 @@ export const ActivityCard = ({
                     aria-label={`Download ${id}`}
                 >
                     <img
-                        src={"/interview/download.svg"}
+                        src={"/global/download.svg"}
                         alt=""
                         style={{
                             maxHeight: "4vh",

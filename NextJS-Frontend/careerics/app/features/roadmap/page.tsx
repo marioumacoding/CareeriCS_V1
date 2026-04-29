@@ -441,7 +441,7 @@ export default function RoadmapPage() {
             />
 
             <img
-              src={"/roadmap/bookmark.svg"}
+              src={"/global/bookmark.svg"}
               alt="Toggle roadmap bookmark"
               style={{
                 height: "1.5rem",

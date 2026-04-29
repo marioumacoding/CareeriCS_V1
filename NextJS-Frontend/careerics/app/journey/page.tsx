@@ -254,7 +254,7 @@ export default function JourneyPage() {
                   key={courseIndex}
                   course={course.name}
                   organization={course.org}
-                  icon="/interview/download.svg"
+                  icon="/global/download.svg"
                   variant="secondary"
                 />
               ))}

@@ -533,7 +533,7 @@ export default function RecordingPage() {
       pointerEvents: isPeeking ? "none" : "auto" 
     }}>
       <img
-        src={status === "idle" ? "/interview/Record.svg" : status === "recording" ? "/interview/Pause.svg" : "/interview/Play.svg"}
+        src={status === "idle" ? "/interview/record.svg" : status === "recording" ? "/interview/Pause.svg" : "/interview/Play.svg"}
         alt="Control"
         style={{ width: "60px", cursor: isQuestionsLoading ? "not-allowed" : "pointer", opacity: isQuestionsLoading ? 0.5 : 1 }}
         onClick={handleCameraToggle}
@@ -542,7 +542,7 @@ export default function RecordingPage() {
         {formatTime(seconds)}
       </span>
       <img 
-        src="/interview/Retake.svg" 
+        src="/interview/retake.svg" 
         alt="Reset" 
         style={{ width: "45px", cursor: "pointer" }} 
         onClick={handleReset} 

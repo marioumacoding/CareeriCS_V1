@@ -191,7 +191,7 @@ export const StepFlow: React.FC<StepFlowProps> = ({
                 }}
               >
                 <img
-                  src="/connector.svg"
+                  src="/roadmap/connector.svg"
                   alt=""
                   style={{
                     width: "100%",
@@ -217,7 +217,7 @@ export const StepFlow: React.FC<StepFlowProps> = ({
                 }}
               >
                 <img
-                  src="/connectorV.svg"
+                  src="/roadmap/connector-vertical.svg"
                   alt=""
                   style={{
                     width: "100%",

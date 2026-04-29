@@ -380,7 +380,7 @@ export default function LastAnalysisPage() {
                     opacity: isOpeningDrive ? 0.7 : downloadUrl ? 1 : 0.55,
                   }}
                 >
-                  <img src="/interview/drive.svg" style={{ width: "20px" }} alt="Drive" />
+                  <img src="/global/drive.svg" style={{ width: "20px" }} alt="Drive" />
                   {isOpeningDrive ? "Opening Drive..." : "Google Drive"}
                 </button>
               </div>

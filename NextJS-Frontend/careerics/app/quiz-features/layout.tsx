@@ -57,7 +57,7 @@ export default function JourneyLayout({
                     }}
                 >
                     <img
-                        src="/Close.svg"
+                        src="/global/close.svg"
                         alt="Close"
                         style={{
                             width: "100%",

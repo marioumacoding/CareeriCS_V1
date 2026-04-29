@@ -110,7 +110,7 @@ const JobDetailsCard: React.FC<JobDetailsProps> = ({ jobData }) => {
             <span style={{ fontSize: "1.4rem", opacity: 0.9, whiteSpace: "nowrap" }}>{jobData.company}</span>
             <div style={{ display: "flex", alignItems: "center", gap: "8px", marginLeft: "30px" }}> 
             <img 
-                src="/cv/Map pin.svg" 
+                src="/job/map pin.svg" 
                 alt="location"
                 style={{ opacity: 0.6, width: "16px", height: "16px" }} 
             />

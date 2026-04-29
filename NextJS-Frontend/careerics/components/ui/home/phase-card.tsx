@@ -47,7 +47,7 @@ export const PhaseCard = (props: PhaseCardProps) => {
         </h3>
 
         <img
-          src={`/phases/${phaseNumber}.svg`}
+          src={`/home/current-phase/${phaseNumber}.svg`}
           alt="Current Phase"
           style={{
             position: "relative",
@@ -124,7 +124,7 @@ export const PhaseCard = (props: PhaseCardProps) => {
         />
 
         <img
-          src={`/phases/${phaseNumber}.svg`}
+          src={`/home/next-phase/${phaseNumber}.svg`}
           alt="Next Phase"
           style={{
             position: "relative",

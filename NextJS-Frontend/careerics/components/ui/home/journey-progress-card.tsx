@@ -28,7 +28,7 @@ export const JourneyProgressCard = ({ percentage = 10, style }: any) => {
       </h3>
 
       <img
-        src={`/journeyProgress/${percentage}.svg`}
+        src={`/home/journey-progress/${percentage}.svg`}
         alt="Progress"
         style={{
           position: "relative",

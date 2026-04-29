@@ -151,7 +151,7 @@ export default function CVCrafting() {
           key={1}
           title="CV Builder"
           description="Elevate your existing resume with AI-driven insights that refine your language and highlight your most impactful achievements."
-          icon="/cv/CV Builder.svg"
+          icon="/cv/cv-builder.svg"
           buttonVariant="primary-inverted"
           route="/cv-feature/builder"
           style={{ gridArea: "1 / 1 / 5 / 3" }}
@@ -161,7 +161,7 @@ export default function CVCrafting() {
           key={2}
           title="CV Enhancer"
           description="Elevate your existing resume with AI-driven insights that refine your language and highlight your most impactful achievements."
-          icon="/cv/CV Enhancer.svg"
+          icon="/cv/cv-enhancer.svg"
           buttonVariant="primary-inverted"
           route="/cv-feature/enhancer"
           style={{ gridArea: "1 / 3 / 5 / 5" }}
@@ -196,7 +196,7 @@ export default function CVCrafting() {
           justifyContent: "space-between"
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: "25px" }}>
-            <img src="/cv/CV Extractor.svg" alt="" style={{ height: "12vh" }} />
+            <img src="/cv/cv-extractor.svg" alt="" style={{ height: "12vh" }} />
             <div style={{ height: "80px", width: "1.7px", backgroundColor: "white" }}></div>
             <div>
               <h3 style={{ color: "white", fontSize: "clamp(0.8rem,1.7vw,1.5rem)", margin: 0, fontFamily: 'var(--font-nova-square)', fontWeight: "200" }}>

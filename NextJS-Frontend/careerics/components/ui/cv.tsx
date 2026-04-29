@@ -156,7 +156,7 @@ export default function CV() {
               />
             ) : selectedFile ? (
               <img
-                src="/cv/cv.svg"
+                src="/interview/analyzing.svg"
                 alt="Selected CV file"
                 style={{ width: '84px', height: '125px', objectFit: 'contain' }}
               />
@@ -261,7 +261,7 @@ export default function CV() {
                         disabled={isOpeningDrive}
                         style={{ backgroundColor: 'white', color: '#1a1a1a', border: 'none', padding: '12px 20px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '10px', width: '240px', justifyContent: 'center', cursor: isOpeningDrive ? 'default' : 'pointer', opacity: isOpeningDrive ? 0.7 : 1 }}
                       >
-                        <img src="/interview/drive.svg" style={{ width: '18px' }} alt="Drive" /> {isOpeningDrive ? 'Opening Drive...' : 'Google Drive'}
+                        <img src="/global/drive.svg" style={{ width: '18px' }} alt="Drive" /> {isOpeningDrive ? 'Opening Drive...' : 'Google Drive'}
                       </button>
                     </div>
                   </div>

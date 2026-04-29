@@ -90,7 +90,6 @@ const Sidebar = () => {
                 style={{
                   padding: "2.3vh",
                   marginLeft: "0.5vw",
-                  // Text turns black on green (active), white otherwise (hover/default)
                   color: isActive || isHovered ? "#000" : "#fff",
                   cursor: "pointer",
                   fontSize: "0.9rem",

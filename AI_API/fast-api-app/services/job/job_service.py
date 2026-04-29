@@ -4,11 +4,10 @@ from typing import Any, Dict, List, Optional, Tuple
 from uuid import UUID
 
 from sqlalchemy import func, or_, select
-from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from db.models import JobApplication, JobPost, JobPostSkill, Skill, JobUserInteraction, User, UserSkill
+from db.models import JobPost, JobPostSkill, Skill, JobUserInteraction, User, UserSkill
 from services.job_ingestion_helpers import clean_text, normalize_and_attach_skills, normalize_skill_name
 
 logger = logging.getLogger(__name__)
@@ -37,20 +36,27 @@ def calculate_job_match_percentage(db: Session, user_id: UUID, job_post_id: UUID
     """
     job_skills = set(get_job_skills(db, job_post_id))
     user_skills = set(get_user_skills(db, user_id))
-    
+    match_percentage = _calculate_match_percentage(job_skills, user_skills)
+    return match_percentage
+
+
+def _calculate_match_percentage(job_skills: set[str], user_skills: set[str]) -> float:
     if not job_skills:
         return 0.0
-    
+
     matched_skills = job_skills & user_skills
     match_percentage = (len(matched_skills) / len(job_skills)) * 100
     return round(match_percentage, 2)
 
 
-def enrich_job_post_with_skills(db: Session, job_post: JobPost, user_id: Optional[UUID] = None) -> Dict[str, Any]:
-    """
-    Convert JobPost object to a dict with skills array and optional match_percentage.
-    """
-    job_dict = {
+def _serialize_job_post(
+    job_post: JobPost,
+    skills: List[str],
+    *,
+    interaction: Optional[JobUserInteraction] = None,
+    match_percentage: Optional[float] = None,
+) -> Dict[str, Any]:
+    return {
         "id": job_post.id,
         "job_title": job_post.job_title,
         "company_name": job_post.company_name,
@@ -67,14 +73,102 @@ def enrich_job_post_with_skills(db: Session, job_post: JobPost, user_id: Optiona
         "description_nice_to_have": job_post.description_nice_to_have,
         "created_at": job_post.created_at,
         "updated_at": job_post.updated_at,
-        "skills": get_job_skills(db, job_post.id),
-        "match_percentage": None,
+        "skills": skills,
+        "match_percentage": match_percentage,
+        "is_saved": interaction.is_saved if interaction else False,
+        "saved_at": interaction.saved_at if interaction else None,
+        "viewed_at": interaction.viewed_at if interaction else None,
+        "view_count": interaction.view_count if interaction else 0,
+        "last_interaction_at": interaction.last_interaction_at if interaction else None,
+        "application_status": "saved" if interaction and interaction.is_saved else None,
+        "applied_at": interaction.saved_at if interaction and interaction.is_saved else None,
     }
-    
+
+
+def _load_job_skills_map(db: Session, job_ids: List[UUID]) -> Dict[UUID, List[str]]:
+    if not job_ids:
+        return {}
+
+    rows = db.execute(
+        select(JobPostSkill.job_post_id, Skill.skill_name)
+        .join(Skill, Skill.id == JobPostSkill.skill_id)
+        .where(JobPostSkill.job_post_id.in_(job_ids))
+        .order_by(Skill.skill_name.asc())
+    ).all()
+
+    skills_map: Dict[UUID, List[str]] = {job_id: [] for job_id in job_ids}
+    for job_post_id, skill_name in rows:
+        skills_map.setdefault(job_post_id, []).append(skill_name)
+
+    return skills_map
+
+
+def _load_latest_interactions_map(
+    db: Session,
+    user_id: UUID,
+    job_ids: List[UUID],
+) -> Dict[UUID, JobUserInteraction]:
+    rows = db.execute(
+        select(JobUserInteraction)
+        .where(
+            JobUserInteraction.user_id == user_id,
+            JobUserInteraction.job_post_id.in_(job_ids),
+        )
+        .order_by(
+            JobUserInteraction.updated_at.desc(),
+            JobUserInteraction.created_at.desc(),
+        )
+    ).scalars().all()
+
+    interactions_map: Dict[UUID, JobUserInteraction] = {}
+    for interaction in rows:
+        interactions_map.setdefault(interaction.job_post_id, interaction)
+
+    return interactions_map
+
+
+def enrich_job_posts(
+    db: Session,
+    job_posts: List[JobPost],
+    user_id: Optional[UUID] = None,
+) -> List[Dict[str, Any]]:
+    if not job_posts:
+        return []
+
+    job_ids = [job_post.id for job_post in job_posts]
+    skills_map = _load_job_skills_map(db, job_ids)
+
+    user_skills: set[str] = set()
+    interactions_map: Dict[UUID, JobUserInteraction] = {}
     if user_id:
-        job_dict["match_percentage"] = calculate_job_match_percentage(db, user_id, job_post.id)
-    
-    return job_dict
+        user_skills = set(get_user_skills(db, user_id))
+        interactions_map = _load_latest_interactions_map(db, user_id, job_ids)
+
+    enriched_jobs: List[Dict[str, Any]] = []
+    for job_post in job_posts:
+        job_skills = skills_map.get(job_post.id, [])
+        match_percentage = None
+        if user_id:
+            match_percentage = _calculate_match_percentage(set(job_skills), user_skills)
+
+        enriched_jobs.append(
+            _serialize_job_post(
+                job_post,
+                job_skills,
+                interaction=interactions_map.get(job_post.id),
+                match_percentage=match_percentage,
+            )
+        )
+
+    return enriched_jobs
+
+
+def enrich_job_post_with_skills(db: Session, job_post: JobPost, user_id: Optional[UUID] = None) -> Dict[str, Any]:
+    """
+    Convert a JobPost object to a response dict with batched related data.
+    """
+    enriched_jobs = enrich_job_posts(db, [job_post], user_id)
+    return enriched_jobs[0]
 
 
 def parse_linkedin_date(value: Optional[str]) -> Optional[date]:
@@ -483,52 +577,68 @@ def set_job_saved_state(db: Session, user_id: UUID, job_post_id: UUID, is_saved:
     return interaction
 
 
-JOB_APPLICATION_STATUSES = {"applied", "interviewed", "rejected", "accepted", "withdrawn"}
-
-
 def upsert_job_application(
     db: Session,
     user_id: UUID,
     job_post_id: UUID,
     status: str,
-) -> JobApplication:
+) -> Dict[str, Any]:
     _validate_user_and_job(db, user_id, job_post_id)
 
     normalized_status = (status or "").strip().lower()
-    if normalized_status not in JOB_APPLICATION_STATUSES:
+    if normalized_status not in {"applied", "interview", "offer", "rejected", "saved"}:
         raise ValueError(f"Invalid application status: {status}")
 
     now = datetime.now(UTC)
-    application = (
-        db.query(JobApplication)
-        .filter(
-            JobApplication.user_id == user_id,
-            JobApplication.job_post_id == job_post_id,
-        )
-        .order_by(JobApplication.applied_at.desc().nullslast(), JobApplication.updated_at.desc())
-        .first()
-    )
+    interaction = set_job_saved_state(db, user_id, job_post_id, is_saved=True)
+    interaction.last_interaction_at = now
+    interaction.updated_at = now
+    db.commit()
+    db.refresh(interaction)
+    return {
+        "id": interaction.id,
+        "job_post_id": interaction.job_post_id,
+        "user_id": interaction.user_id,
+        "status": normalized_status,
+        "applied_at": now,
+        "updated_at": interaction.updated_at,
+    }
 
-    try:
-        if application:
-            application.status = normalized_status
-            application.updated_at = now
-        else:
-            application = JobApplication(
-                user_id=user_id,
-                job_post_id=job_post_id,
-                status=normalized_status,
-                updated_at=now,
-            )
-            db.add(application)
 
-        db.commit()
-        db.refresh(application)
-    except IntegrityError:
-        db.rollback()
-        raise ValueError("Invalid job or user reference for application")
+def _validate_user_exists(db: Session, user_id: UUID) -> None:
+    user_exists = db.query(User.id).filter(User.id == user_id).first()
+    if not user_exists:
+        raise ValueError(f"User with ID {user_id} not found")
 
-    return application
+
+def _load_jobs_by_ordered_ids(
+    db: Session,
+    job_ids: List[UUID],
+    skip: int,
+    limit: int,
+) -> Tuple[List[JobPost], int]:
+    total_count = len(job_ids)
+    paginated_job_ids = job_ids[skip: skip + limit]
+    if not paginated_job_ids:
+        return [], total_count
+
+    jobs = db.query(JobPost).filter(JobPost.id.in_(paginated_job_ids)).all()
+    jobs_by_id = {job.id: job for job in jobs}
+    ordered_jobs = [jobs_by_id[job_id] for job_id in paginated_job_ids if job_id in jobs_by_id]
+    return ordered_jobs, total_count
+
+
+def _ordered_unique_job_ids_from_interactions(
+    interactions: List[JobUserInteraction],
+) -> List[UUID]:
+    job_ids: List[UUID] = []
+    seen: set[UUID] = set()
+    for interaction in interactions:
+        if interaction.job_post_id in seen:
+            continue
+        seen.add(interaction.job_post_id)
+        job_ids.append(interaction.job_post_id)
+    return job_ids
 
 
 def fetch_user_saved_jobs(
@@ -538,23 +648,23 @@ def fetch_user_saved_jobs(
     limit: int = 20,
 ) -> Tuple[List[JobPost], int]:
     limit = min(limit, 100)
+    _validate_user_exists(db, user_id)
 
-    user_exists = db.query(User.id).filter(User.id == user_id).first()
-    if not user_exists:
-        raise ValueError(f"User with ID {user_id} not found")
-
-    query_obj = db.query(JobPost).join(
-        JobUserInteraction,
-        JobUserInteraction.job_post_id == JobPost.id,
-    ).filter(
-        JobUserInteraction.user_id == user_id,
-        JobUserInteraction.is_saved.is_(True),
+    interactions = (
+        db.query(JobUserInteraction)
+        .filter(
+            JobUserInteraction.user_id == user_id,
+            JobUserInteraction.is_saved.is_(True),
+        )
+        .order_by(
+            JobUserInteraction.saved_at.desc().nullslast(),
+            JobUserInteraction.updated_at.desc(),
+        )
+        .all()
     )
 
-    total_count = query_obj.count()
-    jobs = query_obj.order_by(JobUserInteraction.saved_at.desc().nullslast()).offset(skip).limit(limit).all()
-
-    return jobs, total_count
+    ordered_job_ids = _ordered_unique_job_ids_from_interactions(interactions)
+    return _load_jobs_by_ordered_ids(db, ordered_job_ids, skip, limit)
 
 
 def fetch_user_recently_viewed_jobs(
@@ -564,21 +674,32 @@ def fetch_user_recently_viewed_jobs(
     limit: int = 20,
 ) -> Tuple[List[JobPost], int]:
     limit = min(limit, 100)
+    _validate_user_exists(db, user_id)
 
-    user_exists = db.query(User.id).filter(User.id == user_id).first()
-    if not user_exists:
-        raise ValueError(f"User with ID {user_id} not found")
-
-    query_obj = db.query(JobPost).join(
-        JobUserInteraction,
-        JobUserInteraction.job_post_id == JobPost.id,
-    ).filter(
-        JobUserInteraction.user_id == user_id,
-        JobUserInteraction.viewed_at.is_not(None),
+    interactions = (
+        db.query(JobUserInteraction)
+        .filter(
+            JobUserInteraction.user_id == user_id,
+            JobUserInteraction.viewed_at.is_not(None),
+        )
+        .order_by(
+            JobUserInteraction.viewed_at.desc().nullslast(),
+            JobUserInteraction.updated_at.desc(),
+        )
+        .all()
     )
 
-    total_count = query_obj.count()
-    jobs = query_obj.order_by(JobUserInteraction.viewed_at.desc()).offset(skip).limit(limit).all()
+    ordered_job_ids = _ordered_unique_job_ids_from_interactions(interactions)
+    return _load_jobs_by_ordered_ids(db, ordered_job_ids, skip, limit)
 
-    return jobs, total_count
+
+def fetch_user_applied_jobs(
+    db: Session,
+    user_id: UUID,
+    skip: int = 0,
+    limit: int = 20,
+) -> Tuple[List[JobPost], int]:
+    limit = min(limit, 100)
+    _validate_user_exists(db, user_id)
+    return fetch_jobs_paginated(db, skip=skip, limit=limit)
 

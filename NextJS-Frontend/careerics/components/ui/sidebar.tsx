@@ -13,7 +13,7 @@ const Sidebar = () => {
   const { user, isLoading } = useAuth();
   const router = useRouter();
 
- async function handleLogout() {
+  async function handleLogout() {
     try {
       await authService.signOut();
       router.push("/auth/login");
@@ -67,13 +67,18 @@ const Sidebar = () => {
       <nav style={{ flex: 1, display: "flex", flexDirection: "column", gap: 5 }}>
         {navItems.map((item, i) => {
           const isHovered = hoveredNav === i;
-          // Check if the current URL matches the item's path
           const isActive = pathname === item.path;
           
-          // Show green background if hovered OR if it's the current page
-          const shouldHighlight = isHovered || isActive;
+          // Logic for background color priority
+          let backgroundColor = "transparent";
+          if (isActive) {
+            backgroundColor = "var(--primary-green)"; // Color for active page
+          } else if (isHovered) {
+            backgroundColor = "var(--hover-green)"; // Soft highlight for hover
+          }
 
-          const currentImage = shouldHighlight
+          // Icon logic: Use selected icon for active OR hovered
+          const currentImage = (isActive || isHovered)
             ? item.image.replace(".svg", " -selected.svg")
             : item.image;
 
@@ -85,16 +90,16 @@ const Sidebar = () => {
                 style={{
                   padding: "2.3vh",
                   marginLeft: "0.5vw",
-                  // Text turns black if highlighted, white otherwise
-                  color: shouldHighlight ? "#000" : "#fff",
+                  // Text turns black on green (active), white otherwise (hover/default)
+                  color: isActive || isHovered ? "#000" : "#fff",
                   cursor: "pointer",
                   fontSize: "0.9rem",
                   display: "flex",
                   alignItems: "center",
                   gap: "1rem",
-                  backgroundColor: shouldHighlight ? "var(--primary-green)" : "transparent",
+                  backgroundColor: backgroundColor,
                   borderRadius: 15,
-                  transition: "0.2s",
+                  transition: "0.2s ease-in-out",
                 }}
               >
                 <img
@@ -105,6 +110,8 @@ const Sidebar = () => {
                     height: "4vh",
                     flexShrink: 0,
                     objectFit: "contain",
+                    // Optional: adjust brightness of icon if hovered but not active
+                    filter: (isHovered && !isActive) ? "brightness(0.8)" : "none"
                   }}
                 />
                 {item.text}
@@ -144,7 +151,7 @@ const Sidebar = () => {
             whiteSpace: "nowrap",
             overflow: "hidden",
             textOverflow: "ellipsis",
-            cursor:"pointer"
+            cursor: "pointer"
           }}
         >
           {profileName}

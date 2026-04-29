@@ -27,14 +27,14 @@ const Sidebar = () => {
     : user?.displayName?.trim() || "Guest";
 
   const navItems = [
-    { text: "Home", image: "/sidebar/Home.svg", path: "/features/home" },
-    { text: "Career Exploration", image: "/sidebar/Career.svg", path: "/features/career" },
-    { text: "Roadmaps", image: "/sidebar/Roadmap.svg", path: "/features/roadmap" },
-    { text: "Courses Hub", image: "/sidebar/Courses.svg", path: "/features/courses" },
-    { text: "Skill Assessment", image: "/sidebar/Skill.svg", path: "/features/skill" },
-    { text: "CV Crafting", image: "/sidebar/CV.svg", path: "/features/cv" },
-    { text: "Interview Preparation", image: "/sidebar/Interview.svg", path: "/features/interview" },
-    { text: "Job Search", image: "/sidebar/Job.svg", path: "/features/job" },
+    { text: "Home", image: "/sidebar/home.svg", path: "/features/home" },
+    { text: "Career Exploration", image: "/sidebar/career.svg", path: "/features/career" },
+    { text: "Roadmaps", image: "/sidebar/roadmap.svg", path: "/features/roadmap" },
+    { text: "Courses Hub", image: "/sidebar/courses.svg", path: "/features/courses" },
+    { text: "Skill Assessment", image: "/sidebar/skill.svg", path: "/features/skill" },
+    { text: "CV Crafting", image: "/sidebar/cv.svg", path: "/features/cv" },
+    { text: "Interview Preparation", image: "/sidebar/interview.svg", path: "/features/interview" },
+    { text: "Job Search", image: "/sidebar/job.svg", path: "/features/job" },
   ];
 
   return (
@@ -79,7 +79,7 @@ const Sidebar = () => {
 
           // Icon logic: Use selected icon for active OR hovered
           const currentImage = (isActive || isHovered)
-            ? item.image.replace(".svg", " -selected.svg")
+            ? item.image.replace(".svg", "-selected.svg")
             : item.image;
 
           return (

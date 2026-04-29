@@ -742,6 +742,9 @@ class JobPost(Base):
         nullable=False
     )
 
+    # Matches existing DB column `salary` (nullable text)
+    salary = Column(String, nullable=True)
+
     user_interactions = relationship("JobUserInteraction", back_populates="job_post", cascade="all, delete-orphan")
     skills = relationship("JobPostSkill", back_populates="job_post", cascade="all, delete-orphan")
     applications = relationship("JobApplication", back_populates="job_post", cascade="all, delete-orphan")
@@ -763,6 +766,10 @@ class JobPostSkill(Base):
 
     job_post = relationship("JobPost", back_populates="skills")
     skill = relationship("Skill", back_populates="job_post_skills")
+
+    __table_args__ = (
+        Index("idx_job_skills_skill_id", "skill_id"),
+    )
 
 
 # =========================
@@ -795,6 +802,7 @@ class JobUserInteraction(Base):
     user = relationship("User")
 
     __table_args__ = (
+        UniqueConstraint("user_id", "job_post_id", name="unique_user_job_interaction"),
         Index("idx_job_user_interactions_user_saved", "user_id", "is_saved"),
         Index("idx_job_user_interactions_user_viewed_at", "user_id", "viewed_at"),
     )

@@ -88,7 +88,9 @@ export function mapApiJobToUiModel(job: APIJobPost): JobUiModel {
     careerLevel: job.career_level,
     matchPercentage: job.match_percentage,
     isSaved: job.is_saved,
-    applicationStatus: job.application_status,
+    // Do not treat a "saved" application_status as a blocked application state
+    // so bookmarking does not prevent the user from applying. Map "saved" to null.
+    applicationStatus: job.application_status === "saved" ? null : job.application_status,
     savedAt: job.saved_at,
     viewedAt: job.viewed_at,
     appliedAt: job.applied_at,
@@ -174,8 +176,6 @@ export function getApplicationButtonLabel(job: JobUiModel): string {
       return "Offer Received";
     case "rejected":
       return "Rejected";
-    case "saved":
-      return "Saved";
     default:
       return "Apply";
   }

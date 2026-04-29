@@ -1,8 +1,9 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { buildJobDetailsHref, persistSelectedJobId } from '@/lib/jobs';
 
-interface JobProps {
+interface JobCardData {
   id: string;
   title: string;
   company: string;
@@ -16,18 +17,59 @@ interface JobProps {
   skills?: string;
 }
 
-const JobCard: React.FC<JobProps> = (job) => {
+interface JobProps extends JobCardData {
+  isBookmarked?: boolean;
+  isBookmarkLoading?: boolean;
+  disableNavigation?: boolean;
+  detailsHref?: string;
+  onSelect?: (job: JobCardData) => void;
+  onBookmarkToggle?: (job: JobCardData) => void | Promise<void>;
+}
+
+const JobCard: React.FC<JobProps> = ({
+  isBookmarked,
+  isBookmarkLoading = false,
+  disableNavigation = false,
+  detailsHref,
+  onSelect,
+  onBookmarkToggle,
+  ...job
+}) => {
   const router = useRouter();
-  const [bookmarked, setBookmarked] = useState(false);
+  const [internalBookmarked, setInternalBookmarked] = useState(Boolean(isBookmarked));
+
+  useEffect(() => {
+    setInternalBookmarked(Boolean(isBookmarked));
+  }, [isBookmarked]);
+
+  const cardData: JobCardData = job;
+
+  const bookmarked = isBookmarked ?? internalBookmarked;
 
   const handleCardClick = () => {
-    localStorage.setItem('selectedJob', JSON.stringify(job));
-    router.push("/job-features/details");
+    onSelect?.(cardData);
+    persistSelectedJobId(job.id);
+
+    if (disableNavigation) {
+      return;
+    }
+
+    router.push(detailsHref ?? buildJobDetailsHref(job.id));
   };
 
-  const handleBookmark = (e: React.MouseEvent) => {
+  const handleBookmark = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    setBookmarked((prev) => !prev);
+
+    if (isBookmarkLoading) {
+      return;
+    }
+
+    if (onBookmarkToggle) {
+      await onBookmarkToggle(cardData);
+      return;
+    }
+
+    setInternalBookmarked((prev) => !prev);
   };
 
   return (
@@ -65,7 +107,11 @@ const JobCard: React.FC<JobProps> = (job) => {
           <span style={{ fontSize: "1.1rem", fontWeight: "100", color: "#000" }}>{job.salary}</span>
           <div
             onClick={handleBookmark}
-            style={{ cursor: "pointer", transition: "transform 0.15s ease" }}
+            style={{
+              cursor: isBookmarkLoading ? "wait" : "pointer",
+              transition: "transform 0.15s ease",
+              opacity: isBookmarkLoading ? 0.7 : 1,
+            }}
             onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.15)")}
             onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
           >

@@ -163,7 +163,7 @@ export const RecentActivityCard = ({ activities, style }: any) => {
                 }}
               >
                 <Image
-                  src="/interview/download.svg"
+                  src="/global/download.svg"
                   alt="Download"
                   fill
                   style={{ objectFit: "contain" }}

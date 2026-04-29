@@ -150,7 +150,7 @@ export default function Interview() {
         }}
         disabled={isStartDisabled}
         buttonLabel={startButtonLabel}
-        icon="/interview/HR Interview Icon.png"
+        icon="/interview/hr.svg"
         style={{ gridArea: "1 / 1 / 3 / 2" }}
       />
 
@@ -163,7 +163,7 @@ export default function Interview() {
         }}
         disabled={isStartDisabled}
         buttonLabel={startButtonLabel}
-        icon="/interview/Tech Interview Icon.png"
+        icon="/interview/tech.svg"
         style={{ gridArea: "1 / 2 / 3 / 3" }}
       />
 
@@ -187,7 +187,7 @@ export default function Interview() {
       <TipCard
         title="Tip of the day"
         description="Research the company and interviewers before your interview so you understand the company's goals and show how you fit."
-        icon="/interview/Interview Tip.svg"
+        icon="/global/tip.svg"
         style={{ gridArea: "3 / 1 / 4 / 4" }}
       />
     </div>

@@ -130,7 +130,7 @@ export default function ArchiveCard({
                                     aria-label={`Download ${item.id}`}
                                 >
                                     <img
-                                        src={"/interview/download.svg"}
+                                        src={"/global/download.svg"}
                                         alt=""
                                         style={{
                                             maxHeight: "4vh",

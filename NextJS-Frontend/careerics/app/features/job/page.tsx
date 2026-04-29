@@ -53,7 +53,7 @@ export default function JobHunt() {
         <TipCard
           title="Tip of the day"
           description="Research the company and interviewers before your interview so you understand the company's goals and show how you fit."
-          icon="/interview/Interview Tip.svg"
+          icon="/global/tip.svg"
         />
       </div>
 

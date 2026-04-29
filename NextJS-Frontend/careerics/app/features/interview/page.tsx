@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import RootLayout from "@/app/features/layout";
 import ArchiveCard from "@/components/ui/archive-card";
 import ChoiceCard from "@/components/ui/choice-card";
-import TipCard from "@/components/ui/tipcard";
+import TipCard from "@/components/ui/3ateyat";
 import { interviewService } from "@/services/interview.service";
 import { useAuth } from "@/providers/auth-provider";
 import { CardsContainer } from "@/components/ui/cards-container";

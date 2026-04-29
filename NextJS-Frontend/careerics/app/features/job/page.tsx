@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import BookmarkCard from '@/components/ui/BookmarkCard';
 import ContinueCard from '@/components/ui/ContinueCard';
-import TipCard from '@/components/ui/tipcard';
+import TipCard from '@/components/ui/3ateyat';
 import LevelCard from '@/components/ui/LevelCard';
 import RecentlyViewedCard from '@/components/ui/RecentlyViewedCard';
 import { CardsContainer } from '@/components/ui/cards-container';

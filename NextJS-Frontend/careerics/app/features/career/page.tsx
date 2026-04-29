@@ -6,6 +6,7 @@ import { useAuth } from "@/providers/auth-provider";
 import { careerService } from "@/services";
 import type { APICareerTrack } from "@/types";
 import { CareerCardsContainer } from "@/components/ui/career-cards-container";
+import TipCard from "@/components/ui/3ateyat";
 
 const VISIBLE_TRACKS_COUNT = 4;
 const TRACK_DESCRIPTION_FALLBACK =
@@ -125,63 +126,23 @@ export default function CareerDiscoveryPage() {
           height: "100%",
         }}
       >
-        {/* Quiz Banner */}
-        <div style={{ gridArea: "1 / 1 / 3 / 7" }}>
-          <div
-            onClick={() => {
+        <TipCard
+          variant="feature"
+          onclick={() => {
               void handleStartQuiz();
             }}
-            style={{
-              backgroundColor: "#142143",
-              borderRadius: "4vh",
-              paddingBlock: "1rem",
-              paddingLeft: "3rem",
+          style={{
+            gridArea: "1 / 1 / 3 / 7",
+            backgroundColor: "var(--dark-blue)"
+          }}
+          icon="/tracks/career-quiz.svg"
+          title="Start career quiz"
+          description={
+            "Choose your favorite hobbies and activities,then answer a few personalized questions.\n" +
+            "Just like that, you’ll get your best fit career choices."
+          }        >
 
-
-              
-              paddingRight: "2rem",
-              color: "white",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              cursor: isStartingQuiz || isAuthLoading ? "wait" : "pointer",
-              height: "100%",
-              opacity: isStartingQuiz ? 0.8 : 1,
-            }}
-          >
-            <div>
-              <h2
-                style={{
-                  fontSize: "1.2rem",
-                  marginBottom: "1.5vh",
-                  fontFamily: "var(--font-nova-square)",
-                }}
-              >
-                Start career quiz
-              </h2>
-
-              <p
-                style={{
-                  fontSize: "0.9rem",
-                  opacity: 0.8,
-                }}
-              >
-                Choose your favorite hobbies and activities, then answer a few personalized questions.<br />
-                Just like that you’ll get your best fit career choices
-              </p>
-
-              {startError ? (
-                <p style={{ marginTop: "1vh", color: "#FFD3D3", fontSize: "1.8vh" }}>
-                  {startError}
-                </p>
-              ) : null}
-            </div>
-
-            <div style={{ fontSize: "4vh" }}>
-              {isStartingQuiz ? "…" : "❯"}
-            </div>
-          </div>
-        </div>
+        </TipCard>
 
         {/* Career Paths */}
         <CareerCardsContainer
@@ -193,7 +154,7 @@ export default function CareerDiscoveryPage() {
             gridArea: "3 / 1 / 8 / 7",
             backgroundColor: "#1C427B",
             borderRadius: "4vh",
-            gap:0
+            gap: 0
           }}
         >
 

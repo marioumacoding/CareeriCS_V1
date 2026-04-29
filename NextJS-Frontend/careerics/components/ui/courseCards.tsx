@@ -319,7 +319,7 @@ export const CourseCards = ({
                 flexShrink: 0,
               }}
             >
-              <img src="/cv/rectangle 98.svg" alt="icon" style={{ width: "60px" }} />
+              <img src="/courses/course-icon.svg" alt="icon" style={{ width: "60px" }} />
             </div>
 
             <div

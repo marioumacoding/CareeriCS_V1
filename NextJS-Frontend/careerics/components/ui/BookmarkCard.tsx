@@ -17,7 +17,7 @@ const BookmarkCard: React.FC = () => {
     }}>
       <div style={{ display: "flex", gap: "15px", alignItems: "flex-start" }}>
         <img 
-          src="/Landing/bookmark.svg" // Ghayar el path lel icon el sa7
+          src="/global/bookmark.svg" // Ghayar el path lel icon el sa7
           alt="Bookmark"
           style={{ width: "30px", height: "30px" }} 
         />

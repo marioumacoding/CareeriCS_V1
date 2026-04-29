@@ -7,7 +7,6 @@ import { careerService } from "@/services";
 import type { APICareerTrack } from "@/types";
 import { CareerCardsContainer } from "@/components/ui/career-cards-container";
 
-const CARD_IMAGE_PATH = "/Landing/Rectangle.svg";
 const VISIBLE_TRACKS_COUNT = 4;
 const TRACK_DESCRIPTION_FALLBACK =
   "Explore this path and see what the day-to-day work, opportunities, and growth can look like.";
@@ -137,6 +136,9 @@ export default function CareerDiscoveryPage() {
               borderRadius: "4vh",
               paddingBlock: "1rem",
               paddingLeft: "3rem",
+
+
+              
               paddingRight: "2rem",
               color: "white",
               display: "flex",
@@ -254,7 +256,7 @@ export default function CareerDiscoveryPage() {
                   key={track.id}
                   title={track.name}
                   description={track.description || TRACK_DESCRIPTION_FALLBACK}
-                  image={CARD_IMAGE_PATH}
+                  image={`/tracks/${track.id}.svg`}
                   buttonVariant="primary-inverted"
                   buttonLabel="Learn More"
                   onClick={() => router.push(blogPath)}

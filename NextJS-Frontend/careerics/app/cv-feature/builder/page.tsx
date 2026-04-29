@@ -331,7 +331,7 @@ return (
         {isBuilding ? (
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "80%", textAlign: "center" }}>
             <h2 style={{ color: "white", fontSize: "28px", fontFamily: "var(--font-nova-square)", marginBottom: "10px" }}>Building your CV...</h2>
-            <img src="/cv/cv.svg" alt="Building CV" style={{ width: "220px" }} />
+            <img src="/interview/analyzing.svg" alt="Building CV" style={{ width: "220px" }} />
           </div>
         ) : isFinished ? (
           <div style={{ padding: "20px", width: "100%" }}>
@@ -394,7 +394,7 @@ return (
                         { id: `inst-${edu.id}`, type: 'text', placeholder: "Institution's name" },
                         { id: `r-${edu.id}`, type: 'row', fields: [{ id: `q-${edu.id}`, type: 'select', placeholder: 'Qualification', options: ["Bachelor's", "Master's", "PhD", "Diploma"] }, { id: `t-${edu.id}`, type: 'text', placeholder: 'Time period' }]},
                       ]} /></div>
-                      <button onClick={() => removeEntry(edu.id, educationList, setEducationList)}><img src="/cv/trash 3.svg" style={{ width: '20px', filter: 'invert(0.7)', cursor: 'pointer' }} /></button>
+                      <button onClick={() => removeEntry(edu.id, educationList, setEducationList)}><img src="/cv/trash.svg" style={{ width: '20px', filter: 'invert(0.7)', cursor: 'pointer' }} /></button>
                     </div>
                   ))}
                   <button onClick={() => addEntry(educationList, setEducationList)} style={{ color: "#d4ff47", background: "none", border: "none" }}>+ Add another degree</button>
@@ -415,7 +415,7 @@ return (
               <DynamicCVForm values={formData} onChange={handleInputChange} fields={[{ id: `lrow-${lang.id}`, type: 'row', fields: [{ id: `ln-${lang.id}`, type: 'select', placeholder: 'Language', options: ALL_LANGUAGES }, { id: `lp-${lang.id}`, type: 'select', placeholder: 'Proficiency', options: PROFICIENCY_LEVELS }] }]} />
             </div>
             <button onClick={() => removeEntry(lang.id, langList, setLangList)} style={{ background: "none", border: "none", cursor: "pointer" }}>
-              <img src="/cv/trash 3.svg" style={{ width: '20px', filter: 'invert(0.7)' }} />
+              <img src="/cv/trash.svg" style={{ width: '20px', filter: 'invert(0.7)' }} />
             </button>
           </div>
         ))}
@@ -436,7 +436,7 @@ return (
               <DynamicCVForm values={formData} onChange={handleInputChange} fields={[{ id: `srow-${skill.id}`, type: 'row', fields: [{ id: `sn-${skill.id}`, type: 'text', placeholder: 'Skill' }, { id: `sp-${skill.id}`, type: 'select', placeholder: 'Level', options: ["Beginner", "Intermediate", "Advanced", "Expert"] }] }]} />
             </div>
             <button onClick={() => removeEntry(skill.id, skillList, setSkillList)} style={{ background: "none", border: "none", cursor: "pointer" }}>
-              <img src="/cv/trash 3.svg" style={{ width: '20px', filter: 'invert(0.7)' }} />
+              <img src="/cv/trash.svg" style={{ width: '20px', filter: 'invert(0.7)' }} />
             </button>
           </div>
         ))}
@@ -470,7 +470,7 @@ return (
               />
             </div>
             <button onClick={() => removeEntry(cert.id, certList, setCertList)} style={{ background: "none", border: "none", cursor: "pointer", marginTop: "10px" }}>
-              <img src="/cv/trash 3.svg" style={{ width: '20px', filter: 'invert(0.7)' }} />
+              <img src="/cv/trash.svg" style={{ width: '20px', filter: 'invert(0.7)' }} />
             </button>
           </div>
         ))}
@@ -499,7 +499,7 @@ return (
               />
             </div>
             <button onClick={() => removeEntry(award.id, awardList, setAwardList)} style={{ background: "none", border: "none", cursor: "pointer", marginTop: "10px" }}>
-              <img src="/cv/trash 3.svg" style={{ width: '20px', filter: 'invert(0.7)' }} />
+              <img src="/cv/trash.svg" style={{ width: '20px', filter: 'invert(0.7)' }} />
             </button>
           </div>
         ))}
@@ -524,7 +524,7 @@ return (
             <DynamicCVForm values={formData} onChange={handleInputChange} fields={[{ id: `role-${exp.id}`, type: 'text', placeholder: "Role" }, { id: `row-${exp.id}`, type: 'row', fields: [{ id: `org-${exp.id}`, type: 'text', placeholder: 'Organization' }, { id: `tp-${exp.id}`, type: 'text', placeholder: 'Time Period' }] }, { id: `resp-${exp.id}`, type: 'textarea', placeholder: 'Responsibilities' }]} />
           </div>
           <button onClick={() => removeEntry(exp.id, experienceList, setExperienceList)} style={{ background: "none", border: "none", cursor: "pointer", marginTop: "10px" }}>
-            <img src="/cv/trash 3.svg" style={{ width: '20px', filter: 'invert(0.7)' }} />
+            <img src="/cv/trash.svg" style={{ width: '20px', filter: 'invert(0.7)' }} />
           </button>
         </div>
       ))}
@@ -547,7 +547,7 @@ return (
             <DynamicCVForm values={formData} onChange={handleInputChange} fields={[{ id: `pname-${proj.id}`, type: 'text', placeholder: 'Project Name' }, { id: `prole-${proj.id}`, type: 'text', placeholder: 'Your Role' }, { id: `ptech-${proj.id}`, type: 'text', placeholder: 'Technologies Used' }, { id: `pdesc-${proj.id}`, type: 'textarea', placeholder: 'Description' }, { id: `pach-${proj.id}`, type: 'textarea', placeholder: 'Key Achievements' }]} />
           </div>
           <button onClick={() => removeEntry(proj.id, projectList, setProjectList)} style={{ background: "none", border: "none", cursor: "pointer", marginTop: "10px" }}>
-            <img src="/cv/trash 3.svg" style={{ width: '20px', filter: 'invert(0.7)' }} />
+            <img src="/cv/trash.svg" style={{ width: '20px', filter: 'invert(0.7)' }} />
           </button>
         </div>
       ))}
@@ -570,7 +570,7 @@ return (
             <DynamicCVForm values={formData} onChange={handleInputChange} fields={[{ id: `ref-row1-${ref.id}`, type: 'row', fields: [{ id: `rn-${ref.id}`, type: 'text', placeholder: 'Name' }, { id: `rj-${ref.id}`, type: 'text', placeholder: 'Role' }] }, { id: `rc-${ref.id}`, type: 'text', placeholder: 'Organization' }, { id: `ref-row2-${ref.id}`, type: 'row', fields: [{ id: `re-${ref.id}`, type: 'text', placeholder: 'Email Address' }, { id: `rp-${ref.id}`, type: 'text', placeholder: 'Phone Number' }] }]} />
           </div>
           <button onClick={() => removeEntry(ref.id, referenceList, setReferenceList)} style={{ background: "none", border: "none", cursor: "pointer", marginTop: "10px" }}>
-            <img src="/cv/trash 3.svg" style={{ width: '20px', filter: 'invert(0.7)' }} />
+            <img src="/cv/trash.svg" style={{ width: '20px', filter: 'invert(0.7)' }} />
           </button>
         </div>
       ))}

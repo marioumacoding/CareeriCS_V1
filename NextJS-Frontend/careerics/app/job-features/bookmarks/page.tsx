@@ -178,7 +178,7 @@ const BookmarkedJobs = () => {
              }} 
            />
            <img 
-             src="/cv/search.svg" 
+             src="/global/search.svg" 
              alt="search"
              style={{ 
                position: "absolute", 

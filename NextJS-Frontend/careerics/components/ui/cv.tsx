@@ -156,7 +156,7 @@ export default function CV() {
               />
             ) : selectedFile ? (
               <img
-                src="/cv/cv.svg"
+                src="/interview/analyzing.svg"
                 alt="Selected CV file"
                 style={{ width: '84px', height: '125px', objectFit: 'contain' }}
               />

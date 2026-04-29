@@ -196,7 +196,7 @@ export default function CourseLibraryPage() {
                 }}
               />
               <img
-                src="/cv/search.svg"
+                src="/global/search.svg"
                 alt="search"
                 style={{
                   position: "absolute",

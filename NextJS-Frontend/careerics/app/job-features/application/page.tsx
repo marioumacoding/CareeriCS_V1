@@ -308,7 +308,7 @@ const JobDetailsPage = () => {
               boxSizing: "border-box",
             }}
           />
-          <img src="/cv/search.svg" alt="search" style={{ position: "absolute", right: "15px", top: "50%", transform: "translateY(-50%)", width: "35px" }} />
+          <img src="/global/search.svg" alt="search" style={{ position: "absolute", right: "15px", top: "50%", transform: "translateY(-50%)", width: "35px" }} />
         </div>
 
         {/* Filters */}

@@ -772,7 +772,22 @@ class JobPostResponse(JobPostBase):
     updated_at: Optional[datetime] = None
     skills: List[str] = Field(default_factory=list)
     match_percentage: Optional[float] = None
+    is_saved: bool = False
+    saved_at: Optional[datetime] = None
+    viewed_at: Optional[datetime] = None
+    view_count: int = 0
+    last_interaction_at: Optional[datetime] = None
+    application_status: Optional[str] = None
+    applied_at: Optional[datetime] = None
     model_config = ConfigDict(from_attributes=True)
+
+
+class JobListResponse(BaseModel):
+    query: Optional[str] = None
+    total: int
+    skip: int
+    limit: int
+    jobs: List[JobPostResponse]
 
 
 class JobInteractionResponse(BaseModel):
@@ -783,6 +798,23 @@ class JobInteractionResponse(BaseModel):
     is_saved: bool
     saved_at: Optional[datetime] = None
     created_at: datetime
+    updated_at: datetime
+    model_config = ConfigDict(from_attributes=True)
+
+
+JobApplicationStatus = Literal["applied", "interview", "offer", "rejected", "saved"]
+
+
+class JobApplicationUpsertRequest(BaseModel):
+    status: JobApplicationStatus = "applied"
+
+
+class JobApplicationResponse(BaseModel):
+    id: UUID
+    job_post_id: UUID
+    user_id: UUID
+    status: JobApplicationStatus
+    applied_at: Optional[datetime] = None
     updated_at: datetime
     model_config = ConfigDict(from_attributes=True)
 

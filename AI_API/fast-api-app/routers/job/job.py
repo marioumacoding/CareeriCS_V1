@@ -6,19 +6,25 @@ from uuid import UUID
 from dependencies import get_db
 from schemas import (
     JobBulkImportRequest,
+    JobListResponse,
     JobPostResponse,
+    JobApplicationResponse,
+    JobApplicationUpsertRequest,
     JobInteractionResponse,
     UserJobsListResponse,
 )
-from services.job_service import (
+from services.job.job_service import (
     bulk_insert_jobs,
     fetch_jobs_paginated,
     fetch_job_post_by_id,
     search_jobs,
     mark_job_as_recently_viewed,
     set_job_saved_state,
+    upsert_job_application,
     fetch_user_saved_jobs,
     fetch_user_recently_viewed_jobs,
+    fetch_user_applied_jobs,
+    enrich_job_posts,
     enrich_job_post_with_skills,
 )
 
@@ -75,7 +81,7 @@ def bulk_import_jobs(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/", response_model=dict)
+@router.get("/", response_model=JobListResponse)
 def list_jobs(
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
@@ -99,18 +105,20 @@ def list_jobs(
             except ValueError:
                 raise HTTPException(status_code=400, detail="Invalid user ID format")
         
-        enriched_jobs = [enrich_job_post_with_skills(db, job, user_uuid) for job in jobs]
+        enriched_jobs = enrich_job_posts(db, jobs, user_uuid)
         return {
             "total": total_count,
             "skip": skip,
             "limit": limit,
             "jobs": enriched_jobs
         }
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/search/query", response_model=dict)
+@router.get("/search/query", response_model=JobListResponse)
 def search_jobs_endpoint(
     query: str | None = Query(None, min_length=1),
     title: str | None = Query(None, min_length=1, description="Alias for query when searching by title"),
@@ -141,7 +149,7 @@ def search_jobs_endpoint(
             except ValueError:
                 raise HTTPException(status_code=400, detail="Invalid user ID format")
         
-        enriched_jobs = [enrich_job_post_with_skills(db, job, user_uuid) for job in jobs]
+        enriched_jobs = enrich_job_posts(db, jobs, user_uuid)
         return {
             "query": search_term,
             "total": total_count,
@@ -149,6 +157,28 @@ def search_jobs_endpoint(
             "limit": limit,
             "jobs": enriched_jobs
         }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/{job_id}/apply", response_model=JobApplicationResponse)
+def apply_to_job_endpoint(
+    job_id: UUID,
+    payload: JobApplicationUpsertRequest = Body(...),
+    user_id: str = Query(..., description="User ID applying to the job"),
+    db: Session = Depends(get_db)
+):
+    """
+    Create or update a job application for the user.
+    """
+    try:
+        user_uuid = _parse_user_uuid(user_id)
+        application = upsert_job_application(db, user_uuid, job_id, payload.status)
+        return application
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except HTTPException:
         raise
     except Exception as e:
@@ -230,7 +260,7 @@ def list_user_saved_jobs(
     """
     try:
         jobs, total_count = fetch_user_saved_jobs(db, user_id=user_id, skip=skip, limit=limit)
-        enriched_jobs = [enrich_job_post_with_skills(db, job, user_id) for job in jobs]
+        enriched_jobs = enrich_job_posts(db, jobs, user_id)
         return {
             "total": total_count,
             "skip": skip,
@@ -255,7 +285,32 @@ def list_user_recently_viewed_jobs(
     """
     try:
         jobs, total_count = fetch_user_recently_viewed_jobs(db, user_id=user_id, skip=skip, limit=limit)
-        enriched_jobs = [enrich_job_post_with_skills(db, job, user_id) for job in jobs]
+        enriched_jobs = enrich_job_posts(db, jobs, user_id)
+        return {
+            "total": total_count,
+            "skip": skip,
+            "limit": limit,
+            "jobs": enriched_jobs,
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/user/{user_id}/applications", response_model=UserJobsListResponse)
+def list_user_applied_jobs(
+    user_id: UUID,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
+    db: Session = Depends(get_db)
+):
+    """
+    List jobs that the user has already applied to.
+    """
+    try:
+        jobs, total_count = fetch_user_applied_jobs(db, user_id=user_id, skip=skip, limit=limit)
+        enriched_jobs = enrich_job_posts(db, jobs, user_id)
         return {
             "total": total_count,
             "skip": skip,

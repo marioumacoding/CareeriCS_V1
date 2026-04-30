@@ -2,7 +2,13 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 
-const ContinueCard: React.FC = () => {
+interface ContinueCardProps {
+  description?: string;
+}
+
+const ContinueCard: React.FC<ContinueCardProps> = ({
+  description = "Your next opportunity awaits",
+}) => {
   const router = useRouter();
 
   return (
@@ -37,7 +43,7 @@ const ContinueCard: React.FC = () => {
           fontSize: "1.1rem", 
           margin: 0,
         }}>
-          Your next opportunity awaits
+          {description}
         </p>
       </div>
 

@@ -1,9 +1,15 @@
 "use client";
-import React, { use } from 'react';
+import React from 'react';
 import { Button } from "@/components/ui/button";
 import { useRouter } from 'next/navigation';
 
-const BookmarkCard: React.FC = () => {
+interface BookmarkCardProps {
+  description?: string;
+}
+
+const BookmarkCard: React.FC<BookmarkCardProps> = ({
+  description = "All of your saved jobs are here",
+}) => {
   const router = useRouter();
   return (
     <div style={{ 
@@ -27,7 +33,7 @@ const BookmarkCard: React.FC = () => {
             Bookmarks
           </h3>
           <p style={{ color: "rgba(255,255,255,0.6)", fontSize: "0.9rem", margin: "5px 0", fontFamily: 'Nova Square' }}>
-            All of your saved jobs are here
+            {description}
           </p>
         </div>
       </div>

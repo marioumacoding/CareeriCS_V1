@@ -18,6 +18,7 @@ import {
   loadCourseProgress,
   type CourseProgressItem,
 } from "@/lib/course-progress";
+import RetakePopup from "@/components/ui/retake-popup";
 
 function LoadingState({ label }: { label: string }) {
   return (
@@ -61,8 +62,9 @@ export default function CoursesPage() {
   const [pendingCompletionCourse, setPendingCompletionCourse] = useState<CourseProgressItem | null>(null);
   const [selectedRoadmapId, setSelectedRoadmapId] = useState("");
   const [roadmaps, setRoadmaps] = useState<RoadmapListItem[]>([]);
-  const [isLoadingRoadmaps, setIsLoadingRoadmaps] = useState(true);
+  const [isLoadingRoadmaps, setIsLoadingRoadmaps] = useState(false);
   const [roadmapsError, setRoadmapsError] = useState<string | null>(null);
+  const [retakeCourse, setRetakeCourse] = useState<CourseProgressItem | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -144,6 +146,44 @@ export default function CoursesPage() {
     completed: completedCourses.some((completed) => completed.id === course.id),
   }));
 
+
+  const handleRetake = (course: CourseProgressItem) => {
+  const progress = loadCourseProgress();
+
+  // Remove from completed
+  const updatedCompleted = progress.completed.filter(
+    (c) => c.id !== course.id
+  );
+
+  // Add back to current (avoid duplicates)
+  const alreadyExists = progress.current.some(
+    (c) => c.id === course.id
+  );
+
+  const updatedCurrent = alreadyExists
+    ? progress.current
+    : [course, ...progress.current];
+
+  // Save to localStorage (same pattern your system uses)
+  const updatedProgress = {
+    current: updatedCurrent,
+    completed: updatedCompleted,
+  };
+
+  localStorage.setItem("course-progress", JSON.stringify(updatedProgress));
+
+  // Sync UI
+  setCurrentCourses(updatedCurrent);
+  setCompletedCourses(updatedCompleted);
+  setSelectedCourseId(course.id);
+
+  // Close popup
+  setRetakeCourse(null);
+
+  // Trigger global sync event (important)
+  window.dispatchEvent(new Event(COURSE_PROGRESS_UPDATED_EVENT));
+};
+
   return (
     <div
       style={{
@@ -166,22 +206,24 @@ export default function CoursesPage() {
           <RectangularCard
             key={course.id}
             Title={course.title}
-            theme="light"
             variant="radio"
+            theme="light"
             subtext={`by ${course.provider}`}
             isSubtextVisible={true}
             selectable
             selected={selectedCourseId === course.id}
             onSelect={() => handleCurrentCourseClick(course)}
             style={{
-              height: "100%",
+              height: "70%",
+              width:"fit-content",
+
             }}
           />
         ))}
       </CardsContainer>
 
       <CardsContainer
-        Title="Discover roadmaps"
+        Title="More courses to discover"
         Columns={3}
         variant="vertical"
         style={{ gridArea: "3 / 1 / 7 / 4", backgroundColor: "#142143" }}
@@ -249,6 +291,7 @@ export default function CoursesPage() {
             key={course.id}
             title={course.title}
             provider={course.provider}
+            onClick={() => setRetakeCourse(course)}
           />
         ))}
       </CardsContainer>
@@ -260,6 +303,12 @@ export default function CoursesPage() {
           courseOrg={pendingCompletionCourse.provider}
           onConfirm={confirmCompletion}
           onCancel={() => setPendingCompletionCourse(null)}
+        />
+      ) : null}
+      {retakeCourse ? (
+        <RetakePopup
+          onCancel={() => setRetakeCourse(null)} 
+          onConfirm={() => handleRetake(retakeCourse)}
         />
       ) : null}
     </div>

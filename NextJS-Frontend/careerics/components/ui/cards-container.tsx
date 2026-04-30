@@ -173,6 +173,7 @@ export const CardsContainer = ({
                                     marginLeft: "auto",
                                     height: "100%",
                                     justifyContent: "center",
+                                    gap:"0.5rem",
                                 }
                         }
                     >
@@ -231,8 +232,7 @@ const Arrow = ({
         <div
             onClick={onClick}
             style={{
-                fontSize: "4vh",
-                fontWeight: "bold",
+                fontSize: "1rem",
                 fontFamily: "var(--font-jura)",
                 cursor: "pointer",
                 transform: rotation,

@@ -5,9 +5,17 @@ type CircleScoreProps = {
 };
 
 export const CircleScore = ({ score }: CircleScoreProps) => {
-    const radius = 18;
+    const radius = 20;
     const circumference = 2 * Math.PI * radius;
     const offset = circumference - (score / 100) * circumference;
+
+    const getColor = (score: number) => {
+        if (score >= 80) return "#d4ff47";
+        if (score >= 50) return "#f59e0b";
+        return "#ef4444";
+    };
+
+    const color = getColor(score);
 
     return (
         <div
@@ -40,7 +48,7 @@ export const CircleScore = ({ score }: CircleScoreProps) => {
                     cy="22.5"
                     r={radius}
                     fill="none"
-                    stroke="#d4ff47"
+                    stroke={color}
                     strokeWidth="3.5"
                     strokeDasharray={circumference}
                     strokeDashoffset={offset}

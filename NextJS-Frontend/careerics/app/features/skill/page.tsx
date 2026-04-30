@@ -32,6 +32,7 @@ import { ActivityCard } from "@/components/ui/activity-card";
 type AssessmentTarget = {
   id: string;
   label: string;
+  subLabel?: string;
   sessionType: APIAssessmentSessionType;
   sectionId?: string;
   isCurrent?: boolean;
@@ -604,11 +605,13 @@ export default function SkillAssessment() {
           if (current?.step_id) {
             const roadmapTitle = current.roadmap_title || fallbackRoadmapTitle;
             const stepTitle = current.step_title?.trim();
-            const displayLabel = stepTitle ? `${roadmapTitle}: ${stepTitle}` : roadmapTitle;
+            const displayLabel = stepTitle ? `${roadmapTitle}` : roadmapTitle;
+            const displaySubLabel = stepTitle ? `${stepTitle}` : roadmapTitle;
 
             return {
               id: current.step_id,
               label: displayLabel,
+              subLabel: displaySubLabel,
               sessionType: "step" as const,
               sectionId: current.section_id || undefined,
               isCurrent: true,
@@ -643,7 +646,8 @@ export default function SkillAssessment() {
 
           return {
             id: firstStep.id,
-            label: `${roadmap.title || fallbackRoadmapTitle}: ${firstStep.title}`,
+            label: `${roadmap.title || fallbackRoadmapTitle}:`,
+            subLabel:`${firstStep.title}`,
             sessionType: "step" as const,
             sectionId: firstSection.id,
             isCurrent: false,
@@ -798,6 +802,7 @@ export default function SkillAssessment() {
     () => learningTargets.map((target) => ({
       id: target.id,
       label: target.label,
+      subLabel: target.subLabel,
       isCurrent: target.isCurrent,
     })),
     [learningTargets],
@@ -1007,6 +1012,8 @@ export default function SkillAssessment() {
             <RectangularCard
               key={item.id}
               Title={item.label}
+              isSubtextVisible
+              subtext={item.subLabel}
               theme="light"
               selectable
               selected={selectedLearningTargetId === item.id}

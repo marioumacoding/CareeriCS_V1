@@ -113,7 +113,7 @@ export default function CourseActionPopup({
             alignItems: "flex-start",
           }}
         >
-          <p style={{ marginRight: "1rem", whiteSpace: "nowrap" }}>Course Name:</p>
+          <p style={{ marginRight: "1rem", whiteSpace: "nowrap", paddingBlock:"0.5rem" }}>Course Name:</p>
           <div
             style={{
               paddingInline: "1rem",
@@ -136,7 +136,7 @@ export default function CourseActionPopup({
             alignItems: "flex-start",
           }}
         >
-          <p>Organization:</p>
+          <p style={{paddingTop:"0.5rem"}}>Organization:</p>
           <div
             style={{
               paddingInline: "1rem",

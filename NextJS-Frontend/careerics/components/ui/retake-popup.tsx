@@ -104,6 +104,18 @@ export default function RetakePopup({
                     }}
                 >
                     <Button
+                        onClick={onCancel}
+                        variant="popup-inverted"
+                        style={{
+                            minWidth: "45%",
+                            flex: 0,
+                            whiteSpace: "nowrap",
+                        }}
+                    >
+                        Cancel
+                    </Button>
+
+                    <Button
                         onClick={onConfirm}
                         variant="popup"
                         style={{
@@ -115,17 +127,6 @@ export default function RetakePopup({
                         Retake
                     </Button>
 
-                    <Button
-                        onClick={onCancel}
-                        variant="popup-inverted"
-                        style={{
-                            minWidth: "45%",
-                            flex: 0,
-                            whiteSpace: "nowrap",
-                        }}
-                    >
-                        Cancel
-                    </Button>
                 </div>
 
             </div>

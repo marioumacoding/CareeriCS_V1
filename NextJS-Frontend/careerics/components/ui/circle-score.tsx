@@ -62,7 +62,6 @@ export const CircleScore = ({ score }: CircleScoreProps) => {
                     position: "absolute",
                     color: "white",
                     fontSize: "11px",
-                    fontWeight: "bold",
                     fontFamily: "var(--font-nova-square)",
                 }}
             >

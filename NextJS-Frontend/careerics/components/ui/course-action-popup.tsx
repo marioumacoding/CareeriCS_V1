@@ -1,11 +1,13 @@
 "use client";
 
 import React from "react";
+import { Button } from "./button";
 
 type CourseActionMode = "enroll" | "complete";
 
 interface CourseActionPopupProps {
   courseTitle: string;
+  courseOrg: string;
   mode: CourseActionMode;
   isLoading?: boolean;
   onConfirm: () => void;
@@ -14,6 +16,7 @@ interface CourseActionPopupProps {
 
 export default function CourseActionPopup({
   courseTitle,
+  courseOrg,
   mode,
   isLoading = false,
   onConfirm,
@@ -25,7 +28,11 @@ export default function CourseActionPopup({
     <div
       role="dialog"
       aria-modal="true"
-      aria-label={isEnrollMode ? "Course enrollment confirmation" : "Course completion confirmation"}
+      aria-label={
+        isEnrollMode
+          ? "Course enrollment confirmation"
+          : "Course completion confirmation"
+      }
       onClick={onCancel}
       style={{
         position: "fixed",
@@ -45,64 +52,162 @@ export default function CourseActionPopup({
       <div
         onClick={(event) => event.stopPropagation()}
         style={{
-          width: "min(92vw, 520px)",
-          borderRadius: "24px",
+          width: "26rem",
+          height: "fit-content",
+          borderRadius: "4vh",
           backgroundColor: "#E6FFB2",
-          padding: "28px 24px",
+          padding: "1rem",
           display: "flex",
           flexDirection: "column",
-          gap: "20px",
-          textAlign: "center",
           color: "#111827",
           boxShadow: "0 16px 48px rgba(0, 0, 0, 0.35)",
           fontFamily: "var(--font-nova-square)",
+          gap: "1rem",
         }}
       >
-        <h2 style={{ margin: 0, fontSize: "22px", fontWeight: 400, lineHeight: 1.5 }}>
-          {isEnrollMode
-            ? `Enroll in "${courseTitle}"?`
-            : `Did you finish the course "${courseTitle}"?`}
-        </h2>
+        <div
+          style={{
+            display: "flex",
+            width: "100%",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <h2
+            style={{
+              fontSize: "22px",
+              fontWeight: 400,
+              lineHeight: 1.5,
+            }}
+          >
 
-        <div style={{ display: "flex", justifyContent: "center", gap: "12px", flexWrap: "wrap" }}>
-          <button
-            type="button"
+            Courses Details
+          </h2>
+          <img
             onClick={onCancel}
-            disabled={isLoading}
+            src="/global/close.svg"
             style={{
-              minWidth: "120px",
-              padding: "10px 22px",
-              borderRadius: "12px",
-              border: "1px solid #334155",
-              backgroundColor: "transparent",
-              color: "#111827",
-              cursor: isLoading ? "not-allowed" : "pointer",
-              opacity: isLoading ? 0.6 : 1,
-              fontWeight: 700,
+              width: "2rem",
+              height: "2rem",
+              filter: "invert(1)",
+              cursor: "pointer",
             }}
-          >
-            Cancel
-          </button>
-
-          <button
-            type="button"
-            onClick={onConfirm}
-            disabled={isLoading}
-            style={{
-              minWidth: "120px",
-              padding: "10px 22px",
-              borderRadius: "12px",
-              border: "none",
-              backgroundColor: "#1e2b58",
-              color: "white",
-              cursor: isLoading ? "not-allowed" : "pointer",
-              opacity: isLoading ? 0.7 : 1,
-              fontWeight: 700,
-            }}
-          >
-            {isEnrollMode ? "Enroll" : "Yes"}
-          </button>
+          />
         </div>
+
+        <div
+          style={{
+            width: "100%",
+            height: "0.1rem",
+            backgroundColor: "black",
+            borderRadius: "999px",
+          }}
+        />
+
+        {/* Course Name */}
+        <div
+          style={{
+            display: "flex",
+            width: "100%",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+          }}
+        >
+          <p style={{ marginRight: "1rem", whiteSpace: "nowrap" }}>Course Name:</p>
+          <div
+            style={{
+              paddingInline: "1rem",
+              paddingBlock: "0.5rem",
+              backgroundColor: "#636771",
+              borderRadius: "2vh",
+              color: "white",
+            }}
+          >
+            <p>{courseTitle}</p>
+          </div>
+        </div>
+
+        {/* Organization */}
+        <div
+          style={{
+            display: "flex",
+            width: "100%",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+          }}
+        >
+          <p>Organization:</p>
+          <div
+            style={{
+              paddingInline: "1rem",
+              paddingBlock: "0.5rem",
+              backgroundColor: "#636771",
+              borderRadius: "2vh",
+              color: "white",
+            }}
+          >
+            <p>{courseOrg}</p>
+          </div>
+        </div>
+
+        {/* Actions */}
+        {mode === "complete" &&
+          <div
+            style={{
+              display: "flex",
+              width: "100%",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <Button
+              onClick={onConfirm}
+              variant="popup-inverted"
+              style={{
+                minWidth: "45%",
+                flex: 0,
+                whiteSpace: "nowrap",
+              }}
+            >
+              Mark as done
+            </Button>
+
+            <Button
+              onClick={onCancel}
+              variant="popup"
+              style={{
+                minWidth: "45%",
+                flex: 0,
+                whiteSpace: "nowrap",
+              }}
+            >
+              Continue
+            </Button>
+          </div>
+        }
+
+        {mode === "enroll" &&
+          <div
+            style={{
+              display: "flex",
+              width: "100%",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <Button
+              onClick={onConfirm}
+              variant="popup"
+              style={{
+                flex: 1,
+                whiteSpace: "nowrap",
+              }}
+            >
+              Enroll
+            </Button>
+          </div>
+        }
+
       </div>
     </div>
   );

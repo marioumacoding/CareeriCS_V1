@@ -1,7 +1,7 @@
 "use client";
 import { forwardRef, type ButtonHTMLAttributes, CSSProperties, useState } from "react";
 
-type ButtonVariant = "primary" | "secondary" | "outline" | "ghost" | "danger" | "text" | "primary-inverted";
+type ButtonVariant = "primary" | "secondary" | "outline" | "ghost" | "danger" | "text" | "primary-inverted" | "popup" | "popup-inverted";
 type ButtonSize = "sm" | "md" | "lg";
 
 interface TextButtonContent {
@@ -60,7 +60,15 @@ const variantStyles: Record<ButtonVariant, { default: CSSProperties; hover: CSSP
   "primary-inverted": {
     default: { backgroundColor: "var(--hover-green)", color: "black" },
     hover: { backgroundColor: "var(--primary-green)" }
-  }
+  },
+  "popup": {
+    default: { backgroundColor: "var(--medium-blue)", color:"white" },
+    hover: { backgroundColor: "white", color: "black" }
+  },
+  "popup-inverted": {
+    default: { backgroundColor: "white", color: "black" },
+    hover: { backgroundColor: "var(--medium-blue)", color:"white" }
+  },
 };
 
 const sizeStyles: Record<ButtonSize, CSSProperties> = {

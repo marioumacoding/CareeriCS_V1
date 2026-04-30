@@ -257,6 +257,7 @@ export default function CoursesPage() {
         <CourseActionPopup
           mode="complete"
           courseTitle={pendingCompletionCourse.title}
+          courseOrg={pendingCompletionCourse.provider}
           onConfirm={confirmCompletion}
           onCancel={() => setPendingCompletionCourse(null)}
         />

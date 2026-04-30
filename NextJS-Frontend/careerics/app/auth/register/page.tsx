@@ -140,10 +140,7 @@ export default function Register() {
       // empty until they click the link. Show a success message instead.
       if (data.user && data.user.identities?.length === 0) {
         setSuccess("Check your email for a confirmation link, then sign in.");
-      } else {
-        // Auto-confirmed  redirect to dashboard
-        router.push("/features/home");
-      }
+      } 
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Registration failed.";
       setError(message);

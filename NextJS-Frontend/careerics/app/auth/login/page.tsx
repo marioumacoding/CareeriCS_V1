@@ -19,7 +19,7 @@ export default function Login() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const callbackUrl = "/features/home";
+  const redirectTo = searchParams.get("redirect") || "/features/home";
 
   // -- Form state --
   const [email, setEmail] = useState("");
@@ -49,7 +49,7 @@ export default function Login() {
       // localStorage session is read fresh by the AuthProvider on mount.
       // This avoids the race condition where ProtectedRoute checks auth
       // before onAuthStateChange has fired.
-      window.location.href = callbackUrl;
+      window.location.href = redirectTo;
     } catch (err: any) {
       console.error("[Login] sign-in error:", err);
       setError(err.message ?? "Login failed. Please check your credentials.");
@@ -60,7 +60,7 @@ export default function Login() {
 
   async function handleGoogleLogin() {
     try {
-      await authService.signInWithGoogle(callbackUrl);
+      await authService.signInWithGoogle(redirectTo);
       // Supabase redirects to Google — no further code runs here
     } catch (err: any) {
       setError(err.message ?? "Google login failed.");

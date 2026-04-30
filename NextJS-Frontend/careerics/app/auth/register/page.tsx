@@ -138,9 +138,12 @@ export default function Register() {
 
       // If Supabase has "Confirm email" enabled, user.identities will be
       // empty until they click the link. Show a success message instead.
-      if (data.user && data.user.identities?.length === 0) {
+      if (data.user) {
         setSuccess("Check your email for a confirmation link, then sign in.");
-      } 
+        setTimeout(() => {
+          router.push("/auth/login");
+        }, 2500);
+      }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Registration failed.";
       setError(message);

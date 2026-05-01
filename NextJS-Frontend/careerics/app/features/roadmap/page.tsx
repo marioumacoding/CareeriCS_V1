@@ -328,6 +328,7 @@ export default function RoadmapPage() {
     router.push(`/roadmap-feature?roadmap=${selectedRoadmapId}`);
   };
 
+
   return (
     <div
       style={{
@@ -441,16 +442,11 @@ export default function RoadmapPage() {
             />
 
             <img
-              src={"/global/bookmark.svg"}
+              src={isSelectedRoadmapBookmarked ? "/global/bookmark-filled.svg" : "/global/bookmark.svg"}
               alt="Toggle roadmap bookmark"
               style={{
                 height: "1.5rem",
                 cursor: "pointer",
-                transition: "filter 0.2s ease, transform 0.2s ease",
-                filter: isSelectedRoadmapBookmarked
-                  ? "brightness(0) saturate(100%) invert(87%) sepia(10%) saturate(1385%) hue-rotate(44deg) brightness(101%) contrast(90%)"
-                  : "none",
-                transform: isSelectedRoadmapBookmarked ? "scale(1.06)" : "scale(1)",
               }}
               onClick={() => {
                 void handleBookmark();
@@ -470,12 +466,28 @@ export default function RoadmapPage() {
           }}
         >
           <div>
-            <StepFlow
-              steps={steps}
-              roadmapId={selectedRoadmapId}
-              selectedIndex={activeStep ?? undefined}
-              onSelect={setActiveStep}
-            />
+            {steps?.length ? (
+              <StepFlow
+                steps={steps}
+                roadmapId={selectedRoadmapId}
+                selectedIndex={activeStep ?? undefined}
+                onSelect={setActiveStep}
+              />
+            ) : (
+              <div
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontFamily: "var(--font-nova-square)",
+                  color: "white",
+                }}
+              >
+                Loading...
+              </div>
+            )}
           </div>
         </div>
       </div>

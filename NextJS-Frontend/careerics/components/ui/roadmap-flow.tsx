@@ -20,7 +20,6 @@ type StepFlowProps = {
   onSelect?: (index: number) => void;
   selectedIndex?: number;
 
-  // NEW: allow parent-controlled routing
   routeOnClick?: boolean;
   roadmapId?: string;
 };
@@ -28,7 +27,7 @@ type StepFlowProps = {
 const COLUMNS = 4;
 const ROW_GAP = 60;
 const DEFAULT_BORDER_COLOR = "#C1CBE6";
-const NODE_HEIGHT = 50;
+const NODE_HEIGHT = 55;
 
 export const StepFlow: React.FC<StepFlowProps> = ({
   steps,
@@ -40,6 +39,9 @@ export const StepFlow: React.FC<StepFlowProps> = ({
 }) => {
   const router = useRouter();
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+
+  let horizontalCount = 0;
+  let verticalCount = 0;
 
   const rows: StepNode[][] = [];
 
@@ -77,7 +79,6 @@ export const StepFlow: React.FC<StepFlowProps> = ({
     if (node.href && node.href !== "#") {
       return node.href;
     }
-
     return node.label ? toSlug(node.label) : "";
   };
 
@@ -93,18 +94,17 @@ export const StepFlow: React.FC<StepFlowProps> = ({
       }}
     >
       {flat.map((node, index) => {
-        if (!node.label)
-          return <div key={`empty-${index}`} />;
+        if (!node.label) return <div key={`empty-${index}`} />;
 
         const rowIndex = Math.floor(index / COLUMNS);
         const colIndex = index % COLUMNS;
-        const isOddRow = rowIndex % 2 === 1;
 
         const isLastStep = node.globalIndex === steps.length - 1;
 
-        const isEndOfRow = isOddRow
-          ? colIndex === 0
-          : colIndex === COLUMNS - 1;
+        const isEndOfRow =
+          rowIndex % 2 === 1
+            ? colIndex === 0
+            : colIndex === COLUMNS - 1;
 
         const isHovered = hoveredIndex === node.globalIndex;
         const isSelected = selectedIndex === node.globalIndex;
@@ -142,45 +142,47 @@ export const StepFlow: React.FC<StepFlowProps> = ({
                   }
 
                   const query = params.toString();
-                  router.push(query ? `/roadmap-feature?${query}` : "/roadmap-feature");
+                  router.push(
+                    query
+                      ? `/roadmap-feature?${query}`
+                      : "/roadmap-feature"
+                  );
                 }
               }}
               style={{
                 width: "100%",
                 height: NODE_HEIGHT,
-
                 border: `2px solid ${
                   isHovered || isSelected
                     ? "var(--hover-green)"
                     : DEFAULT_BORDER_COLOR
                 }`,
-
                 borderRadius: "99px",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 textAlign: "center",
-
                 background:
                   isHovered || isSelected
                     ? "var(--hover-green)"
                     : "#C1CBE6",
-
-                fontSize: "0.9rem",
+                fontSize: "0.8rem",
                 zIndex: 2,
                 cursor: isNavigatable ? "pointer" : "default",
+                paddingBlock:"1rem",
+                paddingInline:"0.5rem"
               }}
             >
               {node.label}
             </div>
 
-            {/* HORIZONTAL CONNECTOR */}
+            {/* HORIZONTAL CONNECTOR (occurrence-based flip) */}
             {!isEndOfRow && !isLastStep && (
               <div
                 style={{
                   position: "absolute",
                   top: "50%",
-                  left: isOddRow
+                  left: rowIndex % 2 === 1
                     ? `-${HORIZONTAL_DISTANCE}px`
                     : "100%",
                   width: `${HORIZONTAL_DISTANCE}px`,
@@ -197,12 +199,16 @@ export const StepFlow: React.FC<StepFlowProps> = ({
                     width: "100%",
                     height: "100%",
                     objectFit: "fill",
+                    transform:
+                      horizontalCount++ % 2 === 1
+                        ? "scaleX(-1)"
+                        : "scaleX(1)",
                   }}
                 />
               </div>
             )}
 
-            {/* VERTICAL CONNECTOR */}
+            {/* VERTICAL CONNECTOR (occurrence-based flip) */}
             {isEndOfRow && !isLastStep && (
               <div
                 style={{
@@ -223,6 +229,10 @@ export const StepFlow: React.FC<StepFlowProps> = ({
                     width: "100%",
                     height: "100%",
                     objectFit: "fill",
+                    transform:
+                      verticalCount++ % 2 === 1
+                        ? "scaleY(-1)"
+                        : "scaleY(1)",
                   }}
                 />
               </div>

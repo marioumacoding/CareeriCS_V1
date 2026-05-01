@@ -15,7 +15,7 @@ export default function RoadmapResourceCard({
     <div
       style={{
         width: "100%",
-        backgroundColor: "#505259",
+        backgroundColor: "#28292B",
         borderRadius: "1.35rem",
         padding: "0.8rem 1rem",
         display: "flex",
@@ -26,12 +26,14 @@ export default function RoadmapResourceCard({
       <p
         style={{
           margin: 0,
-          fontSize: "0.78rem",
-          color: "#ffffff",
+          fontSize: "0.8rem",
+          color: "var(--primary-green)",
           lineHeight: 1.2,
+          fontFamily:"var(--font-nova-square)"
         }}
       >
-        {resourceType || "Resource"}
+        {(resourceType || "Resource").charAt(0).toUpperCase() +
+          (resourceType || "Resource").slice(1)}
       </p>
 
       <p

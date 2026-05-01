@@ -431,7 +431,7 @@ export default function RoadmapFeaturePage() {
       >
         {/* Left Panel */}
         <div style={{ display: "flex", flexDirection: "column", width: "70%" }}>
-          <div style={{ display: "flex", gap: "2rem", marginBottom: "1rem" }}>
+          <div style={{ display: "flex", gap: "2rem", marginBottom: "2rem" }}>
             <RoadmapProgress
               text="Sections Completed"
               done={String(completedSections)}
@@ -519,6 +519,15 @@ export default function RoadmapFeaturePage() {
                   gap: "0.7rem",
                 }}
               >
+                <p
+                  style={{
+                    fontSize: "1.1rem",
+                    color: "white",
+                    fontFamily: "var(--font-nova-square)"
+                  }}
+                >
+                  Resources:
+                </p>
                 {selectedSection?.resources.map((resource) => {
                   const key = `${resource.url}|${resource.title}|${resource.resourceType}`;
 
@@ -531,27 +540,28 @@ export default function RoadmapFeaturePage() {
                     />
                   );
                 })}
+                <div
+                  style={{
+                    height: "0.1rem",
+                    backgroundColor: "white",
+                    width: "100%",
+                  }}
+                />
               </div>
             )}
 
-            <div
-              style={{
-                height: "0.1rem",
-                backgroundColor: "white",
-                width: "100%",
-                marginBottom: "1rem",
-              }}
-            />
-
-            <p
-              style={{
-                margin: "0 0 1rem 0",
-                fontSize: "1rem",
-                color: "#f3f4f6",
-              }}
-            >
-              Topics to cover:
-            </p>
+            {selectedSection?.skills?.length > 0 && (
+              <p
+                style={{
+                  margin: "0 0 1rem 0",
+                  fontSize: "1.1rem",
+                  color: "white",
+                  fontFamily: "var(--font-nova-square)"
+                }}
+              >
+                Topics to cover:
+              </p>
+            )}
 
             <div
               style={{

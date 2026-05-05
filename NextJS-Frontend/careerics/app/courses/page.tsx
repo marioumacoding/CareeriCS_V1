@@ -164,7 +164,7 @@ export default function CourseLibraryPage() {
     <div
       style={{
         width: "100%",
-        padding: "20px 40px",
+        padding: "50px 40px",
         color: "white",
         boxSizing: "border-box",
         display: "flex",
@@ -179,7 +179,7 @@ export default function CourseLibraryPage() {
               {roadmapCourses?.roadmap_title || "Courses"}
             </h1>
 
-            <div style={{ position: "relative", width: "280px" }}>
+            <div style={{ position: "relative", width: "300px",marginLeft: "auto" }}>
               <input
                 type="text"
                 placeholder="search"
@@ -187,10 +187,10 @@ export default function CourseLibraryPage() {
                 onChange={(event) => setSearchTerm(event.target.value)}
                 style={{
                   width: "100%",
-                  backgroundColor: "rgba(234, 18, 18, 0.05)",
+                  backgroundColor: "transparent",
                   border: "1px solid rgb(255, 255, 255)",
-                  borderRadius: "20px",
-                  padding: "8px 45px 8px 15px",
+                  borderRadius: "18px",
+                  padding: "8px 15px 8px 15px",
                   color: "white",
                   outline: "none",
                 }}
@@ -210,46 +210,56 @@ export default function CourseLibraryPage() {
             </div>
           </div>
 
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "35px" }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "35px", alignItems: "center" }}>
+            
+            {/* 1. Total Topics */}
             <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-              <div style={{ width: "2px", height: "35px", backgroundColor: "#D4FF47" }} />
+              <div style={{ width: "2px", height: "35px", backgroundColor: "#E6FFB2" }} />
               <div>
                 <span style={{ fontSize: "15px", fontWeight: "bold" }}>{totalTopics} topics</span>
                 <br />
                 <span style={{ fontSize: "11px", opacity: 0.6 }}>- by Top Courses</span>
               </div>
             </div>
+
+            {/* 2. Total Courses */}
             <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-              <div style={{ width: "2px", height: "35px", backgroundColor: "#D4FF47" }} />
+              <div style={{ width: "2px", height: "35px", backgroundColor: "#E6FFB2" }} />
               <div>
                 <span style={{ fontSize: "15px", fontWeight: "bold" }}>{totalCourses} courses</span>
                 <br />
                 <span style={{ fontSize: "11px", opacity: 0.6 }}>- by Top Courses</span>
               </div>
             </div>
+
+            {/* 3. Courses Completed (The new unified style) */}
+            <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+              <div style={{ width: "2px", height: "35px", backgroundColor: "#E6FFB2" }} />
+              <div>
+                <span style={{ fontSize: "15px", fontWeight: "bold" }}>
+                  <span style={{ color: "#D4FF47" }}>{completedCount}</span>
+                  <span style={{ opacity: 0.7 }}>/{totalCourses}</span> Completed
+                </span>
+                <br />
+                <span style={{ fontSize: "11px", opacity: 0.6 }}>- Your Progress</span>
+              </div>
+            </div>
+
           </div>
         </div>
 
-        <div style={{ backgroundColor: "#1E3A8A", padding: "20px 30px", borderRadius: "20px", minWidth: "170px" }}>
-          <span style={{ fontSize: "13px", opacity: 0.8 }}>Courses Completed</span>
-          <div style={{ display: "flex", alignItems: "center", gap: "12px", marginTop: "8px" }}>
-            <div style={{ width: "3px", height: "40px", backgroundColor: "#D4FF47" }} />
-            <h2 style={{ margin: 0, fontSize: "34px" }}>
-              <span style={{ color: "#D4FF47" }}>{completedCount}</span>
-              <span style={{ fontSize: "20px", opacity: 0.7 }}> /{totalCourses}</span>
-            </h2>
+      
           </div>
-        </div>
-      </div>
-
-      <hr
-        style={{
-          border: "none",
-          height: "1px",
-          backgroundColor: "rgba(255,255,255,0.1)",
-          marginBottom: "35px",
-        }}
-      />
+        
+        <hr
+          style={{
+            border: "none",
+            borderTop: "2px solid rgba(255, 251, 251, 0.72)", 
+            marginBottom: "20px",
+            opacity: 1, // 3ashan n-ensure eno msh faded
+            width: "100%"
+          }}
+        />
 
       <div style={{ display: "flex", flexDirection: "column", gap: "45px" }}>
         {filteredSections.length ? (

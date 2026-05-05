@@ -91,10 +91,10 @@ function BlogContent() {
           <div style={{ display: "flex", gap: "3vw", padding: "1vh", borderRadius: "4vh" }}>
             {(["Entry", "Junior", "Senior"] as const).map((level) => (
               <Button
+              variant="secondary"
                 key={level}
                 onClick={() => setActiveLevel(level)}
                 style={{
-                  backgroundColor: activeLevel === level ? "#E6FFB2" : "#C1CBE6",
                   color: "#142143",
                   borderRadius: "3vh",
                   padding: "2vh 2vw",

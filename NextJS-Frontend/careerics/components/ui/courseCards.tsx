@@ -296,16 +296,17 @@ export const CourseCards = ({
             type="button"
             onClick={() => onCourseClick?.(course)}
             style={{
-              width: "280px",
+              width: "fit-content",
               minHeight: "120px",
-              height: "auto",
-              backgroundColor: "#BABABA",
+              height: "fit-content",
+              backgroundColor: "#C1CBE6",
               borderRadius: "40px",
               padding: "10px",
               display: "flex",
               alignItems: "stretch",
               position: "relative",
               textAlign: "left",
+              whiteSpace:"nowrap",
               border: "none",
               cursor: onCourseClick ? "pointer" : "default",
             }}
@@ -315,8 +316,8 @@ export const CourseCards = ({
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                width: "70px",
                 flexShrink: 0,
+                
               }}
             >
               <img src="/courses/course-icon.svg" alt="icon" style={{ width: "60px" }} />

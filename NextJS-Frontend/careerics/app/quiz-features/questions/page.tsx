@@ -420,24 +420,24 @@ export default function CareerQuestionsPage() {
   if (!isFinished) {
     return (
       <Interview
-        questions={sidebarSteps}
-        currentActiveId={currentStepId}
-        unlockedStepId={unlockedStepId}
-        onQuestionClick={(id) => {
-          if (id <= unlockedStepId) {
-            setCurrentStepId(id);
-          }
-        }}
-        title="Career Quiz"
-        label="Step"
-      >
+          questions={sidebarSteps.map(step => ({ ...step, text: "" }))}
+          currentActiveId={currentStepId}
+          unlockedStepId={currentStepId} 
+          onQuestionClick={(id) => {
+            if (id <= (unlockedStepId ?? 0)) {
+              setCurrentStepId(id);
+            }
+          }}
+          title="Career Quiz"
+          label="Step"
+        >
         <div
           style={{
             width: "100%",
             height: "100%",
             display: "flex",
             flexDirection: "column",
-            padding: "4vh 4vw",
+            padding: "5vh 4vw",
             boxSizing: "border-box",
             gap: "3vh",
           }}
@@ -485,45 +485,59 @@ export default function CareerQuestionsPage() {
                     </p>
 
                     <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "2.5vw",
-                        flexWrap: "wrap",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <span style={{ color: "#FFB2B2", fontSize: "2.2vh", fontWeight: 600 }}>
-                        Strongly Disagree
-                      </span>
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "2.5vw",
+                          flexWrap: "wrap",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <span style={{ color: "#FFB2B2", fontSize: "2.2vh", fontWeight: 600 }}>
+                          Strongly Disagree
+                        </span>
 
-                      <div style={{ display: "flex", alignItems: "center", gap: "1.8vw" }}>
-                        {[1, 2, 3, 4, 5].map((value) => {
-                          const sizes = ["5vh", "4vh", "2.8vh", "4vh", "5vh"];
-                          const isSelected = ratings[question.id] === value;
+                        <div style={{ display: "flex", alignItems: "center", gap: "1.8vw" }}>
+                          {[1, 2, 3, 4, 5].map((value) => {
+                            const sizes = ["5vh", "4vh", "2.8vh", "4vh", "5vh"];
+                            const isSelected = ratings[question.id] === value;
 
-                          return (
-                            <div
-                              key={value}
-                              onClick={() => handleRate(question.id, value)}
-                              style={{
-                                width: sizes[value - 1],
-                                height: sizes[value - 1],
-                                borderRadius: "50%",
-                                backgroundColor: isSelected ? "#B8EF46" : "#6B7280",
-                                cursor: "pointer",
-                                transition: "all 0.3s ease",
-                                transform: isSelected ? "scale(1.08)" : "scale(1)",
-                              }}
-                            />
-                          );
-                        })}
+                            const getCircleColor = (val: number, selected: boolean) => {
+                              if (!selected) return "#6B7280"; 
+                              
+                              switch (val) {
+                                case 1: return "#FF4D4D"; // Red
+                                case 2: return "#FF8585"; // Light Red
+                                case 3: return "#3B82F6"; // Blue
+                                case 4: return "#D9FF8F"; // Light Neon
+                                case 5: return "#B8EF46"; // Neon Green
+                                default: return "#6B7280";
+                              }
+                            };
+
+                            return (
+                              <div
+                                key={value}
+                                onClick={() => handleRate(question.id, value)}
+                                style={{
+                                  width: sizes[value - 1],
+                                  height: sizes[value - 1],
+                                  borderRadius: "50%",
+                                  backgroundColor: getCircleColor(value, isSelected),
+                                  cursor: "pointer",
+                                  transition: "all 0.3s ease",
+                                  transform: isSelected ? "scale(1.15)" : "scale(1)",
+                                 
+                                }}
+                              />
+                            );
+                          })}
+                        </div>
+
+                        <span style={{ color: "#E6FFB2", fontSize: "2.2vh", fontWeight: 600 }}>
+                          Strongly Agree
+                        </span>
                       </div>
-
-                      <span style={{ color: "#E6FFB2", fontSize: "2.2vh", fontWeight: 600 }}>
-                        Strongly Agree
-                      </span>
-                    </div>
                   </div>
                 ))}
               </>
@@ -541,24 +555,56 @@ export default function CareerQuestionsPage() {
               </p>
             ) : null}
 
-            <Button
-              onClick={handleNext}
-              disabled={isLoadingQuestions || isSubmitting || !currentGroup}
-              style={{
-                alignSelf: "flex-end",
-                backgroundColor: "#B8EF46",
-                color: "#000",
-                padding: "1.5vh 5vw",
-                borderRadius: "1.2vh",
-                fontSize: "2.2vh",
-                fontWeight: 800,
-                height: "auto",
-                minWidth: "15vw",
-                opacity: isLoadingQuestions || isSubmitting || !currentGroup ? 0.6 : 1,
-              }}
-            >
-              {isSubmitting ? "Submitting..." : currentStepId === questionGroups.length ? "Finish" : "Next"}
-            </Button>
+<div style={{ 
+  display: "flex", 
+  justifyContent: "space-between", 
+  width: "100%", 
+  gap: "1.2vh",
+  marginTop: "2vh" 
+}}>
+  
+  {/* Previous Button */}
+  <Button
+  variant="primary-inverted"
+    onClick={() => setCurrentStepId((prev) => Math.max(1, prev - 1))}
+    disabled={currentStepId === 1 || isLoadingQuestions || isSubmitting}
+    style={{
+
+      color: "black",
+      border: "1px solid #6B7280",
+      padding: "1.5vh 4vw",
+      borderRadius: "1.2vh",
+      fontSize: "2vh",
+      fontWeight: 600,
+      height: "auto",
+      minWidth: "12vw",
+      cursor: currentStepId === 1 ? "not-allowed" : "pointer",
+      opacity: currentStepId === 1 ? 0.4 : 1,
+      visibility: currentStepId === 1 ? "hidden" : "visible", // Ekhtiyari: t-khfiha law f awel step
+    }}
+  >
+    Back
+  </Button>
+
+  {/* Next/Finish Button */}
+  <Button
+  variant="primary"
+    onClick={handleNext}
+    disabled={isLoadingQuestions || isSubmitting || !currentGroup}
+    style={{
+      color: "#000",
+      padding: "1.5vh 5vw",
+      borderRadius: "1.2vh",
+      fontSize: "2.2vh",
+      fontWeight: 800,
+      height: "auto",
+      minWidth: "15vw",
+      opacity: isLoadingQuestions || isSubmitting || !currentGroup ? 0.6 : 1,
+    }}
+  >
+    {isSubmitting ? "Submitting..." : currentStepId === questionGroups.length ? "Finish" : "Next"}
+  </Button>
+</div>
           </div>
         </div>
       </Interview>
@@ -664,8 +710,8 @@ export default function CareerQuestionsPage() {
               style={{ textDecoration: "none" }}
             >
               <Button
+              variant="primary-inverted"
                 style={{
-                  backgroundColor: "#C1CBE6",
                   color: "#000000",
                   padding: "2vh 2vw",
                   height: "6vh",
@@ -688,6 +734,7 @@ export default function CareerQuestionsPage() {
 
       <div style={{ display: "flex", gap: "2vw", flexWrap: "wrap", justifyContent: "center" }}>
         <Button
+        variant="primary-inverted"
           onClick={() => {
             if (sessionId) {
               router.push(`/quiz-features/hobbies?sessionId=${encodeURIComponent(sessionId)}`);
@@ -696,7 +743,6 @@ export default function CareerQuestionsPage() {
             }
           }}
           style={{
-            backgroundColor: "#C3D1F0",
             color: "#000",
             padding: "1vh 4vw",
             borderRadius: "1.5vh",
@@ -709,8 +755,9 @@ export default function CareerQuestionsPage() {
 
         <Link href="/features/career" style={{ textDecoration: "none" }}>
           <Button
+          variant="primary"
             style={{
-              backgroundColor: "#B8EF46",
+          
               color: "#000",
               padding: "0 3vw",
               height: "6vh",

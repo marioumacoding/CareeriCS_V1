@@ -65,11 +65,11 @@ export default function HobbiesGrid() {
 
   const currentCards = step === 0 ? hobbyCards : technicalCards;
   const currentTitle = step === 0
-    ? "Choose Your Favorite Hobbies"
+    ? "Choose Your Favorite Intrests"
     : "Choose Your Favorite Technical Skills";
   const currentSubtitle = step === 0
-    ? "Step 1 of 2: Select at least one hobby"
-    : "Step 2 of 2: Select at least one technical skill";
+    ? "Step 1 of 2: Choose 3-5 cards"
+    : "Step 2 of 2: Choose 3-5 cards";
 
   const currentSelectionIds = step === 0 ? selectedHobbyIds : selectedTechnicalIds;
 
@@ -147,8 +147,8 @@ export default function HobbiesGrid() {
   return (
     <div
       style={{
-        width: "100%",
-        minHeight: "100%",
+        width: "100%", // Zabatt de men 1000% le 100% 3ashan el layout
+        minHeight: "100vh",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
@@ -210,8 +210,8 @@ export default function HobbiesGrid() {
             background: "linear-gradient(180deg, #1F2A44 0%, #131A2D 100%)",
             borderRadius: "1.6rem",
             width: "100%",
-            minHeight: "22rem",
-            padding: "1.1rem",
+            minHeight: "fit-content",
+            padding: "1.5rem",
             border: "1px solid rgba(255, 255, 255, 0.08)",
             boxSizing: "border-box",
           }}
@@ -227,9 +227,10 @@ export default function HobbiesGrid() {
           ) : (
             <div
               style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
+                display: "flex",
+                flexWrap: "wrap",
                 gap: "0.9rem",
+                justifyContent: "flex-start",
               }}
             >
               {currentCards.map((card) => {
@@ -240,22 +241,30 @@ export default function HobbiesGrid() {
                     type="button"
                     onClick={() => toggleCard(card.id)}
                     style={{
+                      // Hna el width fit-content
+                      width:"fit-content",
+                      minWidth:"150px",
                       backgroundColor: isSelected ? "#E6FFB2" : "#1C427B",
                       color: isSelected ? "#111827" : "#F9FAFB",
                       border: isSelected ? "1px solid #D9FF8F" : "1px solid rgba(255, 255, 255, 0.12)",
-                      borderRadius: "0.95rem",
-                      padding: "0.95rem 0.85rem",
-                      textAlign: "left",
+                      borderRadius: "1rem",
+                      padding: "0.7rem 1.2rem",
+                      textAlign: "center",
                       cursor: "pointer",
                       transition: "all 0.2s ease",
-                      minHeight: "4.2rem",
+                      minHeight: "3rem",
                       fontSize: "0.95rem",
                       fontWeight: 700,
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "center",
+                      alignItems: "center",
+                      whiteSpace:"normal"
                     }}
                   >
                     <div>{card.name}</div>
                     {card.description ? (
-                      <div style={{ marginTop: "0.35rem", fontSize: "0.78rem", fontWeight: 500, opacity: 0.8 }}>
+                      <div style={{ marginTop: "0.2rem", fontSize: "0.75rem", fontWeight: 500, opacity: 0.8 }}>
                         {card.description}
                       </div>
                     ) : null}
@@ -266,31 +275,44 @@ export default function HobbiesGrid() {
           )}
         </div>
 
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.75rem" }}>
+       <div style={{ 
+          display: "flex", 
+          justifyContent: "space-between", 
+          alignItems: "center", 
+          gap: "0.75rem", 
+          width: "100%",
+          marginTop: "1rem" 
+        }}>
           <Button
+            variant="primary-inverted"
             type="button"
             onClick={handleBack}
             style={{
-              backgroundColor: "#C1CBE6",
               color: "#111827",
               borderRadius: "0.8rem",
               padding: "0.75rem 1.35rem",
               fontWeight: 700,
+              height: "6vh",
+              width: "20%", 
+              flex: "none"   // <--- Prevent flex-grow
             }}
           >
             {step === 0 ? "Back" : "Previous"}
           </Button>
 
           <Button
+            variant="primary"
             type="button"
             onClick={handleNext}
             disabled={isLoadingCards || !isCurrentStepValid || isSubmitting}
             style={{
-              backgroundColor: "#B8EF46",
               color: "#111827",
               borderRadius: "0.8rem",
               padding: "0.75rem 1.35rem",
               fontWeight: 800,
+              width: "20%", 
+              height: "6vh",
+              flex: "none",   
               opacity: isLoadingCards || !isCurrentStepValid || isSubmitting ? 0.55 : 1,
             }}
           >

@@ -78,8 +78,7 @@ const LevelCard: React.FC<LevelCardProps> = ({
       <Button
         variant="secondary"
         style={{
-          color: "black",
-          borderRadius: "5px",
+          borderRadius: "2vh",
           fontFamily: "Nova Square",
           width: "100%",
           paddingBlock: "0.5rem",

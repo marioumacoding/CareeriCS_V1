@@ -143,7 +143,8 @@ export default function JourneyPage() {
                     isSubtextVisible
                     subtext={job.company}
                     font="nova"
-                    style={{ height: "fit-content" }}
+                    variant="radio"
+                    style={{ height: "70%" }}
                   />
                 </div>
               ))

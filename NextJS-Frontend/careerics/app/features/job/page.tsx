@@ -132,10 +132,11 @@ export default function JobHunt() {
             >
               <RectangularCard
                 Title={job.title}
+                variant="radio"
                 isSubtextVisible
                 subtext={job.company}
                 font="nova"
-                style={{ height: "fit-content" }}
+                style={{ height: "70%" }}
               />
             </div>
           ))

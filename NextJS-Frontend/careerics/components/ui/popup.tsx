@@ -40,7 +40,7 @@ export default function CustomizeInterviewPopup({
     }} onClick={onClose}>
       
       <div style={{
-        backgroundColor: "#E6FFB2",
+        backgroundColor: "var(--light-green)",
         width: "550px",
         padding: "40px",
         borderRadius: "40px",

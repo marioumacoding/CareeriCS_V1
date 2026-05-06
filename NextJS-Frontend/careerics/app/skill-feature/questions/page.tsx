@@ -339,7 +339,7 @@ export default function AssessmentPage() {
                   {percentage}%
                 </div>
               </div>
-              <button onClick={handleViewDetails} style={{ marginTop: "60px", width: "100%", maxWidth: "250px", backgroundColor: "#B8EF46", border: "none", padding: "12px", borderRadius: "12px", fontWeight: "bold", fontSize: "16px", cursor: "pointer", color: "#111827" }}>
+              <button onClick={handleViewDetails} style={{ marginTop: "60px", width: "100%", maxWidth: "250px", backgroundColor: "var(--primary-green)", border: "none", padding: "12px", borderRadius: "12px", fontWeight: "bold", fontSize: "16px", cursor: "pointer", color: "#111827" }}>
                 View Details
               </button>
             </div>
@@ -441,7 +441,7 @@ export default function AssessmentPage() {
                   onClick={handleNext}
                   disabled={!isAnswered}
                   style={{
-                    display: "flex", alignItems: "center", backgroundColor: "#E6FFB2",
+                    display: "flex", alignItems: "center", backgroundColor: "var(--light-green)",
                     border: "none", borderRadius: "50px", padding: "5px 5px 5px 25px",
                     cursor: !isAnswered ? "not-allowed" : "pointer",
                     opacity: !isAnswered ? 0.5 : 1, transition: "0.3s"
@@ -457,7 +457,7 @@ export default function AssessmentPage() {
                       void handleFinish();
                     }}
                     disabled={!allAnswered || isSubmitting}
-                    style={{ width: "200px", backgroundColor: "#B8EF46", border: "none", padding: "10px 0", borderRadius: "12px", fontWeight: "800", fontSize: "16px", color: "#111827", opacity: allAnswered && !isSubmitting ? 1 : 0.4, cursor: allAnswered && !isSubmitting ? "pointer" : "not-allowed" }}
+                    style={{ width: "200px", backgroundColor: "var(--primary-green)", border: "none", padding: "10px 0", borderRadius: "12px", fontWeight: "800", fontSize: "16px", color: "#111827", opacity: allAnswered && !isSubmitting ? 1 : 0.4, cursor: allAnswered && !isSubmitting ? "pointer" : "not-allowed" }}
                   >
                     {isSubmitting ? "Submitting..." : "Finish"}
                   </button>

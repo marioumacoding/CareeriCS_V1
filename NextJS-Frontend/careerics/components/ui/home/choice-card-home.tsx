@@ -94,7 +94,7 @@ export default function ChoiceCard({
                 marginLeft: "auto",
                 fontSize: "0.8rem",
                 position: "relative",
-                color: effectiveSelected ? "var(--hover-green)" : "black",
+                color: effectiveSelected ? "var(--light-green)" : "black",
                 cursor: effectiveSelected ? "default" : "pointer",
                 fontFamily: "var(--font-nova-square)",
                 height: "fit-content",

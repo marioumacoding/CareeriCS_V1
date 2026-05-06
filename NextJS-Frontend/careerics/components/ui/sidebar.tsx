@@ -74,7 +74,7 @@ const Sidebar = () => {
           if (isActive) {
             backgroundColor = "var(--primary-green)"; // Color for active page
           } else if (isHovered) {
-            backgroundColor = "var(--hover-green)"; // Soft highlight for hover
+            backgroundColor = "var(--light-green)"; // Soft highlight for hover
           }
 
           // Icon logic: Use selected icon for active OR hovered

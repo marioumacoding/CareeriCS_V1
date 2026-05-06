@@ -28,8 +28,8 @@ export const RectangularCard = ({
 }) => {
     const [isHovered, setIsHovered] = useState(false);
 
-    const baseBg = theme === "dark" ? "#1C427B" : "#C1CBE6";
-    const hoverBg = "var(--hover-green)";
+    const baseBg = theme === "dark" ? "var(--medium-blue)" : "#C1CBE6";
+    const hoverBg = "var(--light-green)";
 
     const active = isHovered || selected;
 

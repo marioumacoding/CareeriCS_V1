@@ -45,7 +45,7 @@ export default function SkillConfirmPopup({
       <div
         onClick={(event) => event.stopPropagation()}
         style={{
-          backgroundColor: "#E6FFB2",
+          backgroundColor: "var(--light-green)",
           width: "26rem",
           padding: "4vh",
           borderRadius: "40px",
@@ -110,7 +110,7 @@ export default function SkillConfirmPopup({
             style={{
               paddingInline: "1rem",
               paddingBlock: "0.5rem",
-              backgroundColor: "#636771",
+              backgroundColor: "var(--medium-grey)",
               borderRadius: "2vh",
               color: "white",
               width: "12rem",
@@ -136,7 +136,7 @@ export default function SkillConfirmPopup({
             style={{
               paddingInline: "1rem",
               paddingBlock: "0.5rem",
-              backgroundColor: "#636771",
+              backgroundColor: "var(--medium-grey)",
               borderRadius: "2vh",
               color: "white",
               width: "12rem",

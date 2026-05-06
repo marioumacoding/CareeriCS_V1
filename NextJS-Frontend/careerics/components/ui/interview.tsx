@@ -40,7 +40,7 @@ export default function SidebarLogicOnly({
           marginBottom: "2vh", 
           border: "none", 
           height: "1px", 
-          backgroundColor: "#142143" 
+          backgroundColor: "var(--dark-blue)" 
         }}
 
         />

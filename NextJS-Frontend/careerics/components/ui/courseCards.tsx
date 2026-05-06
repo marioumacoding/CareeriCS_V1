@@ -12,7 +12,7 @@ export const CurrentCoursesCard = ({ courses, selected, onSelect, style }: any) 
 
   return (
     <div style={{
-      backgroundColor: "#1C427B", borderRadius: "4vh", padding: "20px 30px", color: "white",
+      backgroundColor: "var(--medium-blue)", borderRadius: "4vh", padding: "20px 30px", color: "white",
       display: "flex", flexDirection: "column", justifyContent: "center", position: "relative", ...style
     }}>
       <h3 style={{ fontSize: "18px", marginBottom: "15px", fontFamily: 'var(--font-nova-square)', fontWeight: "200" }}>
@@ -36,7 +36,7 @@ export const CurrentCoursesCard = ({ courses, selected, onSelect, style }: any) 
                 style={{
                   padding: "10px", borderRadius: "15px", flexShrink: 0, minWidth: "220px",
                   // El lon sabet: ya selected (Light Green) ya default (Grey-Blue)
-                  backgroundColor: selected === course.title ? "#E6FFB2" : "#c1cbe6",
+                  backgroundColor: selected === course.title ? "var(--light-green)" : "#c1cbe6",
                   color: "black", cursor: "pointer", position: "relative", transition: "0.2s"
                 }}
               >
@@ -89,7 +89,7 @@ export const FieldsDiscoverCard = ({ fields, selected, onSelect, style }: any) =
 
   return (
     <div style={{
-      backgroundColor: "#142143", borderRadius: "4vh", padding: "20px", color: "white",
+      backgroundColor: "var(--dark-blue)", borderRadius: "4vh", padding: "20px", color: "white",
       display: "flex", flexDirection: "column", position: "relative", overflow: "hidden", ...style
     }}>
       <h3 style={{ fontSize: "20px", marginBottom: "15px", fontFamily: 'var(--font-nova-square)', fontWeight: "100" }}>
@@ -109,7 +109,7 @@ export const FieldsDiscoverCard = ({ fields, selected, onSelect, style }: any) =
             onClick={() => onSelect(field)}
             style={{
               padding: "15px 5px", borderRadius: "12px", border: "none",
-              backgroundColor: selected === field ? "#E6FFB2" : "#1C427B",
+              backgroundColor: selected === field ? "var(--light-green)" : "var(--medium-blue)",
               color: selected === field ? "black" : "white",
               fontSize: "0.7rem", fontWeight: "bold", cursor: "pointer", transition: "0.2s", fontFamily: "var(--font-jura)"
             }}
@@ -188,7 +188,7 @@ export const CompletedCoursesCard = ({ courses, style }: any) => {
 
   return (
     <div style={{
-      backgroundColor: "#142143", borderRadius: "4vh", padding: "20px", color: "white",
+      backgroundColor: "var(--dark-blue)", borderRadius: "4vh", padding: "20px", color: "white",
       display: "flex", flexDirection: "column", gap: "10px", position: "relative", overflow: "hidden", ...style
     }}>
       <h3 style={{ fontSize: "20px", textAlign: "left", marginBottom: "5px", fontFamily: 'var(--font-nova-square)', fontWeight: "200" }}>
@@ -299,7 +299,7 @@ export const CourseCards = ({
               width: "280px",
               minHeight: "120px",
               height: "auto",
-              backgroundColor: "#BABABA",
+              backgroundColor: "var(--bg-grey)",
               borderRadius: "40px",
               padding: "10px",
               display: "flex",

@@ -19,7 +19,7 @@ export default function TipCard({ icon, title, description, style, variant = "ti
                 position: "relative",
                 width: "100%",
                 height: "100%",
-                backgroundColor: "#1C427B",
+                backgroundColor: "var(--medium-blue)",
                 borderRadius: "4vh",
                 display: "flex",
                 padding: "1rem",

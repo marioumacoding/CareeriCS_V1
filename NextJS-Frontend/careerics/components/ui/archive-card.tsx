@@ -52,7 +52,7 @@ export default function ArchiveCard({
                 position: "relative",
                 width: "100%",
                 height: "100%",
-                backgroundColor: "#142143",
+                backgroundColor: "var(--dark-blue)",
                 borderRadius: "4vh",
                 display: "flex",
                 flexDirection: "column",

@@ -41,7 +41,7 @@ export default function LandingPage() {
   }, []);
 
   const getLinkColor = (id: string) => {
-    if (active === id) return "#B8EF46";
+    if (active === id) return "var(--primary-green)";
     if (hovered === id) return "#717171";
     return "#fff";
   };
@@ -166,7 +166,7 @@ export default function LandingPage() {
             width: "50vw",
             height: "100vh",
             background:
-              "radial-gradient(circle at center, var(--bg-effect-color) -10%, rgba(0,0,0,0) 65%)",
+              "radial-gradient(circle at center, var(--phase5-color) -10%, rgba(0,0,0,0) 65%)",
             zIndex: 1,
             pointerEvents: "none",
           }}

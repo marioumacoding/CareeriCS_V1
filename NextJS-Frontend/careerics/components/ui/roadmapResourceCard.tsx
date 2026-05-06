@@ -15,7 +15,7 @@ export default function RoadmapResourceCard({
     <div
       style={{
         width: "100%",
-        backgroundColor: "#28292B",
+        backgroundColor: "var(--dark-grey)",
         borderRadius: "1.35rem",
         padding: "0.8rem 1rem",
         display: "flex",

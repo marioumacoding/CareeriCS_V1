@@ -152,7 +152,7 @@ export default function CareerDiscoveryPage() {
           rightOnclick={handleNext}
           style={{
             gridArea: "3 / 1 / 8 / 7",
-            backgroundColor: "#1C427B",
+            backgroundColor: "var(--medium-blue)",
             borderRadius: "4vh",
             gap: 0
           }}

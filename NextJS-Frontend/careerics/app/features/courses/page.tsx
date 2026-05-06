@@ -226,7 +226,7 @@ export default function CoursesPage() {
         Title="More courses to discover"
         Columns={3}
         variant="vertical"
-        style={{ gridArea: "3 / 1 / 7 / 4", backgroundColor: "#142143" }}
+        style={{ gridArea: "3 / 1 / 7 / 4", backgroundColor: "var(--dark-blue)" }}
       >
         {isLoadingRoadmaps ? <LoadingState label="Loading roadmaps..." /> : null}
 
@@ -283,7 +283,7 @@ export default function CoursesPage() {
         variant="vertical"
         Columns={1}
         centerTitle
-        style={{ gridArea: "3 / 4 / 7 / 5", width: "100%", backgroundColor: "#142143" }}
+        style={{ gridArea: "3 / 4 / 7 / 5", width: "100%", backgroundColor: "var(--dark-blue)" }}
       >
         {completedCourses.map((course) => (
           <ActivityCard

@@ -1,111 +1,91 @@
 "use client";
 
+import { useState } from "react";
 import JourneyTree from "@/components/ui/journey-tree";
-import React, { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
-import ChoiceCard from "@/components/ui/choice-card-career";
-import { useAuth } from "@/providers/auth-provider";
-import { careerService } from "@/services";
-import type { APICareerTrack } from "@/types";
-import { CareerCardsContainer } from "@/components/ui/career-cards-container";
-import TipCard from "@/components/ui/3ateyat";
+import { RectangularCard } from "@/components/ui/rectangular-card";
 
-const VISIBLE_TRACKS_COUNT = 4;
-const TRACK_DESCRIPTION_FALLBACK =
-  "Explore this path and see what the day-to-day work, opportunities, and growth can look like.";
+type Level = "Entry" | "Junior" | "Senior";
 
-function buildTrackBlogPath(track: APICareerTrack): string {
-  const params = new URLSearchParams({
-    jobTitle: track.name,
-    trackId: track.id,
-  });
-
-  return `/quiz-features/blog?${params.toString()}`;
+interface LevelData {
+  salary: string;
+  demand: string;
+  demandColor: string;
+  responsibilities: string[];
+  fit: string[];
 }
 
 export default function JourneyPage() {
+  const [level, setLevel] = useState<Level>("Entry");
 
-  const router = useRouter();
-  const { user, isLoading: isAuthLoading } = useAuth();
+  const track = {
+    title: "Backend Developer",
+    description: "Build and maintain server-side logic, APIs, and databases.",
+    skills: ["Node.js", "Databases", "APIs"],
 
-  const [isStartingQuiz, setIsStartingQuiz] = useState(false);
-  const [startError, setStartError] = useState<string | null>(null);
-  const [careerTracks, setCareerTracks] = useState<APICareerTrack[]>([]);
-  const [isLoadingTracks, setIsLoadingTracks] = useState(true);
-  const [tracksError, setTracksError] = useState<string | null>(null);
+    levels: {
+      Entry: {
+        salary: "E£ 10-15K",
+        demand: "Low",
+        demandColor: "#FFBC6A",
+        responsibilities: [
+          "Write basic API endpoints",
+          "Fix bugs in backend services",
+          "Work with simple database queries",
+          "Assist in debugging server issues",
+          "Follow coding standards and reviews",
+        ],
+        fit: [
+          "You enjoy logic over visuals",
+          "You like working with data structures",
+          "You are patient with debugging",
+          "You prefer structured systems",
+          "You enjoy backend architecture basics",
+        ],
+      },
 
-  const [startIndex, setStartIndex] = useState(0);
+      Junior: {
+        salary: "E£ 20-35K",
+        demand: "Medium",
+        demandColor: "#FFF47C",
+        responsibilities: [
+          "Develop RESTful APIs",
+          "Optimize database queries",
+          "Handle authentication systems",
+          "Integrate third-party services",
+          "Write reusable backend modules",
+        ],
+        fit: [
+          "You think in systems not pages",
+          "You enjoy solving performance issues",
+          "You understand API design",
+          "You like scalable thinking",
+          "You handle complexity well",
+        ],
+      },
 
-  useEffect(() => {
-    let alive = true;
-
-    const loadCareerTracks = async () => {
-      setIsLoadingTracks(true);
-
-      const response = await careerService.listTracks();
-      if (!alive) {
-        return;
-      }
-
-      if (!response.success || !response.data) {
-        setCareerTracks([]);
-        setTracksError(response.message || "Unable to load career tracks right now.");
-        setIsLoadingTracks(false);
-        return;
-      }
-
-      setCareerTracks(response.data);
-      setTracksError(null);
-      setIsLoadingTracks(false);
-    };
-
-    void loadCareerTracks();
-
-    return () => {
-      alive = false;
-    };
-  }, []);
-
-  const maxStartIndex = Math.max(0, careerTracks.length - VISIBLE_TRACKS_COUNT);
-  const safeStartIndex = Math.min(startIndex, maxStartIndex);
-
-  const visibleCards = useMemo(
-    () => careerTracks.slice(safeStartIndex, safeStartIndex + VISIBLE_TRACKS_COUNT),
-    [careerTracks, safeStartIndex],
-  );
-
-  const handleNext = () => {
-    setStartIndex(Math.min(safeStartIndex + 4, maxStartIndex));
+      Senior: {
+        salary: "E£ 50-80K+",
+        demand: "High",
+        demandColor: "var(--light-green)",
+        responsibilities: [
+          "Design system architecture",
+          "Lead backend development teams",
+          "Ensure scalability and performance",
+          "Handle distributed systems",
+          "Review and enforce best practices",
+        ],
+        fit: [
+          "You think in large-scale systems",
+          "You can mentor others",
+          "You handle high responsibility",
+          "You optimize for performance at scale",
+          "You design long-term solutions",
+        ],
+      },
+    } as Record<Level, LevelData>,
   };
 
-  const handlePrev = () => {
-    setStartIndex(Math.max(safeStartIndex - 4, 0));
-  };
-
-  const handleStartQuiz = async () => {
-    if (isStartingQuiz || isAuthLoading) {
-      return;
-    }
-
-    if (!user?.id) {
-      setStartError("Please sign in first to start the career quiz.");
-      router.push("/auth/login?callbackUrl=/features/career");
-      return;
-    }
-
-    setStartError(null);
-    setIsStartingQuiz(true);
-
-    const response = await careerService.createSession({ user_id: user.id });
-
-    if (!response.success || !response.data?.id) {
-      setIsStartingQuiz(false);
-      setStartError(response.message || "Unable to start the quiz right now. Please try again.");
-      return;
-    }
-
-    router.push(`/quiz-features/hobbies?sessionId=${encodeURIComponent(response.data.id)}`);
-  };
+  const current = track.levels[level];
 
   return (
     <JourneyTree
@@ -116,125 +96,219 @@ export default function JourneyPage() {
           style={{
             width: "100%",
             height: "100%",
-            display: "flex",
-            flexDirection: "column",
-            position: "relative",
+            display: "grid",
             padding: "40px",
-            boxSizing: "border-box",
+            gridTemplateColumns: "repeat(2,1fr)",
+            gridTemplateRows: "1fr",
+            gridColumnGap: "1rem",
+            color: "white",
+            textAlign: "left",
+            overflow: "hidden",
           }}
         >
+          {/*Left Section*/}
           <div
             style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(6, 1fr)",
-              gridTemplateRows: "1.6fr repeat(6, 1fr)",
-              gridRowGap: "20px",
-              flex: 1,
+              width: "100%",
               height: "100%",
+              gridArea: "1 / 1 /2 /2",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "flex-start",
+              alignItems: "flex-start",
+              gap: "2rem",
             }}
           >
-            <TipCard
-              variant="feature"
-              onclick={() => {
-                void handleStartQuiz();
-              }}
-              style={{
-                gridArea: "1 / 1 / 3 / 7",
-                backgroundColor: "var(--medium-blue)"
-              }}
-              icon="/tracks/career-quiz.svg"
-              title="Start career quiz"
-              description={
-                "Choose your favorite hobbies and activities,then answer a few personalized questions.\n" +
-                "Just like that, you’ll get your best fit career choices."
-              }        >
 
-            </TipCard>
+            {/* Title and Subtitle */}
+            <div>
+              <h1
+                style={{
+                  fontSize: "1.5rem",
+                  marginBottom: "0.5rem",
+                }}
+              >
+                {track.title}
+              </h1>
+              <p
+                style={{
+                  color: "lightgrey",
+                }}
+              >
+                {track.description}
+              </p>
+            </div>
 
-            {/* Career Paths */}
-            <CareerCardsContainer
-              isScrollable
-              Title="Discover more career paths"
-              leftOnclick={handlePrev}
-              rightOnclick={handleNext}
+            {/* Skills */}
+            <div
               style={{
-                gridArea: "3 / 1 / 8 / 7",
-                backgroundColor: "var(--medium-blue)",
-                borderRadius: "4vh",
-                gap: 0
+                display: "grid",
+                gridTemplateColumns: "repeat(3, 1fr)",
+                width: "fit-content",
+                gap: "1rem"
               }}
             >
+              {track.skills.map((skill, i) => (
+                <RectangularCard
+                  key={i}
+                  style={{ width: "100%" }}
+                  theme="dark"
+                  Title={skill}
+                />
+              ))}
+            </div>
 
-              {isLoadingTracks ? (
-                <div
+            {/* Key Responsibities */}
+            <div>
+              <h1
+                style={{
+                  fontSize: "1.2rem",
+                  marginBottom: "1rem",
+                }}
+              >
+                Key Responsibilities
+              </h1>
+
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(1, 1fr)",
+                  width: "fit-content",
+                  gap: "1rem"
+                }}
+              >
+                {current.responsibilities.map((r, i) => (
+                  <p key={i} style={{ color: "lightgrey" }}> • {r} </p>
+                ))}
+              </div>
+
+            </div>
+
+
+          </div>
+
+          {/*Right Section*/}
+          <div
+            style={{
+              width: "100%",
+              height: "100%",
+              gridArea: "1 / 2 /2 /3",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "flex-start",
+              alignItems: "flex-start",
+              gap: "2rem",
+            }}
+          >
+
+            {/* Level Filter */}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(3, 1fr)",
+                width: "fit-content",
+                gap: "1rem",
+              }}
+            >
+              {(["Entry", "Junior", "Senior"] as Level[]).map((lvl) => (
+                <RectangularCard
+                  style={{ width: "100%" }}
+                  key={lvl}
+                  font="jura"
+                  theme="light"
+                  Title={lvl === "Entry" ? "Entry Level" : lvl}
+                  selected={level === lvl}
+                  selectable
+                  onSelect={() => setLevel(lvl)}
+                />
+              ))}
+            </div>
+
+            {/* Salary Range and Market Demand */}
+            <div
+              style={{
+                width: "100%",
+                height: "fit-content",
+                display: "flex",
+                justifyContent: "flex-start",
+                alignItems: "center",
+                gap: "5rem",
+              }}
+            >
+              {/* Salary Range */}
+              <div>
+                <h1
                   style={{
-                    gridColumn: "1 / -1",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "#D7E3FF",
-                    fontFamily: "var(--font-jura)",
                     fontSize: "1rem",
+                    marginBottom: "0.5rem",
                   }}
                 >
-                  Loading career tracks...
-                </div>
-              ) : null}
-
-              {!isLoadingTracks && tracksError ? (
-                <div
+                  Salary Range
+                </h1>
+                <h1
                   style={{
-                    gridColumn: "1 / -1",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "#FFD3D3",
-                    textAlign: "center",
-                    fontFamily: "var(--font-jura)",
-                    fontSize: "1rem",
-                    paddingInline: "2vw",
+                    fontSize: "1.5rem",
+                    color: "lightgrey",
                   }}
                 >
-                  {tracksError}
-                </div>
-              ) : null}
+                  {current.salary}
+                </h1>
+              </div>
 
-              {!isLoadingTracks && !tracksError && !visibleCards.length ? (
-                <div
+              {/* Market Demand */}
+              <div>
+                <h1
                   style={{
-                    gridColumn: "1 / -1",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "#d7ffdd",
-                    fontFamily: "var(--font-jura)",
                     fontSize: "1rem",
+                    marginBottom: "0.5rem",
                   }}
                 >
-                  No career tracks are available yet.
-                </div>
-              ) : null}
+                  Market Demand
+                </h1>
+                <h1
+                  style={{
+                    fontSize: "1.5rem",
+                    color: current.demandColor,
+                  }}
+                >
+                  {current.demand}
+                </h1>
+              </div>
+            </div>
 
-              {!isLoadingTracks && !tracksError
-                ? visibleCards.map((track) => {
-                  const blogPath = buildTrackBlogPath(track);
+            {/* Fit Profile */}
+            <div
+              style={{
+                width: "100%",
+                height: "100%",
+                backgroundColor: "var(--medium-blue)",
+                borderRadius: "4vh",
+                padding: "2rem",
+              }}
+            >
+              <h1
+                style={{
+                  fontSize: "1.2rem",
+                  marginBottom: "1rem",
+                }}
+              >
+                This Would fit you if
+              </h1>
 
-                  return (
-                    <ChoiceCard
-                      key={track.id}
-                      title={track.name}
-                      description={track.description || TRACK_DESCRIPTION_FALLBACK}
-                      image={`/tracks/${track.id}.svg`}
-                      buttonVariant="primary-inverted"
-                      buttonLabel="Learn More"
-                      onClick={() => router.push(blogPath)}
-                    />
-                  );
-                })
-                : null}
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(1, 1fr)",
+                  width: "fit-content",
+                  gap: "1rem"
+                }}
+              >
+                {current.fit.map((f, i) => (
+                  <p key={i} style={{ color: "lightgrey" }}> • {f}</p>
+                ))}
+              </div>
+            </div>
 
-
-            </CareerCardsContainer>
           </div>
         </div>
       )}

@@ -55,7 +55,7 @@ export default function CourseActionPopup({
           width: "26rem",
           height: "fit-content",
           borderRadius: "4vh",
-          backgroundColor: "#E6FFB2",
+          backgroundColor: "var(--light-green)",
           padding: "1rem",
           display: "flex",
           flexDirection: "column",
@@ -118,7 +118,7 @@ export default function CourseActionPopup({
             style={{
               paddingInline: "1rem",
               paddingBlock: "0.5rem",
-              backgroundColor: "#636771",
+              backgroundColor: "var(--medium-grey)",
               borderRadius: "2vh",
               color: "white",
             }}
@@ -141,7 +141,7 @@ export default function CourseActionPopup({
             style={{
               paddingInline: "1rem",
               paddingBlock: "0.5rem",
-              backgroundColor: "#636771",
+              backgroundColor: "var(--medium-grey)",
               borderRadius: "2vh",
               color: "white",
             }}

@@ -29,7 +29,7 @@ function BlogContent() {
     Entry: {
       salary: "E£ 10-15K",
       demand: "Low",
-      demandColor: "#FFBC6A",
+      demandColor: "var(--light-orange)",
       responsibilities: ["bla bla bla bla", "bla bla bla bla bla bla", "bla bla bla bla", "bla bla bla bla bla bla", "bla bla bla bla", "bla bla bla bla bla bla"],
       fitReason: ["bla bla bla bla", "bla bla bla bla bla bla", "bla bla bla bla", "bla bla bla bla bla bla"],
     },
@@ -43,7 +43,7 @@ function BlogContent() {
     Senior: {
       salary: "E£ 50-80K+",
       demand: "High",
-      demandColor: "#E6FFB2",
+      demandColor: "var(--light-green)",
       responsibilities: ["Senior lead 1", "Senior lead 2"],
       fitReason: ["Expert level 1", "Expert level 2"],
     },
@@ -94,8 +94,8 @@ function BlogContent() {
                 key={level}
                 onClick={() => setActiveLevel(level)}
                 style={{
-                  backgroundColor: activeLevel === level ? "#E6FFB2" : "#C1CBE6",
-                  color: "#142143",
+                  backgroundColor: activeLevel === level ? "var(--light-green)" : "#C1CBE6",
+                  color: "var(--dark-blue)",
                   borderRadius: "3vh",
                   padding: "2vh 2vw",
                   fontSize: "2vh",
@@ -141,7 +141,7 @@ function BlogContent() {
         {/* Dynamic Blue Card: This Would Fit You If */}
         <div style={{ 
           flex: 0.6, 
-          backgroundColor: "#1C427B", 
+          backgroundColor: "var(--medium-blue)", 
           borderRadius: "4vh", 
           padding: "6vh 2vw",
           minHeight: "45vh",

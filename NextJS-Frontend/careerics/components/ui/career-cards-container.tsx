@@ -17,7 +17,7 @@ export const CareerCardsContainer = ({
     return (
         <div
             style={{
-                backgroundColor: "#1C427B",
+                backgroundColor: "var(--medium-blue)",
                 borderRadius: "4vh",
                 paddingBlock: "3vh",
                 paddingInline: isScrollable ? "1rem" : "1.5rem",

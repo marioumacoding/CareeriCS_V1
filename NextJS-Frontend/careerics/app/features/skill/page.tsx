@@ -1003,7 +1003,7 @@ export default function SkillAssessment() {
         <div
           style={{
             gridArea: "1/ 1 / 3 / 3",
-            backgroundColor: "#1C427B",
+            backgroundColor: "var(--medium-blue)",
             borderRadius: "4vh",
             padding: "3vh 2vw",
             display: "flex",
@@ -1030,7 +1030,7 @@ export default function SkillAssessment() {
           Title="Skill you are currently learning"
           variant="horizontal"
           style={{
-            backgroundColor: "#142143",
+            backgroundColor: "var(--dark-blue)",
             width: "100%",
             gridArea: "1 / 3 / 3 / 5",
           }}
@@ -1066,7 +1066,7 @@ export default function SkillAssessment() {
           Columns={3}
           style={{
             gridArea: "3 / 1 / 7 / 4",
-            backgroundColor: "#142143",
+            backgroundColor: "var(--dark-blue)",
           }}
         >
           {moreSkills.map((skill) => {
@@ -1110,7 +1110,7 @@ export default function SkillAssessment() {
           centerTitle
           style={{
             gridArea: "3 / 4 / 7 / 5",
-            backgroundColor: "#142143",
+            backgroundColor: "var(--dark-blue)",
           }}
         >
           {allPastTests.map((test) => (

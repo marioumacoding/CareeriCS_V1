@@ -35,11 +35,11 @@ const baseStyle: CSSProperties = {
 const variantStyles: Record<ButtonVariant, { default: CSSProperties; hover: CSSProperties }> = {
   primary: {
     default: { backgroundColor: "var(--primary-green)", color: "black" },
-    hover: { backgroundColor: "var(--hover-green)" }
+    hover: { backgroundColor: "var(--light-green)" }
   },
   secondary: {
     default: { backgroundColor: "white", color: "#18181b" },
-    hover: { backgroundColor: "var(--hover-grey)" }
+    hover: { backgroundColor: "var(--light-blue)" }
   },
   outline: {
     default: { backgroundColor: "transparent", border: "0.7vh solid white", color: "white" },
@@ -58,7 +58,7 @@ const variantStyles: Record<ButtonVariant, { default: CSSProperties; hover: CSSP
     hover: { color: "white", textDecoration: "underline" }
   },
   "primary-inverted": {
-    default: { backgroundColor: "var(--hover-green)", color: "black" },
+    default: { backgroundColor: "var(--light-green)", color: "black" },
     hover: { backgroundColor: "var(--primary-green)" }
   },
   "popup": {

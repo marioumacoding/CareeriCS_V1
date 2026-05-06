@@ -21,7 +21,7 @@ export default function StepCheckbox({
         gap: "1rem",
         marginBottom: "1rem",
         justifyContent: "space-between",
-        backgroundColor: "#28292B",
+        backgroundColor: "var(--dark-grey)",
         padding: "1rem",
         borderRadius: "3vh",
         cursor: "pointer"

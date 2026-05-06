@@ -14,7 +14,7 @@ export default function JourneyButton({
     <button
       onClick={onClick}
       style={{
-        backgroundColor: isSA ? "#1C427B" : "#C1CBE6",
+        backgroundColor: isSA ? "var(--medium-blue)" : "#C1CBE6",
         borderRadius: "4vh",
         border: "none",
         height: "100%",

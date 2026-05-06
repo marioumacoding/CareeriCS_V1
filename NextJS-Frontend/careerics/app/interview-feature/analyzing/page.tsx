@@ -465,7 +465,7 @@ export default function AnalyzingPage() {
             onClick={() => handleNext()}
             disabled={!isActionReady}
             style={{
-              backgroundColor: isActionReady ? "#d4ff47" : "#BABABA",
+              backgroundColor: isActionReady ? "#d4ff47" : "var(--bg-grey)",
               color: "#1a1a1a",
               padding: "12px 60px",
               borderRadius: "14px",

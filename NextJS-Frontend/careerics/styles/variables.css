@@ -2,18 +2,20 @@
 :root{
     /*Color Palette*/
     --bg-color: #0A0A0A;
-    --bg-effect-color: #1560CA; 
     --form-grey: #3D3D40;
+    --dark-grey: #28292B;
+    --medium-grey: #636771;
     --bg-grey: #BABABA;
-    --text-grey: #AAAAAA;
     --dark-blue: #142143;
     --medium-blue: #1C427B;
-    --light-blue: #00B2FF;
-
-    /*Buttons Colors*/
+    --light-blue: #C1CBE6;
     --primary-green: #B8EF46;
-    --hover-green: #E6FFB2;
-    --hover-grey: #B4B7C7;
+    --light-green: #E6FFB2;
+    --light-red: #FFB2B2;
+    --light-orange: #FFBC6A;
+
+    /*text Colors*/ 
+    --text-grey: #AAAAAA;
 
     /*Landing Page Colors*/
     --phase1-color: #FEF355;

@@ -473,7 +473,7 @@ export default function RoadmapFeaturePage() {
             display: "flex",
             flexDirection: "column",
             padding: "1rem 2rem",
-            backgroundColor: "#636771",
+            backgroundColor: "var(--medium-grey)",
             borderRadius: "4vh",
             width: "30%",
             marginLeft: "2rem",

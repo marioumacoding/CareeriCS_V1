@@ -14,7 +14,7 @@ type PhaseCardProps =
 
 export const PhaseCard = (props: PhaseCardProps) => {
   const baseStyle: React.CSSProperties = {
-    backgroundColor: "#142143",
+    backgroundColor: "var(--dark-blue)",
     borderRadius: "3vh",
     color: "white",
   };

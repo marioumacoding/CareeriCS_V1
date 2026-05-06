@@ -17,7 +17,7 @@ export default function roadmapProgress({ text, done = "0", total = "0" }: roadm
             style={{
                 maxHeight: "100%",
                 width: "0.5rem",
-                backgroundColor: "var(--hover-green)",
+                backgroundColor: "var(--light-green)",
                 borderRadius: "99px",
                 marginRight: "1rem",
             }}
@@ -38,7 +38,7 @@ export default function roadmapProgress({ text, done = "0", total = "0" }: roadm
             >
                 <span
                     style={{
-                        color: "var(--hover-green)",
+                        color: "var(--light-green)",
                     }}
                 >
                     {done}

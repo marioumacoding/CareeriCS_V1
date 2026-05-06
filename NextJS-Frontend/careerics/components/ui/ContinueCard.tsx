@@ -15,20 +15,18 @@ const ContinueCard: React.FC<ContinueCardProps> = ({
     <div
       onClick={() => router.push('/job-features/application')}
       style={{ 
-        backgroundColor: "#1e2a4a", 
-        borderRadius: "20px", 
-        padding: "24px", 
+        backgroundColor: "var(--dark-blue)", 
+        borderRadius: "4vh", 
+        paddingInline: "1rem",
+        paddingBlock:"2rem", 
         height: "100%", 
         display: "flex", 
         justifyContent: "space-between", 
-        alignItems: "flex-start",
+        alignItems: "center",
         cursor: "pointer",
-        transition: "background-color 0.2s",
       }}
-      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#243460")}
-      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#1e2a4a")}
     >
-      <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+      <div style={{ display: "flex", flexDirection: "column", justifyContent:"space-between" }}>
         <h3 style={{ 
           color: "white", 
           fontSize: "1.2rem", 
@@ -40,14 +38,14 @@ const ContinueCard: React.FC<ContinueCardProps> = ({
         </h3>
         <p style={{ 
           color: "rgba(255,255,255,0.6)", 
-          fontSize: "1.1rem", 
+          fontSize: "0.9rem", 
           margin: 0,
         }}>
           {description}
         </p>
       </div>
 
-      <div style={{ color: "white", fontSize: "20px", marginTop: "5vh" }}>❯</div>
+      <div style={{ color: "white", fontSize: "20px"}}>❯</div>
     </div>
   );
 };

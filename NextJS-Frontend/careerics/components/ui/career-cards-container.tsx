@@ -4,15 +4,15 @@ export const CareerCardsContainer = ({
     style,
     isScrollable = false,
     Title = "Your Careers",
-    leftOnclick,
-    rightOnclick,
+    leftOnclick = () => { },
+    rightOnclick = () => { },
 }: {
     children: React.ReactNode;
     style?: React.CSSProperties;
     isScrollable?: boolean;
     Title?: string;
-    leftOnclick: () => void;
-    rightOnclick: () => void;
+    leftOnclick?: () => void;
+    rightOnclick?: () => void;
 }) => {
     return (
         <div

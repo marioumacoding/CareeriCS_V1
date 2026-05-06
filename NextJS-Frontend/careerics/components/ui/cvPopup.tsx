@@ -74,7 +74,7 @@ export default function CVPop({
     >
       <div
         style={{
-          backgroundColor: "#E6FFB2",
+          backgroundColor: "var(--light-green)",
           width: "26rem",
           padding: "4vh",
           borderRadius: "40px",
@@ -198,7 +198,7 @@ export default function CVPop({
               }
               disabled={status === "loading"}
               style={{
-                backgroundColor: "#636771",
+                backgroundColor: "var(--medium-grey)",
                 color: "white",
                 border: "none",
                 paddingBlock: "1.5vh",

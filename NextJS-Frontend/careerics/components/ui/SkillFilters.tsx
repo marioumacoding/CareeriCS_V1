@@ -34,7 +34,7 @@ const  SkillFilters = ({
     flex: 1,
     padding: "1.2vh 0.5vw",
     borderRadius: "4vh",
-    backgroundColor: skillType === type ? "#E6FFB2" : "#315891",
+    backgroundColor: skillType === type ? "var(--light-green)" : "#315891",
     color: skillType === type ? "#1e293b" : "#fff",
     fontSize: "0.9vw",
     fontWeight: "bold" as const,

@@ -92,7 +92,7 @@ export const CardsContainer = ({
   return (
     <div
       style={{
-        backgroundColor: "#1C427B",
+        backgroundColor: "var(--medium-blue)",
         borderRadius: "4vh",
         paddingTop: "1rem",
         paddingLeft: "1rem",

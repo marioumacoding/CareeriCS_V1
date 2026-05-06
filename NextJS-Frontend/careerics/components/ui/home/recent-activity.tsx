@@ -93,7 +93,7 @@ export const RecentActivityCard = ({ activities, style }: any) => {
   return (
     <div
       style={{
-        backgroundColor: "#142143",
+        backgroundColor: "var(--dark-blue)",
         borderRadius: "3vh",
         color: "white",
         display: "flex",

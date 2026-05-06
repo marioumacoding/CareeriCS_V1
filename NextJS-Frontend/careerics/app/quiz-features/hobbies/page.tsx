@@ -187,7 +187,7 @@ export default function HobbiesGrid() {
             style={{
               background: "rgba(184, 239, 70, 0.15)",
               border: "1px solid rgba(184, 239, 70, 0.35)",
-              color: "#E6FFB2",
+              color: "var(--light-green)",
               borderRadius: "999px",
               padding: "0.5rem 0.9rem",
               fontSize: "0.9rem",
@@ -240,7 +240,7 @@ export default function HobbiesGrid() {
                     type="button"
                     onClick={() => toggleCard(card.id)}
                     style={{
-                      backgroundColor: isSelected ? "#E6FFB2" : "#1C427B",
+                      backgroundColor: isSelected ? "var(--light-green)" : "var(--medium-blue)",
                       color: isSelected ? "#111827" : "#F9FAFB",
                       border: isSelected ? "1px solid #D9FF8F" : "1px solid rgba(255, 255, 255, 0.12)",
                       borderRadius: "0.95rem",
@@ -286,7 +286,7 @@ export default function HobbiesGrid() {
             onClick={handleNext}
             disabled={isLoadingCards || !isCurrentStepValid || isSubmitting}
             style={{
-              backgroundColor: "#B8EF46",
+              backgroundColor: "var(--primary-green)",
               color: "#111827",
               borderRadius: "0.8rem",
               padding: "0.75rem 1.35rem",

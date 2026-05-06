@@ -154,7 +154,7 @@ export const StepFlow: React.FC<StepFlowProps> = ({
                 height: NODE_HEIGHT,
                 border: `2px solid ${
                   isHovered || isSelected
-                    ? "var(--hover-green)"
+                    ? "var(--light-green)"
                     : DEFAULT_BORDER_COLOR
                 }`,
                 borderRadius: "99px",
@@ -164,7 +164,7 @@ export const StepFlow: React.FC<StepFlowProps> = ({
                 textAlign: "center",
                 background:
                   isHovered || isSelected
-                    ? "var(--hover-green)"
+                    ? "var(--light-green)"
                     : "#C1CBE6",
                 fontSize: "0.8rem",
                 zIndex: 2,

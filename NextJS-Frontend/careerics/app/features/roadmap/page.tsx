@@ -370,7 +370,7 @@ export default function RoadmapPage() {
                 padding: "6px 10px",
                 borderRadius: "8px",
                 backgroundColor:
-                  selectedRoadmapId === bookmark.id ? "var(--hover-green)" : "var(--medium-blue)",
+                  selectedRoadmapId === bookmark.id ? "var(--light-green)" : "var(--medium-blue)",
                 color: selectedRoadmapId === bookmark.id ? "black" : "white",
                 fontSize: "0.85rem",
                 cursor: "pointer",

@@ -41,7 +41,7 @@ export default function RetakePopup({
                     width: "26rem",
                     height: "fit-content",
                     borderRadius: "4vh",
-                    backgroundColor: "#E6FFB2",
+                    backgroundColor: "var(--light-green)",
                     padding: "1rem",
                     display: "flex",
                     flexDirection: "column",

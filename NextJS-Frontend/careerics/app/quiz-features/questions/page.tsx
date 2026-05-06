@@ -493,7 +493,7 @@ export default function CareerQuestionsPage() {
                         justifyContent: "center",
                       }}
                     >
-                      <span style={{ color: "#FFB2B2", fontSize: "2.2vh", fontWeight: 600 }}>
+                      <span style={{ color: "var(--light-red)", fontSize: "2.2vh", fontWeight: 600 }}>
                         Strongly Disagree
                       </span>
 
@@ -510,7 +510,7 @@ export default function CareerQuestionsPage() {
                                 width: sizes[value - 1],
                                 height: sizes[value - 1],
                                 borderRadius: "50%",
-                                backgroundColor: isSelected ? "#B8EF46" : "#6B7280",
+                                backgroundColor: isSelected ? "var(--primary-green)" : "#6B7280",
                                 cursor: "pointer",
                                 transition: "all 0.3s ease",
                                 transform: isSelected ? "scale(1.08)" : "scale(1)",
@@ -520,7 +520,7 @@ export default function CareerQuestionsPage() {
                         })}
                       </div>
 
-                      <span style={{ color: "#E6FFB2", fontSize: "2.2vh", fontWeight: 600 }}>
+                      <span style={{ color: "var(--light-green)", fontSize: "2.2vh", fontWeight: 600 }}>
                         Strongly Agree
                       </span>
                     </div>
@@ -546,7 +546,7 @@ export default function CareerQuestionsPage() {
               disabled={isLoadingQuestions || isSubmitting || !currentGroup}
               style={{
                 alignSelf: "flex-end",
-                backgroundColor: "#B8EF46",
+                backgroundColor: "var(--primary-green)",
                 color: "#000",
                 padding: "1.5vh 5vw",
                 borderRadius: "1.2vh",
@@ -603,7 +603,7 @@ export default function CareerQuestionsPage() {
             key={track.track_id}
             style={{
               width: "min(320px, 90vw)",
-              backgroundColor: "#1C427B",
+              backgroundColor: "var(--medium-blue)",
               borderRadius: "3vh",
               padding: "4vh 1.3rem 3.2vh 1.3rem",
               display: "flex",
@@ -651,7 +651,7 @@ export default function CareerQuestionsPage() {
               {track.track_name}
             </h2>
 
-            <p style={{ margin: 0, color: "#E6FFB2", fontWeight: 700, fontSize: "2vh" }}>
+            <p style={{ margin: 0, color: "var(--light-green)", fontWeight: 700, fontSize: "2vh" }}>
               Match Score: {track.score}%
             </p>
 
@@ -710,7 +710,7 @@ export default function CareerQuestionsPage() {
         <Link href="/features/career" style={{ textDecoration: "none" }}>
           <Button
             style={{
-              backgroundColor: "#B8EF46",
+              backgroundColor: "var(--primary-green)",
               color: "#000",
               padding: "0 3vw",
               height: "6vh",

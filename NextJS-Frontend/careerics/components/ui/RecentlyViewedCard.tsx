@@ -19,7 +19,7 @@ const RecentlyViewedCard: React.FC<{ jobs: Job[] }> = ({ jobs }) => {
 
   return (
     <div style={{ 
-      backgroundColor: "#142143", 
+      backgroundColor: "var(--dark-blue)", 
       borderRadius: "30px", 
       padding: "24px", 
       height: "120%", 

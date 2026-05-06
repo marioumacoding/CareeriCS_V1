@@ -19,7 +19,7 @@ const LevelCard: React.FC<LevelCardProps> = ({
   return (
     <div
       style={{
-        backgroundColor: "#142143",
+        backgroundColor: "var(--dark-blue)",
         borderRadius: "20px",
         padding: "1rem",
         height: "100%",

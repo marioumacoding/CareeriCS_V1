@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Jura, Nova_Square } from "next/font/google";
 import { Providers } from "@/providers";
 import "../styles/globals.scss"; 
-import "../styles/mixins.scss"; 
 import "../styles/variables.css"; 
 
 const jura = Jura({

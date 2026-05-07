@@ -140,7 +140,7 @@ export default function ChoiceCard({
 
       <Button
         type="button"
-        variant={isSelected ? "primary-inverted" : "secondary"}
+        variant={isSelected ? "primary-inverted" : "popup-inverted"}
         onClick={() => { router.push(blogPath || "/"); }}
         disabled={disabled}
         style={{

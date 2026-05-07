@@ -20,7 +20,7 @@ const LevelCard: React.FC<LevelCardProps> = ({
     <div
       style={{
         backgroundColor: "var(--dark-blue)",
-        borderRadius: "20px",
+        borderRadius: "4vh",
         padding: "1rem",
         height: "100%",
         display: "flex",
@@ -30,7 +30,7 @@ const LevelCard: React.FC<LevelCardProps> = ({
         aspectRatio: "1/1",
         boxSizing: "border-box",
 
-        ...style, // ✅ override container only
+        ...style,
       }}
     >
       {/* Top Section */}
@@ -76,12 +76,12 @@ const LevelCard: React.FC<LevelCardProps> = ({
 
       {/* Button */}
       <Button
-        variant="secondary"
+        variant="primary-inverted"
         style={{
-          borderRadius: "2vh",
-          fontFamily: "Nova Square",
           width: "100%",
-          paddingBlock: "0.5rem",
+          paddingBlock: "1.2rem",
+          borderRadius:"2vh",
+          flex:0,
         }}
         onClick={onClick}
       >

@@ -279,6 +279,7 @@ export default function CourseLibraryPage() {
         <CourseActionPopup
           mode="enroll"
           courseTitle={pendingEnrollmentCourse.title}
+          courseOrg={pendingEnrollmentCourse.provider}
           onConfirm={confirmEnrollment}
           onCancel={() => setPendingEnrollmentCourse(null)}
         />

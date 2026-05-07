@@ -10,6 +10,7 @@ from services.interview.session_service import (
     create_session_service,
     get_sessions_by_user_service,
     get_session_by_id_service,
+    update_session_service,
     delete_session_service,
 )
 from utils.util import build_session_report_pdf
@@ -43,6 +44,15 @@ def get_session(
     db: Session = Depends(get_db),
 ):
     return get_session_by_id_service(db, session_id)
+
+
+@router.put("/{session_id}", response_model=schemas.SessionRead)
+def update_session(
+    session_id: UUID,
+    payload: schemas.SessionUpdate,
+    db: Session = Depends(get_db),
+):
+    return update_session_service(db, session_id, payload)
 
 
 @router.delete("/{session_id}")

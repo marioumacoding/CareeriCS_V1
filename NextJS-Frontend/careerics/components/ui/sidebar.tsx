@@ -133,7 +133,7 @@ const Sidebar = () => {
         }}
       >
         <img
-          src="/sidebar/Profile.svg"
+          src="/sidebar/profile.svg"
           alt="User Account"
           style={{
             width: "auto",

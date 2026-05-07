@@ -380,6 +380,7 @@ export default function HomePage() {
       }}
     >
       <CareerCardsContainer
+        Title="Your Careers"
         style={{ gridArea: "1 / 1 / 3 / 4" }}
       >
         {careerData.map((career) => (

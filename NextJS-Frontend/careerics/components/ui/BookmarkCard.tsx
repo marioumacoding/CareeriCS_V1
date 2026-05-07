@@ -12,50 +12,47 @@ const BookmarkCard: React.FC<BookmarkCardProps> = ({
 }) => {
   const router = useRouter();
   return (
-    <div style={{ 
-      backgroundColor: "#1e2a4a", 
-      borderRadius: "20px", 
-      padding: "24px", 
-      height: "100%", 
-      display: "flex", 
-      flexDirection: "column", 
-      justifyContent: "space-between" 
+    <div style={{
+      backgroundColor: "var(--dark-blue)",
+      borderRadius: "4vh",
+      paddingInline: "2.4rem",
+      height: "100%",
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems:"center",
+      paddingBlock:"1rem"
     }}>
-      <div style={{ display: "flex", gap: "15px", alignItems: "flex-start" }}>
-        <img 
-          src="/global/bookmark.svg" // Ghayar el path lel icon el sa7
-          alt="Bookmark"
-          style={{ width: "30px", height: "30px" }} 
-        />
-        
-        <div>
-          <h3 style={{ color: "white", margin: 0, fontSize: "1.2rem", fontFamily: 'Nova Square', fontWeight: "400" }}>
-            Bookmarks
-          </h3>
-          <p style={{ color: "rgba(255,255,255,0.6)", fontSize: "0.9rem", margin: "5px 0", fontFamily: 'Nova Square' }}>
-            {description}
-          </p>
-        </div>
+
+      <img
+        src="/global/bookmark.svg" // Ghayar el path lel icon el sa7
+        alt="Bookmark"
+        style={{ width: "3rem"}}
+      />
+
+      <div>
+        <h3 style={{ color: "white", margin: 0, fontSize: "1.2rem", fontFamily: 'Nova Square', fontWeight: "400" }}>
+          Bookmarks
+        </h3>
+        <p style={{ color: "rgba(255,255,255,0.6)", fontSize: "0.9rem", margin: "5px 0", fontFamily: 'Nova Square' }}>
+          {description}
+        </p>
       </div>
 
       {/* Estekhdam el Button component bta3ak */}
-      <div>
-        <Button 
-          variant="secondary" 
-           style={{ 
-          color: "black",
-          borderRadius: "5px", // Radius Smooth
+      <Button
+        variant="primary-inverted"
+        style={{
+          borderRadius: "2vh",
           fontFamily: 'Nova Square',
-          width: "25%",          
-          padding: "15px",
-          left: "75%",
-          bottom: "10px",
+          marginTop: "auto",
+          paddingInline: "3rem",
+          paddingBlock: "1rem",
+          flex: "0"
         }}
-           onClick={() => router.push('/job-features/bookmarks')}          
-        >
-          Open
-        </Button>
-      </div>
+        onClick={() => router.push('/job-features/bookmarks')}
+      >
+        Open
+      </Button>
     </div>
   );
 };

@@ -19,14 +19,13 @@ type StepFlowProps = {
   isNavigatable?: boolean;
   onSelect?: (index: number) => void;
   selectedIndex?: number;
-
+  variant?: "light" | "dark";
   routeOnClick?: boolean;
   roadmapId?: string;
 };
 
 const COLUMNS = 4;
 const ROW_GAP = 60;
-const DEFAULT_BORDER_COLOR = "#C1CBE6";
 const NODE_HEIGHT = 55;
 
 export const StepFlow: React.FC<StepFlowProps> = ({
@@ -36,7 +35,9 @@ export const StepFlow: React.FC<StepFlowProps> = ({
   selectedIndex,
   routeOnClick = true,
   roadmapId,
+  variant = "light",
 }) => {
+  const DEFAULT_BORDER_COLOR = variant === "light" ? "#C1CBE6" : "var(--medium-blue)";
   const router = useRouter();
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
@@ -152,12 +153,11 @@ export const StepFlow: React.FC<StepFlowProps> = ({
               style={{
                 width: "100%",
                 height: NODE_HEIGHT,
-                border: `2px solid ${
-                  isHovered || isSelected
-                    ? "var(--light-green)"
-                    : DEFAULT_BORDER_COLOR
-                }`,
-                borderRadius: "99px",
+                border: `2px solid ${isHovered || isSelected
+                  ? "var(--light-green)"
+                  : DEFAULT_BORDER_COLOR
+                  }`,
+                borderRadius: "3.5vh",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -165,12 +165,17 @@ export const StepFlow: React.FC<StepFlowProps> = ({
                 background:
                   isHovered || isSelected
                     ? "var(--light-green)"
-                    : "#C1CBE6",
+                    : variant === "light" ?
+                      "#C1CBE6" :
+                      "var(--medium-blue)",
                 fontSize: "0.8rem",
                 zIndex: 2,
                 cursor: isNavigatable ? "pointer" : "default",
-                paddingBlock:"1rem",
-                paddingInline:"0.5rem"
+                paddingBlock: "1rem",
+                paddingInline: "0.5rem",
+                color: isHovered || isSelected || variant === "light"
+                    ? "black"
+                    : "white",
               }}
             >
               {node.label}
@@ -193,7 +198,7 @@ export const StepFlow: React.FC<StepFlowProps> = ({
                 }}
               >
                 <img
-                  src="/roadmap/connector.svg"
+                  src={variant==="light"?"/roadmap/connector.svg":"/roadmap/connector-blue.svg"}
                   alt=""
                   style={{
                     width: "100%",
@@ -223,7 +228,7 @@ export const StepFlow: React.FC<StepFlowProps> = ({
                 }}
               >
                 <img
-                  src="/roadmap/connector-vertical.svg"
+                  src={variant==="light"?"/roadmap/connector-vertical.svg":"/roadmap/connector-vertical-blue.svg"}
                   alt=""
                   style={{
                     width: "100%",

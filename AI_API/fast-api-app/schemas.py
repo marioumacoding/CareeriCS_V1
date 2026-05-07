@@ -726,6 +726,7 @@ class CareerTrackScoreRead(BaseModel):
     track_id: UUID
     track_name: str
     track_description: Optional[str] = None
+    roadmap_id: Optional[UUID] = None
     score: int = Field(ge=0, le=100)
 
 class CareerEvaluationRead(BaseModel):

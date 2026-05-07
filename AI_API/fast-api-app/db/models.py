@@ -96,10 +96,6 @@ class Session(Base):
 
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
-    emotion_evaluation = Column(JSON, nullable=True)
-    tone_evaluation = Column(JSON, nullable=True)
-    sentiment_evaluation = Column(JSON, nullable=True)
-
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
 
     user = relationship("User", back_populates="sessions")

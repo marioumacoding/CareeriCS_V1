@@ -56,23 +56,26 @@ def evaluate_answer_prompt(
 ) -> str:
 
     followup_instruction = (
-        "If the answer is incomplete or unclear, Only if necessary set followup_required to true.\n"
-        "If the answer, is clear enough but could be improved, or is missing key details, set followup_required to true and provide a specific improvement suggestion in the improvement field.\n"
-        "If the answer is clear and complete, set followup_required to false and leave improvement field empty."
+        "Set followup_required to true ONLY when the answer is too vague, incomplete, unclear, off-topic, "
+        "or missing critical information needed to properly evaluate the candidate.\n"
+        "Do NOT ask a follow-up just because the answer could be better, more detailed, or more polished.\n"
+        "If the answer is acceptable and understandable, set followup_required to false.\n"
+        "If followup_required is false, improvement must be an empty string.\n"
+        "Only provide improvement suggestions when followup_required is true.\n"
+        "Prefer followup_required = false unless a follow-up is truly necessary."
     )
 
     return (
         f"Question:\n{question_text}\n\n"
         f"User Answer:\n{user_answer}\n\n"
         "Role:\n"
-        f"You are a friendly, professional {interview_type} interviewer.\n\n"
+        f"You are a professional {interview_type} interviewer.\n\n"
         "Objective:\n"
         "Evaluate the user's answer naturally and professionally.\n\n"
         "Instructions:\n"
         "- Score from 0 to 5 (integer only)\n"
         "- Provide constructive feedback\n"
-        "- Provide clear improvement suggestions\n"
-        f"- {followup_instruction}\n"
+        f"- {followup_instruction}\n\n"
         "Return ONLY valid JSON following this exact schema:\n"
         f"{json.dumps(evaluate_answer_schema, indent=2)}\n\n"
         "IMPORTANT:\n"
@@ -87,20 +90,99 @@ def evaluate_answer_prompt(
 # Interview Session
 # ============================================================
 def interview_session_fields_prompt(session_json: dict) -> str:
-    return (
-        f"You are an advanced interview report generator.\n\n"
-        f"You are given a JSON of an interview session summary:\n{json.dumps(session_json, indent=2)}\n\n"
-        f"Your task is to read it concisely and generate a report filling the following schema exactly:\n{json.dumps(interview_session_schema, indent=2)}\n\n"
-        f"IMPORTANT RULES:\n"
-        "- Return ONLY valid JSON.\n"
-        "- Auto enumerate questions.\n"
-        "- The score of each question is out of 5. \n"
-        "- Overall score is out of (number of questions * 5).\n"
-        "- Do NOT include explanations, markdown, or extra text.\n"
-        "- If a section does not exist, return an empty array [].\n"
-        "- If a field does not exist, return an empty string \"\".\n"
-        "- Follow the schema EXACTLY."
-    )
+    return f"""
+        You are an elite AI interview evaluator and professional hiring report generator.
+
+        You are given a raw interview session JSON containing:
+        - interview metadata
+        - questions and answers
+        - feedback
+        - emotional analysis
+        - tone analysis
+        - sentiment analysis
+
+        INPUT SESSION JSON:
+        {json.dumps(session_json, indent=2)}
+
+        Your task is to analyze the interview deeply and generate a complete professional interview report.
+
+        You MUST fill the following schema EXACTLY:
+        {json.dumps(interview_session_schema, indent=2)}
+
+        STRICT OUTPUT RULES:
+        1. Return ONLY valid JSON.
+        2. Do NOT wrap the response in markdown.
+        3. Do NOT include explanations, comments, headings, or extra text.
+        4. Follow the schema EXACTLY.
+        5. Never add extra fields.
+        6. Preserve all field names exactly as provided.
+        7. All arrays must always exist.
+        8. Missing string values must be "".
+        9. Missing arrays must be [].
+        10. Missing numeric values must be null.
+
+        SCORING RULES:
+        - Each question score is an integer from 0 to 5.
+        - Evaluate scores based on:
+        - technical accuracy
+        - communication clarity
+        - confidence
+        - completeness
+        - relevance
+        - professionalism
+        - Be realistic and critical.
+        - Avoid giving perfect scores unless strongly deserved.
+        - overall_score = sum of all question scores.
+        - Maximum overall_score = number_of_questions * 5.
+
+        QUESTION SUMMARY RULES:
+        - Auto enumerate question_number starting from 1.
+        - answer_summary must:
+        - be concise
+        - summarize the candidate's actual answer
+        - avoid repetition
+        - avoid hallucinations
+        - feedback must:
+        - be actionable
+        - identify strengths and weaknesses
+        - explain why the score was given
+
+        SKILLS EXTRACTION RULES:
+        - Extract ONLY meaningful professional skills demonstrated in answers.
+        - Include both technical and soft skills when applicable.
+        - Avoid duplicates.
+        - Return concise skill names only.
+
+        BEHAVIORAL INSIGHTS RULES:
+        - FER should summarize facial/emotional expression patterns if available.
+        - SER should summarize speech emotion/tone patterns if available.
+        - sentiment_analysis should summarize the overall emotional sentiment of the interview.
+        - Keep all behavioral summaries concise and professional.
+
+        OVERALL ASSESSMENT RULES:
+        - strengths:
+        - list the candidate's strongest demonstrated qualities
+        - use short bullet-style statements
+        - areas_for_improvement:
+        - identify genuine weaknesses or missing areas
+        - be constructive and specific
+        - final_recommendation:
+        - provide a concise hiring recommendation
+        - examples:
+            - "Strong Hire"
+            - "Hire"
+            - "Consider"
+            - "Weak Consider"
+            - "No Hire"
+        - recommendation must align with the actual performance
+
+        QUALITY RULES:
+        - Maintain professional HR/interviewer language.
+        - Be objective and evidence-based.
+        - Do not invent information not supported by the input.
+        - Avoid generic filler statements.
+        - Keep summaries concise but insightful.
+    """
 
 
 # ============================================================

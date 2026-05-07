@@ -174,6 +174,55 @@ def _recompute_roadmap_progress(db: Session, user_id: UUID, roadmap: Roadmap) ->
     roadmap_row.score = avg_score
 
 
+def _get_locked_section_message(
+    db: Session,
+    user_id: UUID,
+    roadmap_id: UUID,
+    target_section: RoadmapSection,
+) -> str | None:
+    sections = (
+        db.query(RoadmapSection)
+        .filter(RoadmapSection.roadmap_id == roadmap_id)
+        .order_by(RoadmapSection.order.asc(), RoadmapSection.id.asc())
+        .all()
+    )
+
+    target_index = next(
+        (index for index, section in enumerate(sections) if section.id == target_section.id),
+        None,
+    )
+    if target_index is None or target_index <= 0:
+        return None
+
+    existing_target_progress = (
+        db.query(RoadmapAssessmentResult.id)
+        .filter(
+            RoadmapAssessmentResult.user_id == user_id,
+            RoadmapAssessmentResult.roadmap_id == roadmap_id,
+            RoadmapAssessmentResult.section_id == target_section.id,
+            RoadmapAssessmentResult.type == "step",
+        )
+        .first()
+    )
+    if existing_target_progress:
+        return None
+
+    progress_summary = get_roadmap_progress_service(db, roadmap_id, user_id)
+    previous_sections = progress_summary.sections[:target_index]
+
+    first_incomplete_previous = next(
+        (section for section in previous_sections if section.completion_status != "completed"),
+        None,
+    )
+    if not first_incomplete_previous:
+        return None
+
+    return (
+        f'Complete "{first_incomplete_previous.title}" before updating '
+        f'"{target_section.title}".'
+    )
+
+
 def upsert_step_progress_service(
     db: Session,
     roadmap_id: UUID,
@@ -192,6 +241,10 @@ def upsert_step_progress_service(
     section = db.query(RoadmapSection).filter(RoadmapSection.id == step.section_id).first()
     if not section or section.roadmap_id != roadmap.id:
         raise ValueError("Step does not belong to roadmap")
+
+    locked_section_message = _get_locked_section_message(db, user_id, roadmap.id, section)
+    if locked_section_message:
+        raise ValueError(locked_section_message)
 
     step_row = _upsert_progress_row(
         db,

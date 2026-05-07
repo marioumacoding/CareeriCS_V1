@@ -6,6 +6,9 @@ export interface CourseProgressItem {
   id: string;
   title: string;
   provider: string;
+  startedAt?: string | null;
+  completedAt?: string | null;
+  updatedAt?: string | null;
 }
 
 export interface CourseProgressState {
@@ -40,6 +43,9 @@ function normalizeCourseItem(raw: unknown): CourseProgressItem | null {
     id: maybe.id,
     title: maybe.title,
     provider: maybe.provider,
+    startedAt: typeof maybe.startedAt === "string" ? maybe.startedAt : null,
+    completedAt: typeof maybe.completedAt === "string" ? maybe.completedAt : null,
+    updatedAt: typeof maybe.updatedAt === "string" ? maybe.updatedAt : null,
   };
 }
 
@@ -116,9 +122,18 @@ export function saveCourseProgress(state: CourseProgressState): CourseProgressSt
 }
 
 export function enrollCourse(course: CourseProgressItem): CourseProgressState {
+  const now = new Date().toISOString();
   const progress = loadCourseProgress();
   const nextCompleted = progress.completed.filter((item) => item.id !== course.id);
-  const nextCurrent = [course, ...progress.current.filter((item) => item.id !== course.id)];
+  const nextCurrent = [
+    {
+      ...course,
+      startedAt: course.startedAt || now,
+      completedAt: null,
+      updatedAt: now,
+    },
+    ...progress.current.filter((item) => item.id !== course.id),
+  ];
 
   return saveCourseProgress({ current: nextCurrent, completed: nextCompleted });
 }
@@ -131,8 +146,42 @@ export function completeCourse(courseId: string): CourseProgressState {
     return progress;
   }
 
+  const now = new Date().toISOString();
   const nextCurrent = progress.current.filter((item) => item.id !== courseId);
-  const nextCompleted = [course, ...progress.completed.filter((item) => item.id !== courseId)];
+  const nextCompleted = [
+    {
+      ...course,
+      completedAt: now,
+      updatedAt: now,
+    },
+    ...progress.completed.filter((item) => item.id !== courseId),
+  ];
 
   return saveCourseProgress({ current: nextCurrent, completed: nextCompleted });
+}
+
+export function retakeCourse(courseId: string): CourseProgressState {
+  const progress = loadCourseProgress();
+  const course = progress.completed.find((item) => item.id === courseId);
+
+  if (!course) {
+    return progress;
+  }
+
+  const now = new Date().toISOString();
+  const nextCompleted = progress.completed.filter((item) => item.id !== courseId);
+  const nextCurrent = [
+    {
+      ...course,
+      startedAt: now,
+      completedAt: null,
+      updatedAt: now,
+    },
+    ...progress.current.filter((item) => item.id !== courseId),
+  ];
+
+  return saveCourseProgress({
+    current: nextCurrent,
+    completed: nextCompleted,
+  });
 }

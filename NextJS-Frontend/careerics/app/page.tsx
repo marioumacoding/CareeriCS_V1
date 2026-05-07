@@ -302,7 +302,7 @@ export default function LandingPage() {
               title={<>CV<br />Builder</>}
               description={<>Never had a CV before and you got no idea how to start?<br />  Our Ai model will build you an ATS- friendly CV. <br /> No guesswork Just results. </>}
               color="var(--phase3-color)"
-              link="/auth/login?redirect=/features/cv"
+              link="/auth/login?redirect=/cv-feature/builder"
             />
           </div>
 
@@ -312,7 +312,7 @@ export default function LandingPage() {
               title={<>CV Enhancer</>}
               description={<>Already have a CV but it’s not getting you anywhere?<br />  We’ll optimize it to get you recruiters attention.</>}
               color="var(--phase3-color)"
-              link="/auth/login?redirect=/features/cv"
+              link="/auth/login?redirect=/cv-feature/enhancer"
             />
           </div>
 

@@ -3,17 +3,23 @@
 interface StepCheckboxProps {
   text?: string | null;
   isChecked?: boolean;
+  disabled?: boolean;
   onToggle?: () => void;
 }
 
 export default function StepCheckbox({
   text,
   isChecked = false,
+  disabled = false,
   onToggle,
 }: StepCheckboxProps) {
   return (
     <div
-      onClick={onToggle}
+      onClick={() => {
+        if (!disabled) {
+          onToggle?.();
+        }
+      }}
       style={{
         display: "flex",
         width: "100%",
@@ -24,7 +30,8 @@ export default function StepCheckbox({
         backgroundColor: "var(--dark-grey)",
         padding: "1rem",
         borderRadius: "3vh",
-        cursor: "pointer"
+        cursor: disabled ? "not-allowed" : "pointer",
+        opacity: disabled ? 0.6 : 1,
       }}
     >
       {/* Text */}
@@ -47,7 +54,7 @@ export default function StepCheckbox({
           borderRadius: "50%",
           backgroundColor: "transparent",
           border: isChecked ? `2px solid var(--primary-green)` : "2px solid white",
-          cursor: "pointer",
+          cursor: disabled ? "not-allowed" : "pointer",
           display: "flex",
           justifyContent: "center",
           alignItems: "center",

@@ -16,6 +16,7 @@ import type {
   ApiResponse,
   APISession,
   APISessionCreate,
+  APISessionUpdate,
   APIQuestion,
   APIQuestionCreate,
   APIAnswerRead,
@@ -127,6 +128,13 @@ export const interviewService = {
 
   getSession(sessionId: string): Promise<ApiResponse<APISession>> {
     return fastapiApi.get<APISession>(`/sessions/${sessionId}`);
+  },
+
+  updateSession(
+    sessionId: string,
+    payload: APISessionUpdate,
+  ): Promise<ApiResponse<APISession>> {
+    return fastapiApi.put<APISession>(`/sessions/${sessionId}`, payload);
   },
 
   getUserSessions(userId: string): Promise<ApiResponse<APISession[]>> {

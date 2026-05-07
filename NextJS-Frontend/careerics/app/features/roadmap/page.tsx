@@ -3,11 +3,34 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import CustomDropdown from "@/components/ui/dropdown-menu";
+import BookmarkReplacePopup from "@/components/ui/bookmarkReplacePopup";
 import { StepFlow } from "@/components/ui/roadmap-flow";
+import {
+  createRoadmapUnifiedBookmark,
+  resolveUnifiedBookmarkHref,
+} from "@/lib/bookmark-targets";
+import { removeBookmarkEntryFromUnifiedList } from "@/lib/unified-bookmark-actions";
+import {
+  addOrMoveUnifiedBookmark,
+  getUnifiedBookmarks,
+  MAX_UNIFIED_BOOKMARKS,
+  replaceUnifiedBookmark,
+  UNIFIED_BOOKMARKS_UPDATED_EVENT,
+} from "@/lib/unified-bookmarks";
+import {
+  normalizeRoadmapListPayload,
+  syncBackendRoadmapBookmarksToUnifiedList,
+} from "@/lib/roadmap-bookmark-sync";
 import { useAuth } from "@/providers/auth-provider";
 import { roadmapService } from "@/services";
-import { getUnifiedBookmarks, setUnifiedBookmarks } from "@/lib/unified-bookmarks";
-import type { ApiResponse, RoadmapListItem, RoadmapRead, UserRoadmapBookmark } from "@/types";
+import type {
+  ApiResponse,
+  RoadmapListItem,
+  RoadmapRead,
+  UnifiedBookmarkDraft,
+  UnifiedBookmarkEntry,
+  UserRoadmapBookmark,
+} from "@/types";
 
 type CachedApiRequest<T> = {
   expiresAt: number;
@@ -15,29 +38,12 @@ type CachedApiRequest<T> = {
 };
 
 const DEFAULT_PATH_OPTION = "__default_path__";
-const MAX_BOOKMARKS = 3;
 const ROADMAP_DETAILS_CACHE_TTL_MS = 60_000;
-
-function normalizeRoadmapListPayload(payload: unknown): RoadmapListItem[] {
-  if (Array.isArray(payload)) {
-    return payload as RoadmapListItem[];
-  }
-
-  if (
-    payload &&
-    typeof payload === "object" &&
-    "roadmaps" in payload &&
-    Array.isArray((payload as { roadmaps: unknown }).roadmaps)
-  ) {
-    return (payload as { roadmaps: RoadmapListItem[] }).roadmaps;
-  }
-
-  return [];
-}
 
 export default function RoadmapPage() {
   const router = useRouter();
   const { user, isLoading: isAuthLoading } = useAuth();
+  const userId = user?.id ?? null;
 
   const [roadmaps, setRoadmaps] = useState<RoadmapListItem[]>([]);
   const [selectedRoadmapPreferenceId, setSelectedRoadmapPreferenceId] = useState<string>(
@@ -47,8 +53,20 @@ export default function RoadmapPage() {
   const [backendRoadmapBookmarks, setBackendRoadmapBookmarks] = useState<UserRoadmapBookmark[]>([]);
   const [hasLoadedRoadmapBookmarks, setHasLoadedRoadmapBookmarks] = useState(false);
   const [selectedRoadmapDetails, setSelectedRoadmapDetails] = useState<RoadmapRead | null>(null);
+  const [pendingRoadmapBookmark, setPendingRoadmapBookmark] = useState<UnifiedBookmarkDraft | null>(null);
+  const [replaceCandidates, setReplaceCandidates] = useState<UnifiedBookmarkEntry[]>([]);
+  const [isReplacingBookmark, setIsReplacingBookmark] = useState(false);
+  const [bookmarkError, setBookmarkError] = useState<string | null>(null);
+  const [bookmarkRefreshNonce, setBookmarkRefreshNonce] = useState(0);
 
   const roadmapByIdCacheRef = useRef<Map<string, CachedApiRequest<RoadmapRead>>>(new Map());
+  const unifiedBookmarks = useMemo(() => {
+    if (isAuthLoading) {
+      return [];
+    }
+
+    return getUnifiedBookmarks(userId);
+  }, [bookmarkRefreshNonce, isAuthLoading, userId]);
 
   const getRoadmapByIdCached = useCallback((roadmapId: string) => {
     const now = Date.now();
@@ -70,6 +88,23 @@ export default function RoadmapPage() {
     });
 
     return requestPromise;
+  }, [isAuthLoading]);
+
+  useEffect(() => {
+    const handleBookmarksUpdated = () => {
+      setBookmarkRefreshNonce((previous) => previous + 1);
+    };
+
+    window.addEventListener(UNIFIED_BOOKMARKS_UPDATED_EVENT, handleBookmarksUpdated as EventListener);
+    window.addEventListener("storage", handleBookmarksUpdated);
+
+    return () => {
+      window.removeEventListener(
+        UNIFIED_BOOKMARKS_UPDATED_EVENT,
+        handleBookmarksUpdated as EventListener,
+      );
+      window.removeEventListener("storage", handleBookmarksUpdated);
+    };
   }, []);
 
   const options = useMemo(
@@ -85,8 +120,10 @@ export default function RoadmapPage() {
   }, [roadmaps]);
 
   const bookmarkedRoadmapIds = useMemo(() => {
-    return backendRoadmapBookmarks.map((bookmark) => bookmark.roadmap_id);
-  }, [backendRoadmapBookmarks]);
+    return unifiedBookmarks
+      .filter((bookmark) => bookmark.kind === "roadmap")
+      .map((bookmark) => bookmark.entity_id);
+  }, [unifiedBookmarks]);
 
   const selectedRoadmapId = useMemo(() => {
     const validSelection =
@@ -108,12 +145,16 @@ export default function RoadmapPage() {
     return roadmaps[0]?.id || DEFAULT_PATH_OPTION;
   }, [bookmarkedRoadmapIds, roadmaps, selectedRoadmapPreferenceId]);
 
-  const bookmarkCardData = useMemo(() => {
-    return backendRoadmapBookmarks.map((bookmark) => ({
-      id: bookmark.roadmap_id,
-      title: roadmapTitleById.get(bookmark.roadmap_id) || "Roadmap",
+  const bookmarkCards = useMemo(() => {
+    return unifiedBookmarks.map((bookmark) => ({
+      ...bookmark,
+      title:
+        bookmark.kind === "roadmap"
+          ? roadmapTitleById.get(bookmark.entity_id) || bookmark.title || "Roadmap"
+          : bookmark.title,
+      href: resolveUnifiedBookmarkHref(bookmark),
     }));
-  }, [backendRoadmapBookmarks, roadmapTitleById]);
+  }, [roadmapTitleById, unifiedBookmarks]);
 
   const selectedRoadmap = useMemo(() => {
     return options.find((option) => option.id === selectedRoadmapId) || options[0];
@@ -154,8 +195,7 @@ export default function RoadmapPage() {
         return;
       }
 
-      const list = normalizeRoadmapListPayload(response.data);
-      setRoadmaps(list);
+      setRoadmaps(normalizeRoadmapListPayload(response.data));
     };
 
     void loadRoadmaps();
@@ -173,7 +213,7 @@ export default function RoadmapPage() {
     let alive = true;
 
     const loadBookmarks = async () => {
-      if (!user?.id) {
+      if (!userId) {
         setBackendRoadmapBookmarks([]);
         setHasLoadedRoadmapBookmarks(true);
         return;
@@ -182,7 +222,7 @@ export default function RoadmapPage() {
       setHasLoadedRoadmapBookmarks(false);
       setBackendRoadmapBookmarks([]);
 
-      const response = await roadmapService.getUserRoadmapBookmarks(user.id);
+      const response = await roadmapService.getUserRoadmapBookmarks(userId);
       if (!alive) {
         return;
       }
@@ -194,7 +234,7 @@ export default function RoadmapPage() {
               return [String(bookmark.roadmap_id), bookmark] as const;
             }),
           ).values(),
-        ).slice(0, MAX_BOOKMARKS);
+        );
 
         setBackendRoadmapBookmarks(uniqueBookmarks);
       }
@@ -207,30 +247,25 @@ export default function RoadmapPage() {
     return () => {
       alive = false;
     };
-  }, [isAuthLoading, user?.id]);
+  }, [isAuthLoading, userId]);
 
   useEffect(() => {
-    if (isAuthLoading || !user?.id || !hasLoadedRoadmapBookmarks) {
+    if (isAuthLoading || !userId || !hasLoadedRoadmapBookmarks) {
       return;
     }
 
-    const existingUnifiedBookmarks = getUnifiedBookmarks(user.id);
-    const careerBookmarks = existingUnifiedBookmarks.filter((bookmark) => bookmark.kind === "career");
-
-    const roadmapBookmarks = backendRoadmapBookmarks.map((bookmark) => {
-      const roadmap = roadmaps.find((item) => item.id === bookmark.roadmap_id);
-
-      return {
-        kind: "roadmap" as const,
-        entity_id: bookmark.roadmap_id,
-        title: roadmap?.title || "Roadmap",
-        description: roadmap?.description ?? null,
-        saved_at: bookmark.created_at,
-      };
+    syncBackendRoadmapBookmarksToUnifiedList({
+      userId,
+      backendBookmarks: backendRoadmapBookmarks,
+      roadmaps,
     });
-
-    setUnifiedBookmarks([...roadmapBookmarks, ...careerBookmarks], user.id);
-  }, [backendRoadmapBookmarks, hasLoadedRoadmapBookmarks, isAuthLoading, roadmaps, user?.id]);
+  }, [
+    backendRoadmapBookmarks,
+    hasLoadedRoadmapBookmarks,
+    isAuthLoading,
+    roadmaps,
+    userId,
+  ]);
 
   useEffect(() => {
     let alive = true;
@@ -260,27 +295,44 @@ export default function RoadmapPage() {
     };
   }, [getRoadmapByIdCached, selectedRoadmapId]);
 
+  const removeLocalBackendRoadmap = useCallback((roadmapId: string) => {
+    setBackendRoadmapBookmarks((previous) =>
+      previous.filter((bookmark) => bookmark.roadmap_id !== roadmapId),
+    );
+  }, []);
+
+  const addLocalBackendRoadmap = useCallback((roadmapId: string, createdAt?: string) => {
+    setBackendRoadmapBookmarks((previous) => {
+      const withoutCurrent = previous.filter((bookmark) => bookmark.roadmap_id !== roadmapId);
+      return [
+        { roadmap_id: roadmapId, created_at: createdAt || new Date().toISOString() },
+        ...withoutCurrent,
+      ];
+    });
+  }, []);
+
+  const closeReplacePopup = useCallback(() => {
+    if (isReplacingBookmark) {
+      return;
+    }
+
+    setPendingRoadmapBookmark(null);
+    setReplaceCandidates([]);
+  }, [isReplacingBookmark]);
+
   const onRoadmapChange = (roadmapId: string) => {
     setSelectedRoadmapPreferenceId(roadmapId);
     setActiveStep(null);
+    setBookmarkError(null);
   };
 
-  const toggleLocalBookmark = (roadmapId: string) => {
-    const savedAt = new Date().toISOString();
+  const handleBookmarkChipClick = (bookmark: UnifiedBookmarkEntry) => {
+    if (bookmark.kind === "roadmap" && roadmaps.some((roadmap) => roadmap.id === bookmark.entity_id)) {
+      onRoadmapChange(bookmark.entity_id);
+      return;
+    }
 
-    setBackendRoadmapBookmarks((previous) => {
-      const exists = previous.some((bookmark) => bookmark.roadmap_id === roadmapId);
-      if (exists) {
-        return previous.filter((bookmark) => bookmark.roadmap_id !== roadmapId);
-      }
-
-      if (previous.length >= MAX_BOOKMARKS) {
-        console.warn("Max 3 bookmarks allowed");
-        return previous;
-      }
-
-      return [{ roadmap_id: roadmapId, created_at: savedAt }, ...previous];
-    });
+    router.push(resolveUnifiedBookmarkHref(bookmark));
   };
 
   const handleBookmark = async () => {
@@ -289,36 +341,125 @@ export default function RoadmapPage() {
     }
 
     const roadmapId = selectedRoadmap.id;
-    const currentlyBookmarked = bookmarkedRoadmapIds.includes(roadmapId);
-
-    if (!currentlyBookmarked && bookmarkedRoadmapIds.length >= MAX_BOOKMARKS) {
-      console.warn("Max 3 bookmarks allowed");
-      return;
-    }
-
-    if (!user?.id) {
-      toggleLocalBookmark(roadmapId);
-      return;
-    }
-
-    const response = await roadmapService.toggleRoadmapBookmark(roadmapId, user.id);
-    if (!response.success || !response.data) {
-      return;
-    }
-
-    setBackendRoadmapBookmarks((previous) => {
-      const withoutCurrent = previous.filter((bookmark) => bookmark.roadmap_id !== roadmapId);
-      if (!response.data.bookmarked) {
-        return withoutCurrent;
-      }
-
-      if (withoutCurrent.length >= MAX_BOOKMARKS) {
-        return previous;
-      }
-
-      return [{ roadmap_id: roadmapId, created_at: new Date().toISOString() }, ...withoutCurrent];
+    const currentlyBookmarked = unifiedBookmarks.some((bookmark) => {
+      return bookmark.kind === "roadmap" && bookmark.entity_id === roadmapId;
     });
+
+    setBookmarkError(null);
+
+    if (currentlyBookmarked) {
+      const bookmarkToRemove = unifiedBookmarks.find((bookmark) => {
+        return bookmark.kind === "roadmap" && bookmark.entity_id === roadmapId;
+      });
+
+      if (!bookmarkToRemove) {
+        return;
+      }
+
+      const removal = await removeBookmarkEntryFromUnifiedList(bookmarkToRemove, userId);
+      if (!removal.success) {
+        setBookmarkError(removal.message || "Unable to update bookmark right now. Please try again.");
+        return;
+      }
+
+      if (removal.removedRoadmapId) {
+        removeLocalBackendRoadmap(removal.removedRoadmapId);
+      }
+      return;
+    }
+
+    const candidate = createRoadmapUnifiedBookmark({
+      roadmapId,
+      title: roadmapTitleById.get(roadmapId) || selectedRoadmap.title || "Roadmap",
+      description: roadmaps.find((roadmap) => roadmap.id === roadmapId)?.description ?? null,
+    });
+
+    if (unifiedBookmarks.length >= MAX_UNIFIED_BOOKMARKS) {
+      setPendingRoadmapBookmark(candidate);
+      setReplaceCandidates(unifiedBookmarks);
+      return;
+    }
+
+    const alreadyInBackend = backendRoadmapBookmarks.some((bookmark) => bookmark.roadmap_id === roadmapId);
+
+    if (userId && !alreadyInBackend) {
+      const response = await roadmapService.toggleRoadmapBookmark(roadmapId, userId);
+      if (!response.success || !response.data?.bookmarked) {
+        setBookmarkError(response.message || "Unable to save bookmark right now. Please try again.");
+        return;
+      }
+    }
+
+    if (userId) {
+      addLocalBackendRoadmap(roadmapId, candidate.saved_at);
+    }
+
+    addOrMoveUnifiedBookmark(candidate, userId);
   };
+
+  const handleReplaceBookmark = useCallback(
+    async (bookmarkToReplace: UnifiedBookmarkEntry) => {
+      if (!pendingRoadmapBookmark) {
+        return;
+      }
+
+      setBookmarkError(null);
+      setIsReplacingBookmark(true);
+
+      let addedRoadmap = false;
+
+      const alreadyInBackend = backendRoadmapBookmarks.some(
+        (bookmark) => bookmark.roadmap_id === pendingRoadmapBookmark.entity_id,
+      );
+
+      if (userId && !alreadyInBackend) {
+        const addResponse = await roadmapService.toggleRoadmapBookmark(
+          pendingRoadmapBookmark.entity_id,
+          userId,
+        );
+
+        if (!addResponse.success || !addResponse.data?.bookmarked) {
+          setBookmarkError(addResponse.message || "Unable to save the new bookmark right now.");
+          setIsReplacingBookmark(false);
+          return;
+        }
+
+        addedRoadmap = true;
+      }
+
+      if (userId) {
+        addLocalBackendRoadmap(pendingRoadmapBookmark.entity_id, pendingRoadmapBookmark.saved_at);
+      }
+
+      const removal = await removeBookmarkEntryFromUnifiedList(bookmarkToReplace, userId);
+      if (!removal.success) {
+        if (addedRoadmap && userId) {
+          const rollbackResponse = await roadmapService.toggleRoadmapBookmark(
+            pendingRoadmapBookmark.entity_id,
+            userId,
+          );
+
+          if (rollbackResponse.success && rollbackResponse.data && !rollbackResponse.data.bookmarked) {
+            removeLocalBackendRoadmap(pendingRoadmapBookmark.entity_id);
+          }
+        }
+
+        setBookmarkError(removal.message || "Unable to replace bookmark right now. Please try again.");
+        setIsReplacingBookmark(false);
+        return;
+      }
+
+      if (removal.removedRoadmapId) {
+        removeLocalBackendRoadmap(removal.removedRoadmapId);
+      }
+
+      replaceUnifiedBookmark(bookmarkToReplace, pendingRoadmapBookmark, userId);
+      setPendingRoadmapBookmark(null);
+      setReplaceCandidates([]);
+      setIsReplacingBookmark(false);
+    },
+    [addLocalBackendRoadmap, backendRoadmapBookmarks, pendingRoadmapBookmark, removeLocalBackendRoadmap, userId],
+  );
 
   const handleFullscreen = () => {
     if (!selectedRoadmapId || selectedRoadmapId === DEFAULT_PATH_OPTION) {
@@ -328,6 +469,11 @@ export default function RoadmapPage() {
     router.push(`/roadmap-feature?roadmap=${selectedRoadmapId}`);
   };
 
+  const roadmapHeading = selectedRoadmapDetails?.id === selectedRoadmapId && selectedRoadmapDetails.title
+    ? `${selectedRoadmapDetails.title} Roadmap`
+    : selectedRoadmapId === DEFAULT_PATH_OPTION
+      ? "Choose a roadmap"
+      : "Loading roadmap...";
 
   return (
     <div
@@ -340,7 +486,6 @@ export default function RoadmapPage() {
         flexDirection: "column",
       }}
     >
-      {/* Top Row */}
       <div
         style={{
           height: "fit-content",
@@ -351,6 +496,7 @@ export default function RoadmapPage() {
           alignItems: "center",
           gap: "1rem",
           marginBottom: "1rem",
+          flexWrap: "wrap",
         }}
       >
         <CustomDropdown
@@ -360,22 +506,26 @@ export default function RoadmapPage() {
           onChange={onRoadmapChange}
         />
 
-        {/* Bookmarked Display */}
-        {bookmarkCardData.length > 0 ? (
-          bookmarkCardData.map((bookmark) => (
+        {bookmarkCards.length > 0 ? (
+          bookmarkCards.map((bookmark) => (
             <div
-              key={bookmark.id}
+              key={`${bookmark.kind}:${bookmark.entity_id}`}
               style={{
                 fontFamily: "var(--font-nova-square)",
                 padding: "6px 10px",
                 borderRadius: "8px",
                 backgroundColor:
-                  selectedRoadmapId === bookmark.id ? "var(--light-green)" : "var(--medium-blue)",
-                color: selectedRoadmapId === bookmark.id ? "black" : "white",
+                  selectedRoadmapId === bookmark.entity_id && bookmark.kind === "roadmap"
+                    ? "var(--light-green)"
+                    : "var(--medium-blue)",
+                color:
+                  selectedRoadmapId === bookmark.entity_id && bookmark.kind === "roadmap"
+                    ? "black"
+                    : "white",
                 fontSize: "0.85rem",
                 cursor: "pointer",
               }}
-              onClick={() => onRoadmapChange(bookmark.id)}
+              onClick={() => handleBookmarkChipClick(bookmark)}
             >
               {bookmark.title}
             </div>
@@ -392,7 +542,6 @@ export default function RoadmapPage() {
         )}
       </div>
 
-      {/* Roadmap Panel */}
       <div
         style={{
           width: "100%",
@@ -406,7 +555,6 @@ export default function RoadmapPage() {
           overflow: "hidden",
         }}
       >
-        {/* Header */}
         <div
           style={{
             display: "flex",
@@ -416,14 +564,23 @@ export default function RoadmapPage() {
             marginBottom: "1rem",
           }}
         >
-          <h1
-            style={{
-              fontSize: "1.2rem",
-              color: "white",
-            }}
-          >
-            {selectedRoadmap?.title} Roadmap
-          </h1>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+            <h1
+              style={{
+                fontSize: "1.2rem",
+                color: "white",
+                margin: 0,
+              }}
+            >
+              {roadmapHeading}
+            </h1>
+
+            {bookmarkError ? (
+              <p style={{ margin: 0, color: "#FFD3D3", fontSize: "0.9rem" }}>
+                {bookmarkError}
+              </p>
+            ) : null}
+          </div>
 
           <div
             style={{
@@ -436,7 +593,8 @@ export default function RoadmapPage() {
               alt="Open roadmap in fullscreen"
               style={{
                 height: "1.5rem",
-                cursor: "pointer",
+                cursor: selectedRoadmapId === DEFAULT_PATH_OPTION ? "default" : "pointer",
+                opacity: selectedRoadmapId === DEFAULT_PATH_OPTION ? 0.5 : 1,
               }}
               onClick={handleFullscreen}
             />
@@ -446,7 +604,8 @@ export default function RoadmapPage() {
               alt="Toggle roadmap bookmark"
               style={{
                 height: "1.5rem",
-                cursor: "pointer",
+                cursor: selectedRoadmapId === DEFAULT_PATH_OPTION ? "default" : "pointer",
+                opacity: selectedRoadmapId === DEFAULT_PATH_OPTION ? 0.5 : 1,
               }}
               onClick={() => {
                 void handleBookmark();
@@ -455,7 +614,6 @@ export default function RoadmapPage() {
           </div>
         </div>
 
-        {/* Roadmap */}
         <div
           style={{
             width: "100%",
@@ -466,7 +624,7 @@ export default function RoadmapPage() {
           }}
         >
           <div>
-            {steps?.length ? (
+            {steps.length ? (
               <StepFlow
                 steps={steps}
                 roadmapId={selectedRoadmapId}
@@ -485,12 +643,24 @@ export default function RoadmapPage() {
                   color: "white",
                 }}
               >
-                Loading...
+                {selectedRoadmapId === DEFAULT_PATH_OPTION ? "Choose a roadmap to begin." : "Loading..."}
               </div>
             )}
           </div>
         </div>
       </div>
+
+      {pendingRoadmapBookmark ? (
+        <BookmarkReplacePopup
+          incomingTitle={pendingRoadmapBookmark.title}
+          bookmarks={replaceCandidates}
+          isLoading={isReplacingBookmark}
+          onReplace={(bookmark) => {
+            void handleReplaceBookmark(bookmark);
+          }}
+          onCancel={closeReplacePopup}
+        />
+      ) : null}
     </div>
   );
 }

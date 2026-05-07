@@ -7,7 +7,7 @@ type CourseActionMode = "enroll" | "complete";
 
 interface CourseActionPopupProps {
   courseTitle: string;
-  courseOrg: string;
+  courseOrg?: string;
   mode: CourseActionMode;
   isLoading?: boolean;
   onConfirm: () => void;

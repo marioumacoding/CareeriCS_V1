@@ -1,7 +1,8 @@
 "use client";
 
-import React from "react";
+import React, { useReducer } from "react";
 import JourneyFolder from "@/components/ui/journey-folder";
+import { useRouter } from "next/navigation";
 
 type JourneyTreeProps = {
   current: number;
@@ -20,6 +21,7 @@ function renderChain(
   const [first, ...rest] = phases;
   const isCurrent = first === current;
   const isAheadOfMax = current < maxReached;
+
 
   return (
     <JourneyFolder phase={first} current={isCurrent}>
@@ -58,6 +60,7 @@ export default function JourneyTree({
   renderContent,
 }: JourneyTreeProps) {
   const phases = Array.from({ length: maxReached }, (_, i) => i + 1);
+  const router = useRouter();
 
   return (
     <div
@@ -65,10 +68,40 @@ export default function JourneyTree({
         width: "100%",
         height: "100vh",
         display: "flex",
-        padding: "40px",
+        flexDirection: "column",
+        paddingInline: "40px",
+        paddingBlock: "20px",
+        overflow: "hidden",
+        boxSizing: "border-box",
       }}
     >
-      {renderChain(phases, current, maxReached, renderContent)}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "flex-end",
+          alignItems: "center",
+          marginBottom:"10px",
+        }}
+      >
+        <img
+          src={"/global/close.svg"}
+          onClick={() => router.push("/features/home")}
+          style={{
+            width: "1.5rem",
+            height: "1.5rem",
+            cursor: "pointer",
+          }}
+        />
+      </div>
+      <div
+        style={{
+          flex: 1,
+          minHeight: 0,
+          width: "100%",
+        }}
+      >
+        {renderChain(phases, current, maxReached, renderContent)}
+      </div>
     </div>
   );
 }

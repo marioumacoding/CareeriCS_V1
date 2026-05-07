@@ -31,6 +31,10 @@ async def toggle_user_roadmap_bookmark_endpoint(
     try:
         return toggle_user_roadmap_bookmark_service(db, roadmap_id, user_id)
     except ValueError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+        # Distinguish between "not found" and "max bookmarks" errors
+        if "not found" in str(exc).lower():
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        else:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc

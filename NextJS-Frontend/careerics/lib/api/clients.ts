@@ -37,6 +37,18 @@ async function withAuth(init: RequestInit): Promise<RequestInit> {
   return init;
 }
 
+async function withFastApiProxyAuth(init: RequestInit): Promise<RequestInit> {
+  // Client-side FastAPI calls go through the same-origin `/api/fastapi` proxy,
+  // so the browser already sends the auth cookie to Next.js. Let the proxy
+  // translate that cookie into the upstream Authorization header to avoid
+  // duplicating a large JWT in both Cookie and Authorization.
+  if (typeof window !== "undefined") {
+    return init;
+  }
+
+  return withAuth(init);
+}
+
 // ──────────────────────────────────────────────
 // .NET API clients
 // ──────────────────────────────────────────────
@@ -56,12 +68,12 @@ export const dotnetGraphql = new GraphQLClient({
 // ──────────────────────────────────────────────
 export const fastapiApi = new HttpClient({
   baseUrl: resolveFastApiBaseUrl(publicConfig.fastapiUrl, "/api/fastapi"),
-  onRequest: withAuth,
+  onRequest: withFastApiProxyAuth,
   timeout: 150000, // 150s timeout for ML calls
   next: { revalidate: 0 },
 });
 
 export const fastapiGraphql = new GraphQLClient({
   baseUrl: resolveFastApiBaseUrl(publicConfig.fastapiGraphqlUrl, "/api/fastapi/graphql"),
-  onRequest: withAuth,
+  onRequest: withFastApiProxyAuth,
 });

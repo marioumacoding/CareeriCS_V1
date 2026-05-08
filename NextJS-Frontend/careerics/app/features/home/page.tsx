@@ -369,7 +369,7 @@ export default function HomePage() {
             )}&sessionId=${encodeURIComponent(session.id)}&q=1`,
           }));
 
-        const courseActivities = loadCourseProgress().completed.map((course) => {
+        const courseActivities = loadCourseProgress(user?.id).completed.map((course) => {
           const activityDate = course.completedAt ?? course.updatedAt ?? "";
 
           return {

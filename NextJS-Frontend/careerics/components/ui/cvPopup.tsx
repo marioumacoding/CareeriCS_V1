@@ -1,4 +1,5 @@
 "use client";
+
 import React, { useRef, useState } from "react";
 
 interface CVPopProps {
@@ -16,17 +17,13 @@ export default function CVPop({
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedFileName, setSelectedFileName] = useState("");
-  const [status, setStatus] = useState<
-    "idle" | "loading" | "success" | "error"
-  >("idle");
+  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
 
   const handleButtonClick = () => {
     fileInputRef.current?.click();
   };
 
-  const handleFileChange = (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = "";
 
@@ -48,10 +45,9 @@ export default function CVPop({
       }
 
       setStatus("success");
-
       setSelectedFile(null);
       setSelectedFileName("");
-    } catch (err) {
+    } catch {
       setStatus("error");
     }
   };
@@ -84,7 +80,7 @@ export default function CVPop({
           gap: "2vh",
           fontFamily: "var(--font-nova-square)",
         }}
-        onClick={(e) => e.stopPropagation()}
+        onClick={(event) => event.stopPropagation()}
       >
         <div
           style={{
@@ -99,6 +95,7 @@ export default function CVPop({
               fontSize: "22px",
               fontWeight: 400,
               lineHeight: 1.5,
+              margin: 0,
             }}
           >
             Replace your information
@@ -106,6 +103,7 @@ export default function CVPop({
           <img
             onClick={onClose}
             src="/global/close.svg"
+            alt="Close popup"
             style={{
               width: "2rem",
               height: "2rem",
@@ -123,7 +121,7 @@ export default function CVPop({
             borderRadius: "999px",
           }}
         />
-        {/* Info Row */}
+
         <div
           style={{
             display: "flex",
@@ -150,7 +148,6 @@ export default function CVPop({
           {lastVersion}
         </div>
 
-        {/* Upload Section */}
         <div
           style={{
             display: "flex",
@@ -172,7 +169,6 @@ export default function CVPop({
               gap: "20px",
             }}
           >
-            {/* Hidden Input */}
             <input
               type="file"
               ref={fileInputRef}
@@ -181,21 +177,61 @@ export default function CVPop({
               accept=".pdf,.docx"
             />
 
-            <img
-              src={
-                selectedFileName ? "/cv/file.svg" : "/cv/upload.svg"
-              }
-              alt="Upload"
-              style={{ height: "12vh" }}
-            />
-
-            {/* Button */}
             <button
-              onClick={
-                !selectedFileName
-                  ? handleButtonClick
-                  : handleExtract
-              }
+              type="button"
+              onClick={handleButtonClick}
+              style={{
+                width: "100%",
+                minHeight: "170px",
+                borderRadius: "28px",
+                border: "1px dashed rgba(17, 24, 39, 0.22)",
+                backgroundColor: "rgba(255, 255, 255, 0.55)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: "18px",
+                cursor: "pointer",
+              }}
+            >
+              <div
+                style={{
+                  width: "100%",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "14px",
+                  maxWidth: "100%",
+                }}
+              >
+                <img
+                  src={selectedFileName ? "/cv/file.svg" : "/cv/upload.svg"}
+                  alt="Upload"
+                  style={{ height: "12vh", maxHeight: "72px" }}
+                />
+                <div
+                  style={{
+                    maxWidth: "100%",
+                    padding: selectedFileName ? "10px 14px" : 0,
+                    borderRadius: "14px",
+                    backgroundColor: selectedFileName ? "rgba(17, 24, 39, 0.08)" : "transparent",
+                    color: "#111827",
+                    fontSize: "14px",
+                    textAlign: "center",
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
+                  title={selectedFileName || undefined}
+                >
+                  {selectedFileName || "Choose a PDF or DOCX file"}
+                </div>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={!selectedFileName ? handleButtonClick : handleExtract}
               disabled={status === "loading"}
               style={{
                 backgroundColor: "var(--medium-grey)",
@@ -206,18 +242,15 @@ export default function CVPop({
                 borderRadius: "15px",
                 fontSize: "1.1rem",
                 fontWeight: 600,
-                cursor:
-                  status === "loading"
-                    ? "not-allowed"
-                    : "pointer",
+                cursor: status === "loading" ? "not-allowed" : "pointer",
                 transition: "0.3s opacity",
               }}
-              onMouseOver={(e) =>
-                (e.currentTarget.style.opacity = "0.8")
-              }
-              onMouseOut={(e) =>
-                (e.currentTarget.style.opacity = "1")
-              }
+              onMouseOver={(event) => {
+                event.currentTarget.style.opacity = "0.8";
+              }}
+              onMouseOut={(event) => {
+                event.currentTarget.style.opacity = "1";
+              }}
             >
               {status === "loading"
                 ? "Processing..."
@@ -226,35 +259,17 @@ export default function CVPop({
                   : "Extract"}
             </button>
 
-            {/* File name */}
-            {selectedFileName ? (
-              <p
-                style={{
-                  margin: 0,
-                  color: "#000000",
-                  opacity: 0.85,
-                  maxWidth: "100%",
-                  textAlign: "center",
-                  wordBreak: "break-word",
-                  fontSize: "14px",
-                }}
-              >
-                {selectedFileName}
+            {status === "success" ? (
+              <p style={{ color: "#000000", fontSize: "14px", margin: 0 }}>
+                Extracted successfully
               </p>
             ) : null}
 
-            {/* Feedback */}
-            {status === "success" && (
-              <p style={{ color: "#000000", fontSize: "14px" }}>
-                Extracted successfully
-              </p>
-            )}
-
-            {status === "error" && (
-              <p style={{ color: "#ff0000", fontSize: "14px" }}>
+            {status === "error" ? (
+              <p style={{ color: "#ff0000", fontSize: "14px", margin: 0 }}>
                 Extraction failed
               </p>
-            )}
+            ) : null}
           </div>
         </div>
       </div>

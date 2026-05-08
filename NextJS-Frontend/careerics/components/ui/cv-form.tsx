@@ -13,7 +13,7 @@ export type FormField = {
 interface DynamicCVFormProps {
   fields: FormField[];
   // Added these to connect to your main page state
-  values: Record<string, any>;
+  values: Record<string, string>;
   onChange: (id: string, value: string) => void;
 }
 

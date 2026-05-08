@@ -1,26 +1,23 @@
-from fileinput import filename
+from uuid import UUID
 
 from fastapi import HTTPException
 from fastapi.responses import StreamingResponse
-from sqlalchemy.orm import Session, joinedload
-from uuid import UUID
-import schemas
-
-from db.models import ReportTypeEnum, User, UserSkill, Report
-from utils.util import build_cv_pdf
-from services.reports.report_service import save_report
-from .cv_extractor_service import handle_cv_for_builder
 from sqlalchemy import func
+from sqlalchemy.orm import Session, joinedload
 
-def generate_user_cv_response(
-    db: Session,
-    user_id: UUID,
-):
+import schemas
+from db.models import Report, ReportTypeEnum, User, UserSkill
+from services.reports.report_service import save_report
+from utils.util import build_cv_pdf
 
+from .cv_extractor_service import handle_cv_for_builder
+
+
+def _load_user_with_cv_relations(db: Session, user_id: UUID) -> User:
     user = (
         db.query(User)
         .options(
-            joinedload(User.skills).joinedload(UserSkill.skill), 
+            joinedload(User.skills).joinedload(UserSkill.skill),
             joinedload(User.experiences),
             joinedload(User.education),
             joinedload(User.certifications),
@@ -36,23 +33,37 @@ def generate_user_cv_response(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
+    return user
+
+
+def get_user_cv_profile(db: Session, user_id: UUID) -> schemas.UserSchema:
+    user = _load_user_with_cv_relations(db, user_id)
+    return schemas.UserSchema.from_orm(user)
+
+
+def generate_user_cv_response(
+    db: Session,
+    user_id: UUID,
+):
+    user = _load_user_with_cv_relations(db, user_id)
     user_schema = schemas.UserSchema.from_orm(user)
 
     cv_skills = [
-        us for us in user.skills
-        if us.isCV and us.skill is not None
+        user_skill
+        for user_skill in user.skills
+        if user_skill.isCV and user_skill.skill is not None
     ]
 
     def serialize(items, schema):
-        return [schema.from_orm(i).model_dump() for i in items]
+        return [schema.from_orm(item).model_dump() for item in items]
 
     skills_data = [
         {
-            "id": us.skill.id,
-            "skill_name": us.skill.skill_name,
-            "proficiency": us.proficiency,
+            "id": user_skill.skill.id,
+            "skill_name": user_skill.skill.skill_name,
+            "proficiency": user_skill.proficiency,
         }
-        for us in cv_skills
+        for user_skill in cv_skills
     ]
 
     pdf_buffer = build_cv_pdf(
@@ -68,19 +79,17 @@ def generate_user_cv_response(
         enhance_ai=True,
     )
 
+    base_name = user.full_name or "careerics"
     safe_name = "".join(
-        c for c in user.full_name if c.isalnum() or c in ("_", "-")
-    ).replace(" ", "_")
+        character for character in base_name if character.isalnum() or character in ("_", "-", " ")
+    ).strip().replace(" ", "_") or "careerics"
 
-    # -------------------------
-    # Save the generated PDF using your service
-    # -------------------------
-    pdf_bytes = pdf_buffer.getvalue()  
+    pdf_bytes = pdf_buffer.getvalue()
     version = (
         db.query(func.count(Report.id))
         .filter(
             Report.user_id == str(user.id),
-            Report.type == ReportTypeEnum.CV
+            Report.type == ReportTypeEnum.CV,
         )
         .scalar()
     ) + 1
@@ -89,11 +98,10 @@ def generate_user_cv_response(
         db=db,
         user_id=str(user.id),
         file_bytes=pdf_bytes,
-        filename=f"{safe_name}_CV_V{str(version)}.pdf",
-        report_type=ReportTypeEnum.CV
+        filename=f"{safe_name}_CV_V{version}.pdf",
+        report_type=ReportTypeEnum.CV,
     )
 
-    # Reset buffer to start for streaming
     pdf_buffer.seek(0)
 
     return StreamingResponse(
@@ -105,10 +113,6 @@ def generate_user_cv_response(
     )
 
 
-
-
 async def build_user_cv(user_id: UUID, db: Session, cv_text: str):
-
     await handle_cv_for_builder(cv_text, user_id, db, type="extractor")
-
     return generate_user_cv_response(db=db, user_id=user_id)

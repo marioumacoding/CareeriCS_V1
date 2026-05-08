@@ -57,7 +57,6 @@ export default function SkillFilters({
       style={{
         width: "100%",
         height: "100%",
-        maxWidth: "520px",
         backgroundColor: "var(--medium-blue)",
         color: "white",
         display: "flex",
@@ -65,8 +64,8 @@ export default function SkillFilters({
         justifyContent: "center",
         alignItems: "flex-start",
 
-        padding: "clamp(0.75rem, 1.2vw, 1.25rem)",
-        gap: "clamp(0.75rem, 1vw, 1rem)",
+        padding: "1.5rem",
+        gap: "0.5rem",
 
         borderRadius: "clamp(1rem, 2vw, 2rem)",
         boxSizing: "border-box",
@@ -79,7 +78,7 @@ export default function SkillFilters({
         <h3
           style={{
             fontSize: "clamp(1rem, 0.9vw, 1.25rem)",
-            marginBottom: "0.5rem",
+            marginBottom: "0.2rem",
           }}
         >
           Track
@@ -99,7 +98,7 @@ export default function SkillFilters({
         <h3
           style={{
             fontSize: "clamp(1rem, 0.9vw, 1.25rem)",
-            marginBottom: "0.5rem",
+            marginBottom: "0.2rem",
           }}
         >
           Skill Type

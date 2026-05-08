@@ -1,4 +1,5 @@
 import React from "react";
+import CustomDropdown from "./dropdown-menu";
 
 export type SkillFilterType = "general" | "specific";
 
@@ -16,9 +17,10 @@ interface SkillFiltersProps {
   disabled?: boolean;
   disableSkillTypeToggle?: boolean;
   trackHelperText?: string;
+  style?: React.CSSProperties;
 }
 
-const  SkillFilters = ({
+export default function SkillFilters({
   tracks,
   selectedTrackId,
   onTrackChange,
@@ -26,72 +28,90 @@ const  SkillFilters = ({
   onSkillTypeChange,
   disabled = false,
   disableSkillTypeToggle = false,
-  trackHelperText,
-}: SkillFiltersProps) => {
+  style,
+}: SkillFiltersProps) {
+
   const isSkillTypeDisabled = disabled || disableSkillTypeToggle;
 
-  const getButtonStyle = (type: SkillFilterType) => ({
-    flex: 1,
-    padding: "1.2vh 0.5vw",
-    borderRadius: "4vh",
-    backgroundColor: skillType === type ? "var(--light-green)" : "#315891",
-    color: skillType === type ? "#1e293b" : "#fff",
-    fontSize: "0.9vw",
-    fontWeight: "bold" as const,
-    cursor: isSkillTypeDisabled ? "not-allowed" : "pointer",
-    transition: "all 0.3s ease",
-    opacity: isSkillTypeDisabled ? 0.6 : 1,
-  });
+  function getButtonStyle(type: SkillFilterType): React.CSSProperties {
+    const isActive = skillType === type;
+
+    return {
+      flex: 1,
+      padding: "0.65rem 0.75rem",
+      borderRadius: "999px",
+      backgroundColor: isActive ? "var(--light-green)" : "#C1CBE6",
+      color: "#000",
+      fontSize: "clamp(0.85rem, 0.6vw, 1rem)",
+      fontWeight: 600,
+      cursor: isSkillTypeDisabled ? "not-allowed" : "pointer",
+      transition: "all 0.25s ease",
+      opacity: isSkillTypeDisabled ? 0.7 : 1,
+      border: "none",
+      whiteSpace: "nowrap",
+    };
+  }
 
   return (
     <div
       style={{
+        width: "100%",
+        height: "100%",
+        maxWidth: "520px",
+        backgroundColor: "var(--medium-blue)",
+        color: "white",
         display: "flex",
         flexDirection: "column",
-        color: "white",
-        height: "100%",
         justifyContent: "center",
-        padding:"1rem",
-        gap: "0.5rem  ",
+        alignItems: "flex-start",
+
+        padding: "clamp(0.75rem, 1.2vw, 1.25rem)",
+        gap: "clamp(0.75rem, 1vw, 1rem)",
+
+        borderRadius: "clamp(1rem, 2vw, 2rem)",
+        boxSizing: "border-box",
+
+        ...style,
       }}
     >
-      <div>
-        <h3 style={{ fontSize: "1.2rem" }}>
-          Track
-        </h3>
-        <select
-          value={selectedTrackId}
-          onChange={(event) => onTrackChange(event.target.value)}
-          disabled={disabled}
+      {/* Track Selector */}
+      <div style={{ width: "100%" }}>
+        <h3
           style={{
-            width: "100%",
-            padding: "0.5rem",
-            borderRadius: "2vh",
-            backgroundColor: "#cbd5e1",
-            border: "none",
-            fontSize: "0.8rem",
-            outline: "none",
-            cursor: disabled ? "not-allowed" : "pointer",
-            color: "#000",
-            opacity: disabled ? 0.7 : 1,
-            fontFamily: "var(--font-nova-square)",
-            
+            fontSize: "clamp(1rem, 0.9vw, 1.25rem)",
+            marginBottom: "0.5rem",
           }}
         >
-          <option value="">Choose a track </option>
-          {tracks.map((track) => (
-            <option key={track.id} value={track.id}>
-              {track.title}
-            </option>
-          ))}
-        </select>
+          Track
+        </h3>
+
+        <CustomDropdown
+          background="#C1CBE6"
+          value={selectedTrackId}
+          options={tracks}
+          placeholder="Choose a track"
+          onChange={onTrackChange}
+        />
       </div>
 
-      <div>
-        <h3 style={{ fontSize: "1.2rem"}}>
+      {/* Skill Type Toggle */}
+      <div style={{ width: "100%" }}>
+        <h3
+          style={{
+            fontSize: "clamp(1rem, 0.9vw, 1.25rem)",
+            marginBottom: "0.5rem",
+          }}
+        >
           Skill Type
         </h3>
-        <div style={{ display: "flex", gap: "1vw" }}>
+
+        <div
+          style={{
+            display: "flex",
+            gap: "clamp(0.5rem, 0.8vw, 1rem)",
+            width: "100%",
+          }}
+        >
           <button
             onClick={() => onSkillTypeChange("general")}
             disabled={isSkillTypeDisabled}
@@ -108,10 +128,7 @@ const  SkillFilters = ({
             Specific Skill
           </button>
         </div>
-        
       </div>
     </div>
   );
-};
-
-export default SkillFilters;
+}

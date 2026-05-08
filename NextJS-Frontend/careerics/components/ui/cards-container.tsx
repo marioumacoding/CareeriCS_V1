@@ -11,6 +11,10 @@ type Props = {
   Columns?: number;
   variant?: Variant;
   centerTitle?: boolean;
+  searchBar?: boolean;
+
+  searchValue?: string;
+  onSearchChange?: (value: string) => void;
 };
 
 export const CardsContainer = ({
@@ -20,6 +24,9 @@ export const CardsContainer = ({
   Columns = 4,
   variant = "vertical",
   centerTitle = false,
+  searchBar = false,
+  searchValue = "",
+  onSearchChange,
 }: Props) => {
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -118,15 +125,51 @@ export const CardsContainer = ({
         }}
       >
         {/* Title */}
-        <h2
+        <div
           style={{
-            fontSize: "1.2rem",
-            fontFamily: "var(--font-nova-square)",
-            textAlign: centerTitle ? "center" : "left",
+            display: "flex",
+            justifyContent: centerTitle ? "center" : "space-between",
+            marginBottom:"0.5rem",
           }}
-        >
-          {Title}
-        </h2>
+          >
+          <h2
+            style={{
+              fontSize: "1.2rem",
+              textAlign: centerTitle ? "center" : "left",
+              fontFamily: "var(--font-nova-square)",
+            }}
+          >
+            {Title}
+          </h2>
+          {searchBar && (
+            <form
+              role="search"
+              onSubmit={(e) => e.preventDefault()}
+              style={{
+                width:"fit-content",
+                height: "100%",
+                paddingInline: "1rem",
+                border: "2px solid white",
+                display: "flex",
+                alignItems: "center",
+                borderRadius: "999px",
+              }}
+            >
+              <input
+                type="search"
+                placeholder="Search..."
+                value={searchValue}
+                onChange={(e) => onSearchChange?.(e.target.value)}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  outline: "none",
+                  color: "white",
+                }}
+              />
+            </form>
+          )}
+        </div>
 
         {/* Scroll Area */}
         <div
@@ -144,22 +187,22 @@ export const CardsContainer = ({
             style={
               variant === "vertical"
                 ? {
-                    display: "grid",
-                    gridTemplateColumns: `repeat(${Columns}, 1fr)`,
-                    gap: "1rem",
-                    overflowY: "auto",
-                    scrollbarWidth: "none",
-                    flex: 1,
-                    alignContent: "start",
-                  }
+                  display: "grid",
+                  gridTemplateColumns: `repeat(${Columns}, 1fr)`,
+                  gap: "1rem",
+                  overflowY: "auto",
+                  scrollbarWidth: "none",
+                  flex: 1,
+                  alignContent: "start",
+                }
                 : {
-                    display: "flex",
-                    gap: "1.5rem",
-                    overflowX: "auto",
-                    scrollbarWidth: "none",
-                    flex: 1,
-                    alignItems: "center",
-                  }
+                  display: "flex",
+                  gap: "1.5rem",
+                  overflowX: "auto",
+                  scrollbarWidth: "none",
+                  flex: 1,
+                  alignItems: "center",
+                }
             }
           >
             {isEmpty ? (
@@ -191,24 +234,24 @@ export const CardsContainer = ({
             style={
               variant === "vertical"
                 ? {
-                    display: "flex",
-                    justifyContent: "flex-end",
-                    gap: "1rem",
-                    marginTop: "auto",
-                    userSelect: "none",
-                    marginRight: "0.5rem",
-                  }
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  gap: "1rem",
+                  marginTop: "auto",
+                  userSelect: "none",
+                  marginRight: "0.5rem",
+                }
                 : {
-                    display: "flex",
-                    flexDirection: "column",
-                    paddingLeft: "0.5rem",
-                    userSelect: "none",
-                    width: "fit-content",
-                    marginLeft: "auto",
-                    height: "100%",
-                    justifyContent: "center",
-                    gap: "0.5rem",
-                  }
+                  display: "flex",
+                  flexDirection: "column",
+                  paddingLeft: "0.5rem",
+                  userSelect: "none",
+                  width: "fit-content",
+                  marginLeft: "auto",
+                  height: "100%",
+                  justifyContent: "center",
+                  gap: "0.5rem",
+                }
             }
           >
             <Arrow

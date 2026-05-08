@@ -354,6 +354,7 @@ export default function RoadmapPage() {
         }}
       >
         <CustomDropdown
+        maxwidth="22vw"
           value={selectedRoadmapId}
           options={options}
           placeholder="Find a new path"

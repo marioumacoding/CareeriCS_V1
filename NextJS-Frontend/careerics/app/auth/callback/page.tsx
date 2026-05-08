@@ -2,11 +2,15 @@
 import { useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import {
+  consumePendingPostAuthPath,
+  DEFAULT_POST_AUTH_PATH,
+  getSafePostAuthPath,
+} from "@/lib/auth/post-auth-redirect";
 import { setClientToken } from "@/lib/auth/token";
 import { dotnetApi } from "@/lib/api";
 
 const TOKEN_COOKIE = "careerics_token";
-const TARGET_PATH = "/features/home";
 const COOKIE_MAX_AGE_SECONDS = 3600;
 
 function syncTokenCookie(token: string | null) {
@@ -51,6 +55,12 @@ export default function AuthCallback() {
   useEffect(() => {
     let redirected = false;
     let profileSynced = false;
+    const pendingTargetPath = consumePendingPostAuthPath();
+    const targetPath =
+      getSafePostAuthPath(searchParams.get("callbackUrl")) ??
+      getSafePostAuthPath(searchParams.get("redirect")) ??
+      pendingTargetPath ??
+      DEFAULT_POST_AUTH_PATH;
 
     const oauthErrorCode = searchParams.get("error") || "";
     const oauthErrorDescription = searchParams.get("error_description") || "";
@@ -58,6 +68,9 @@ export default function AuthCallback() {
     if (oauthError) {
       const loginUrl = new URLSearchParams();
       loginUrl.set("error", oauthError);
+      if (targetPath !== DEFAULT_POST_AUTH_PATH) {
+        loginUrl.set("callbackUrl", targetPath);
+      }
       router.replace(`/auth/login?${loginUrl.toString()}`);
       return;
     }
@@ -65,7 +78,7 @@ export default function AuthCallback() {
     const redirectIfNeeded = () => {
       if (redirected) return;
       redirected = true;
-      window.location.replace(TARGET_PATH);
+      window.location.replace(targetPath);
     };
 
     const syncProfileAndRedirect = (accessToken: string | null | undefined) => {
@@ -106,6 +119,9 @@ export default function AuthCallback() {
         const loginUrl = new URLSearchParams({
           error: "Google sign-in timed out",
         });
+        if (targetPath !== DEFAULT_POST_AUTH_PATH) {
+          loginUrl.set("callbackUrl", targetPath);
+        }
         router.replace(`/auth/login?${loginUrl.toString()}`);
       }
     }, 10000);

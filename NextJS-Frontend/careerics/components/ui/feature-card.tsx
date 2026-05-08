@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/providers";
 
 type CardType = "horizontal" | "square" | "vertical";
 
@@ -49,6 +50,19 @@ const layouts = {
   },
 };
 
+/**
+ * Extract the redirect target from a login URL.
+ * e.g. "/auth/login?redirect=/features/career" → "/features/career"
+ */
+function extractRedirectTarget(url: string): string | null {
+  try {
+    const parsed = new URL(url, "http://localhost");
+    return parsed.searchParams.get("redirect") || parsed.searchParams.get("callbackUrl");
+  } catch {
+    return null;
+  }
+}
+
 export default function FeatureCard({
   type = "horizontal",
   title = "",
@@ -58,13 +72,28 @@ export default function FeatureCard({
 }: CardProps) {
   const [hover, setHover] = useState(false);
   const router = useRouter();
+  const { isAuthenticated, isLoading } = useAuth();
   const layout = layouts[type];
+
+  const handleCardClick = () => {
+    // If user is authenticated and the link is a login URL with a redirect param,
+    // navigate directly to the redirect target instead of going to login.
+    if (isAuthenticated && !isLoading && link?.includes("/auth/login")) {
+      const redirectTarget = extractRedirectTarget(link);
+      if (redirectTarget) {
+        router.push(redirectTarget);
+        return;
+      }
+    }
+    // Otherwise, use the link as-is
+    router.push(link);
+  };
 
   return (
     <div
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
-      onClick={() => router.push(link)}
+      onClick={handleCardClick}
       style={{
         width: "100%",
         aspectRatio: layout.aspectRatio,

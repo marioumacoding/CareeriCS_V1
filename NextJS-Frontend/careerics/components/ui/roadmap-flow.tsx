@@ -19,6 +19,7 @@ type StepFlowProps = {
   isNavigatable?: boolean;
   onSelect?: (index: number) => void;
   selectedIndex?: number;
+  lockedStepIndexes?: number[];
   variant?: "light" | "dark";
   routeOnClick?: boolean;
   roadmapId?: string;
@@ -33,6 +34,7 @@ export const StepFlow: React.FC<StepFlowProps> = ({
   onSelect,
   isNavigatable = true,
   selectedIndex,
+  lockedStepIndexes = [],
   routeOnClick = true,
   roadmapId,
   variant = "light",
@@ -40,6 +42,7 @@ export const StepFlow: React.FC<StepFlowProps> = ({
   const DEFAULT_BORDER_COLOR = variant === "light" ? "#C1CBE6" : "var(--medium-blue)";
   const router = useRouter();
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const lockedStepIndexSet = new Set(lockedStepIndexes);
 
   let horizontalCount = 0;
   let verticalCount = 0;
@@ -109,6 +112,7 @@ export const StepFlow: React.FC<StepFlowProps> = ({
 
         const isHovered = hoveredIndex === node.globalIndex;
         const isSelected = selectedIndex === node.globalIndex;
+        const isLocked = lockedStepIndexSet.has(node.globalIndex);
 
         return (
           <div
@@ -125,9 +129,17 @@ export const StepFlow: React.FC<StepFlowProps> = ({
           >
             {/* NODE */}
             <div
-              onMouseEnter={() => setHoveredIndex(node.globalIndex)}
+              onMouseEnter={() => {
+                if (!isLocked) {
+                  setHoveredIndex(node.globalIndex);
+                }
+              }}
               onMouseLeave={() => setHoveredIndex(null)}
               onClick={() => {
+                if (isLocked) {
+                  return;
+                }
+
                 onSelect?.(node.globalIndex);
 
                 if (isNavigatable && routeOnClick && node.label) {
@@ -153,7 +165,9 @@ export const StepFlow: React.FC<StepFlowProps> = ({
               style={{
                 width: "100%",
                 height: NODE_HEIGHT,
-                border: `2px solid ${isHovered || isSelected
+                border: `2px solid ${isLocked
+                  ? "rgba(148, 163, 184, 0.35)"
+                  : isHovered || isSelected
                   ? "var(--light-green)"
                   : DEFAULT_BORDER_COLOR
                   }`,
@@ -163,22 +177,41 @@ export const StepFlow: React.FC<StepFlowProps> = ({
                 justifyContent: "center",
                 textAlign: "center",
                 background:
-                  isHovered || isSelected
+                  isLocked
+                    ? "rgba(15, 23, 42, 0.65)"
+                    : isHovered || isSelected
                     ? "var(--light-green)"
                     : variant === "light" ?
                       "#C1CBE6" :
                       "var(--medium-blue)",
                 fontSize: "0.8rem",
                 zIndex: 2,
-                cursor: isNavigatable ? "pointer" : "default",
+                cursor: isLocked ? "not-allowed" : isNavigatable ? "pointer" : "default",
                 paddingBlock: "1rem",
                 paddingInline: "0.5rem",
-                color: isHovered || isSelected || variant === "light"
+                color: isLocked
+                  ? "#CBD5E1"
+                  : isHovered || isSelected || variant === "light"
                     ? "black"
                     : "white",
+                opacity: isLocked ? 0.8 : 1,
               }}
             >
-              {node.label}
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: "0.15rem",
+                }}
+              >
+                <span>{node.label}</span>
+                {isLocked ? (
+                  <span style={{ fontSize: "0.55rem", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+                    Locked
+                  </span>
+                ) : null}
+              </div>
             </div>
 
             {/* HORIZONTAL CONNECTOR (occurrence-based flip) */}

@@ -4,6 +4,10 @@ import { useRouter } from "next/navigation";
 import ChoiceCard from "@/components/ui/choice-card-career";
 import { useAuth } from "@/providers/auth-provider";
 import { careerService } from "@/services";
+import {
+  buildCareerQuizSelectionHref,
+  startCareerQuizSession,
+} from "@/lib/career-quiz";
 import type { APICareerTrack } from "@/types";
 import { CareerCardsContainer } from "@/components/ui/career-cards-container";
 import TipCard from "@/components/ui/3ateyat";
@@ -86,22 +90,24 @@ export default function CareerDiscoveryPage() {
 
     if (!user?.id) {
       setStartError("Please sign in first to start the career quiz.");
-      router.push("/auth/login?callbackUrl=/features/career");
+      router.push("/auth/login?redirect=/features/career");
       return;
     }
 
     setStartError(null);
     setIsStartingQuiz(true);
 
-    const response = await careerService.createSession({ user_id: user.id });
-
-    if (!response.success || !response.data?.id) {
+    try {
+      const sessionId = await startCareerQuizSession(user.id);
+      router.push(buildCareerQuizSelectionHref(sessionId));
+    } catch (error) {
       setIsStartingQuiz(false);
-      setStartError(response.message || "Unable to start the quiz right now. Please try again.");
-      return;
+      setStartError(
+        error instanceof Error
+          ? error.message
+          : "Unable to start the quiz right now. Please try again.",
+      );
     }
-
-    router.push(`/quiz-features/hobbies?sessionId=${encodeURIComponent(response.data.id)}`);
   };
 
   return (
@@ -143,6 +149,21 @@ export default function CareerDiscoveryPage() {
           }        >
 
         </TipCard>
+
+        {startError ? (
+          <p
+            style={{
+              gridArea: "2 / 1 / 3 / 7",
+              margin: 0,
+              color: "#FFD3D3",
+              fontFamily: "var(--font-jura)",
+              fontSize: "0.95rem",
+              alignSelf: "end",
+            }}
+          >
+            {startError}
+          </p>
+        ) : null}
 
         {/* Career Paths */}
         <CareerCardsContainer

@@ -28,6 +28,8 @@ type Section = {
   href: string;
   resources: SectionResource[];
   skills: Skill[];
+  locked: boolean;
+  lockReason: string | null;
 };
 
 type CachedApiRequest<T> = {
@@ -71,6 +73,7 @@ export default function RoadmapFeaturePage() {
   const [progress, setProgress] = useState<RoadmapProgressSummary | null>(null);
   const [localStepCompletion, setLocalStepCompletion] = useState<Record<string, boolean>>({});
   const [selectedSectionPreferenceId, setSelectedSectionPreferenceId] = useState("");
+  const [sectionAccessMessage, setSectionAccessMessage] = useState<string | null>(null);
 
   const inFlightStepIdsRef = useRef<Set<string>>(new Set());
   const roadmapByIdCacheRef = useRef<Map<string, CachedApiRequest<RoadmapRead>>>(new Map());
@@ -154,6 +157,7 @@ export default function RoadmapFeaturePage() {
       }
 
       setRoadmap(response.data);
+      setSectionAccessMessage(null);
     };
 
     void loadRoadmap();
@@ -202,6 +206,14 @@ export default function RoadmapFeaturePage() {
     [roadmap],
   );
 
+  const progressSectionsById = useMemo(() => {
+    const map = new Map<string, RoadmapProgressSummary["sections"][number]>();
+    for (const section of progress?.sections || []) {
+      map.set(section.section_id, section);
+    }
+    return map;
+  }, [progress?.sections]);
+
   const progressByStepId = useMemo(() => {
     const map = new Map<string, boolean>();
     for (const section of progress?.sections || []) {
@@ -213,7 +225,7 @@ export default function RoadmapFeaturePage() {
   }, [progress]);
 
   const sections = useMemo<Section[]>(() => {
-    return orderedSections.map((section) => {
+    return orderedSections.map((section, index) => {
       const rawResources = section.steps
         .slice()
         .sort((a, b) => a.order - b.order)
@@ -258,41 +270,74 @@ export default function RoadmapFeaturePage() {
           };
         });
 
+      const previousIncompleteSection = orderedSections
+        .slice(0, index)
+        .find((previousSection) => {
+          const previousProgress = progressSectionsById.get(previousSection.id);
+          return previousProgress?.completion_status !== "completed";
+        });
+
+      const hasExistingProgress = (progressSectionsById.get(section.id)?.steps || []).some((step) => {
+        return step.completion_status !== "not_started";
+      });
+
+      const locked = Boolean(previousIncompleteSection) && !hasExistingProgress;
+      const lockReason = locked && previousIncompleteSection
+        ? `Complete "${previousIncompleteSection.title}" before opening "${section.title}".`
+        : null;
+
       return {
         id: section.id,
         title: section.title,
         href: section.id,
         resources,
         skills,
+        locked,
+        lockReason,
       };
     });
-  }, [localStepCompletion, orderedSections, progressByStepId]);
+  }, [localStepCompletion, orderedSections, progressByStepId, progressSectionsById]);
+
+  const firstUnlockedSectionId = useMemo(() => {
+    return sections.find((section) => !section.locked)?.id || sections[0]?.id || "";
+  }, [sections]);
+
+  const requestedSection = useMemo(() => {
+    if (!sections.length) {
+      return null;
+    }
+
+    if (selectedSectionPreferenceId) {
+      return sections.find((section) => section.id === selectedSectionPreferenceId) || null;
+    }
+
+    const normalizedStepParam = stepParam.trim().toLowerCase();
+    if (normalizedStepParam) {
+      return sections.find(
+        (section) =>
+          section.id.toLowerCase() === normalizedStepParam ||
+          toSlug(section.title) === normalizedStepParam,
+      ) || null;
+    }
+
+    return sections[0];
+  }, [sections, selectedSectionPreferenceId, stepParam]);
 
   const selectedSectionId = useMemo(() => {
     if (!sections.length) {
       return "";
     }
 
-    const preferredSectionExists = sections.some((section) => section.id === selectedSectionPreferenceId);
-    if (preferredSectionExists) {
-      return selectedSectionPreferenceId;
+    if (!requestedSection) {
+      return firstUnlockedSectionId;
     }
 
-    const normalizedStepParam = stepParam.trim().toLowerCase();
-    if (normalizedStepParam) {
-      const matchedByParam = sections.find(
-        (section) =>
-          section.id.toLowerCase() === normalizedStepParam ||
-          toSlug(section.title) === normalizedStepParam,
-      );
-
-      if (matchedByParam) {
-        return matchedByParam.id;
-      }
+    if (requestedSection.locked) {
+      return firstUnlockedSectionId;
     }
 
-    return sections[0].id;
-  }, [sections, selectedSectionPreferenceId, stepParam]);
+    return requestedSection.id;
+  }, [firstUnlockedSectionId, requestedSection, sections]);
 
   const selectedIndex = useMemo(() => {
     return Math.max(
@@ -302,15 +347,28 @@ export default function RoadmapFeaturePage() {
   }, [sections, selectedSectionId]);
 
   const selectedSection = sections[selectedIndex] || sections[0] || null;
+  const lockedSectionMessage =
+    requestedSection?.locked && requestedSection.id !== selectedSectionId
+      ? requestedSection.lockReason || "Complete the previous section first to unlock this one."
+      : null;
+  const activeSectionAccessMessage = sectionAccessMessage || lockedSectionMessage;
 
   const handleSectionSelect = useCallback(
     (index: number) => {
-      const nextSectionId = sections[index]?.id;
-      if (!nextSectionId) {
+      const nextSection = sections[index];
+      if (!nextSection) {
         return;
       }
 
-      setSelectedSectionPreferenceId(nextSectionId);
+      if (nextSection.locked) {
+        setSectionAccessMessage(
+          nextSection.lockReason || "Complete the previous section first to unlock this one.",
+        );
+        return;
+      }
+
+      setSectionAccessMessage(null);
+      setSelectedSectionPreferenceId(nextSection.id);
     },
     [sections],
   );
@@ -337,6 +395,13 @@ export default function RoadmapFeaturePage() {
       return;
     }
 
+    if (selectedSection.locked) {
+      setSectionAccessMessage(
+        selectedSection.lockReason || "Complete the previous section first to unlock this one.",
+      );
+      return;
+    }
+
     const step = selectedSection.skills[skillIndex];
     if (!step) {
       return;
@@ -349,6 +414,7 @@ export default function RoadmapFeaturePage() {
     const previousChecked = step.checked;
     const nextChecked = !previousChecked;
 
+    setSectionAccessMessage(null);
     setLocalStepCompletion((previous) => ({
       ...previous,
       [step.id]: nextChecked,
@@ -371,6 +437,7 @@ export default function RoadmapFeaturePage() {
         ...previous,
         [step.id]: previousChecked,
       }));
+      setSectionAccessMessage(response.message || "Unable to update progress right now.");
       return;
     }
 
@@ -391,12 +458,22 @@ export default function RoadmapFeaturePage() {
     [sections],
   );
 
+  const lockedStepIndexes = useMemo(() => {
+    return sections.reduce<number[]>((indexes, section, index) => {
+      if (section.locked) {
+        indexes.push(index);
+      }
+      return indexes;
+    }, []);
+  }, [sections]);
+
   const completedSections = progress?.completed_sections || 0;
   const totalSections = progress?.total_sections || sections.length;
   const completedSteps = progress?.completed_steps || 0;
   const totalSteps = progress?.total_steps || sections.reduce((sum, section) => sum + section.skills.length, 0);
   const currentSectionCompletedSteps = selectedSection?.skills.filter((skill) => skill.checked).length || 0;
   const currentSectionTotalSteps = selectedSection?.skills.length || 0;
+  const roadmapHeading = roadmap?.title ? `${roadmap.title} Roadmap` : "Loading roadmap...";
 
   return (
     <div
@@ -409,16 +486,23 @@ export default function RoadmapFeaturePage() {
         overflow: "clip",
       }}
     >
-      {/* Title */}
-      <h1
-        style={{
-          fontSize: "2rem",
-          color: "white",
-          marginBottom: "1rem",
-        }}
-      >
-        {(roadmap?.title || "Roadmap")} Roadmap
-      </h1>
+      <div style={{ display: "flex", flexDirection: "column", gap: "0.45rem", marginBottom: "1rem" }}>
+        <h1
+          style={{
+            fontSize: "2rem",
+            color: "white",
+            margin: 0,
+          }}
+        >
+          {roadmapHeading}
+        </h1>
+
+        {activeSectionAccessMessage ? (
+          <p style={{ margin: 0, color: "#FFD3D3", fontSize: "0.95rem" }}>
+            {activeSectionAccessMessage}
+          </p>
+        ) : null}
+      </div>
 
       <div
         style={{
@@ -429,7 +513,6 @@ export default function RoadmapFeaturePage() {
           flex: 1,
         }}
       >
-        {/* Left Panel */}
         <div style={{ display: "flex", flexDirection: "column", width: "70%" }}>
           <div style={{ display: "flex", gap: "2rem", marginBottom: "2rem" }}>
             <RoadmapProgress
@@ -461,13 +544,13 @@ export default function RoadmapFeaturePage() {
             <StepFlow
               steps={steps}
               selectedIndex={selectedIndex}
+              lockedStepIndexes={lockedStepIndexes}
               onSelect={handleSectionSelect}
               isNavigatable={false}
             />
           </div>
         </div>
 
-        {/* Right Panel */}
         <div
           style={{
             display: "flex",
@@ -523,7 +606,7 @@ export default function RoadmapFeaturePage() {
                   style={{
                     fontSize: "1.1rem",
                     color: "white",
-                    fontFamily: "var(--font-nova-square)"
+                    fontFamily: "var(--font-nova-square)",
                   }}
                 >
                   Resources:
@@ -550,18 +633,18 @@ export default function RoadmapFeaturePage() {
               </div>
             )}
 
-            {selectedSection?.skills?.length > 0 && (
+            {selectedSection?.skills?.length > 0 ? (
               <p
                 style={{
                   margin: "0 0 1rem 0",
                   fontSize: "1.1rem",
                   color: "white",
-                  fontFamily: "var(--font-nova-square)"
+                  fontFamily: "var(--font-nova-square)",
                 }}
               >
                 Topics to cover:
               </p>
-            )}
+            ) : null}
 
             <div
               style={{
@@ -575,6 +658,7 @@ export default function RoadmapFeaturePage() {
                   key={skill.id}
                   text={skill.text}
                   isChecked={skill.checked}
+                  disabled={Boolean(selectedSection?.locked)}
                   onToggle={() => {
                     void toggleSkill(index);
                   }}

@@ -16,6 +16,7 @@ import {
   DEFAULT_COMPLETED_COURSES,
   DEFAULT_CURRENT_COURSES,
   loadCourseProgress,
+  retakeCourse,
   type CourseProgressItem,
 } from "@/lib/course-progress";
 import RetakePopup from "@/components/ui/retake-popup";
@@ -148,41 +149,13 @@ export default function CoursesPage() {
 
 
   const handleRetake = (course: CourseProgressItem) => {
-  const progress = loadCourseProgress();
+    const progress = retakeCourse(course.id);
 
-  // Remove from completed
-  const updatedCompleted = progress.completed.filter(
-    (c) => c.id !== course.id
-  );
-
-  // Add back to current (avoid duplicates)
-  const alreadyExists = progress.current.some(
-    (c) => c.id === course.id
-  );
-
-  const updatedCurrent = alreadyExists
-    ? progress.current
-    : [course, ...progress.current];
-
-  // Save to localStorage (same pattern your system uses)
-  const updatedProgress = {
-    current: updatedCurrent,
-    completed: updatedCompleted,
+    setCurrentCourses(progress.current);
+    setCompletedCourses(progress.completed);
+    setSelectedCourseId(course.id);
+    setRetakeCourse(null);
   };
-
-  localStorage.setItem("course-progress", JSON.stringify(updatedProgress));
-
-  // Sync UI
-  setCurrentCourses(updatedCurrent);
-  setCompletedCourses(updatedCompleted);
-  setSelectedCourseId(course.id);
-
-  // Close popup
-  setRetakeCourse(null);
-
-  // Trigger global sync event (important)
-  window.dispatchEvent(new Event(COURSE_PROGRESS_UPDATED_EVENT));
-};
 
   return (
     <div

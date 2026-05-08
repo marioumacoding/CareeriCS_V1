@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { interviewService } from "@/services/interview.service";
 import { normalizeInterviewAudioUrl } from "@/lib/interview-media";
 
-const INTERVIEW_TEST_QUESTION_LIMIT = 3;
+const INTERVIEW_TEST_QUESTION_LIMIT = 2;
 
 export type InterviewType = "hr";
 

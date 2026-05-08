@@ -103,6 +103,38 @@ export default function LastAnalysisPage() {
   }, [sessionId, reportUrl]);
 
   useEffect(() => {
+    let alive = true;
+
+    const markSessionCompleted = async () => {
+      if (!sessionId) {
+        return;
+      }
+
+      const response = await interviewService.updateSession(sessionId, {
+        status: "completed",
+      });
+
+      if (!alive || response.success) {
+        return;
+      }
+
+      setReportError((previous) => {
+        if (previous) {
+          return previous;
+        }
+
+        return response.message || "Interview completed, but the activity feed could not be updated.";
+      });
+    };
+
+    void markSessionCompleted();
+
+    return () => {
+      alive = false;
+    };
+  }, [sessionId]);
+
+  useEffect(() => {
     return () => {
       if (downloadUrl) {
         URL.revokeObjectURL(downloadUrl);

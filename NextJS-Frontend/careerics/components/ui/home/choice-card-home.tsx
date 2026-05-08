@@ -3,7 +3,6 @@
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import React, { CSSProperties, ReactNode } from "react";
-import Image from "next/image";
 
 interface ChoiceCardProps {
   icon?: string;
@@ -21,6 +20,7 @@ interface ChoiceCardProps {
   isSelected?: boolean;
   blogPath?: string;
   type?: string;
+  onAction?: () => void;
 }
 
 export default function ChoiceCard({
@@ -35,6 +35,7 @@ export default function ChoiceCard({
   isSelected,
   blogPath,
   type,
+  onAction,
 }: ChoiceCardProps) {
   const router = useRouter();
 
@@ -141,7 +142,18 @@ export default function ChoiceCard({
       <Button
         type="button"
         variant={isSelected ? "primary-inverted" : "popup-inverted"}
-        onClick={() => { router.push(blogPath || "/"); }}
+        onClick={() => {
+          if (disabled) {
+            return;
+          }
+
+          if (onAction) {
+            onAction();
+            return;
+          }
+
+          router.push(blogPath || "/");
+        }}
         disabled={disabled}
         style={{
           flexGrow: 0,

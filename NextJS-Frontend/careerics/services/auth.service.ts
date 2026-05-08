@@ -11,6 +11,11 @@
 
 import { supabase } from "@/lib/supabase";
 import { dotnetApi } from "@/lib/api";
+import {
+  DEFAULT_POST_AUTH_PATH,
+  getSafePostAuthPath,
+  rememberPendingPostAuthPath,
+} from "@/lib/auth/post-auth-redirect";
 import type { ApiResponse, User } from "@/types";
 
 // ── Payload types ───────────────────────────────────────────────
@@ -53,14 +58,6 @@ function buildSafeUsername(email: string): string {
   return `${base}_${suffix}`;
 }
 
-const DEFAULT_POST_AUTH_PATH = "/features/home";
-
-function getSafeInternalCallbackPath(callbackUrl?: string): string | null {
-  if (!callbackUrl) return null;
-  if (!callbackUrl.startsWith("/")) return null;
-  if (callbackUrl.startsWith("/auth/")) return null;
-  return callbackUrl;
-}
 
 // ── Service ─────────────────────────────────────────────────────
 export const authService: AuthService = {
@@ -153,7 +150,9 @@ export const authService: AuthService = {
    */
   async signInWithGoogle(callbackUrl?: string) {
     const callbackPath =
-      getSafeInternalCallbackPath(callbackUrl) ?? DEFAULT_POST_AUTH_PATH;
+      getSafePostAuthPath(callbackUrl) ?? DEFAULT_POST_AUTH_PATH;
+    rememberPendingPostAuthPath(callbackPath);
+
     const redirectUrl = new URL(`${window.location.origin}/auth/callback`);
     if (callbackPath !== DEFAULT_POST_AUTH_PATH) {
       redirectUrl.searchParams.set("callbackUrl", callbackPath);

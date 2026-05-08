@@ -58,17 +58,11 @@ class SessionCreate(SessionBase):
 
 class SessionUpdate(BaseModel):
     status: Optional[str] = None
-    emotion_evaluation: Optional[Dict] = None
-    tone_evaluation: Optional[Dict] = None
-    sentiment_evaluation: Optional[Dict] = None
 
 
 class SessionRead(SessionBase):
     id: UUID
     user_id: UUID
-    created_at: Optional[datetime] = None
-    emotion_evaluation: Optional[Dict] = None
-    tone_evaluation: Optional[Dict] = None
     sentiment_evaluation: Optional[Dict] = None
     model_config = ConfigDict(from_attributes=True)
 
@@ -726,6 +720,7 @@ class CareerTrackScoreRead(BaseModel):
     track_id: UUID
     track_name: str
     track_description: Optional[str] = None
+    roadmap_id: Optional[UUID] = None
     score: int = Field(ge=0, le=100)
 
 class CareerEvaluationRead(BaseModel):

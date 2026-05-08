@@ -1,4 +1,10 @@
-import type { UnifiedBookmarkDraft, UnifiedBookmarkEntry, UnifiedBookmarkKind } from "@/types";
+import { buildCareerTrackDetailsHref } from "@/lib/career-quiz";
+import type {
+  UnifiedBookmarkDraft,
+  UnifiedBookmarkEntry,
+  UnifiedBookmarkKind,
+  UnifiedBookmarkMetadata,
+} from "@/types";
 
 export const MAX_UNIFIED_BOOKMARKS = 3;
 export const UNIFIED_BOOKMARKS_UPDATED_EVENT = "unified-bookmarks-updated";
@@ -28,6 +34,32 @@ function normalizeTimestamp(value?: string): string {
   return new Date(parsed).toISOString();
 }
 
+function normalizeBookmarkMetadata(value: unknown): UnifiedBookmarkMetadata | null {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  const maybe = value as Partial<UnifiedBookmarkMetadata>;
+  const roadmapId = typeof maybe.roadmap_id === "string" ? maybe.roadmap_id : null;
+  const sessionId = typeof maybe.session_id === "string" ? maybe.session_id : null;
+  const trackId = typeof maybe.track_id === "string" ? maybe.track_id : null;
+  const trackName = typeof maybe.track_name === "string" ? maybe.track_name : null;
+  const source =
+    maybe.source === "roadmap" || maybe.source === "career_quiz" ? maybe.source : null;
+
+  if (!roadmapId && !sessionId && !trackId && !trackName && !source) {
+    return null;
+  }
+
+  return {
+    roadmap_id: roadmapId,
+    session_id: sessionId,
+    track_id: trackId,
+    track_name: trackName,
+    source,
+  };
+}
+
 function normalizeBookmarkEntry(raw: unknown): UnifiedBookmarkEntry | null {
   if (!raw || typeof raw !== "object") {
     return null;
@@ -47,6 +79,11 @@ function normalizeBookmarkEntry(raw: unknown): UnifiedBookmarkEntry | null {
     typeof maybe.description === "string" || maybe.description === null
       ? maybe.description
       : null;
+  const targetHref =
+    typeof maybe.target_href === "string" || maybe.target_href === null
+      ? maybe.target_href
+      : null;
+  const metadata = normalizeBookmarkMetadata(maybe.metadata);
 
   return {
     kind: maybe.kind,
@@ -54,6 +91,8 @@ function normalizeBookmarkEntry(raw: unknown): UnifiedBookmarkEntry | null {
     title: maybe.title,
     description,
     score,
+    target_href: targetHref,
+    metadata,
     saved_at: normalizeTimestamp(maybe.saved_at),
   };
 }
@@ -146,6 +185,12 @@ function parseLegacyCareerBookmarks(raw: string | null): UnifiedBookmarkEntry[] 
             ? maybe.track_description
             : null,
         score: typeof maybe.score === "number" ? maybe.score : null,
+        target_href: buildCareerTrackDetailsHref(maybe.track_name, maybe.track_id),
+        metadata: {
+          track_id: maybe.track_id,
+          track_name: maybe.track_name,
+          source: "career_quiz",
+        },
         saved_at: normalizeTimestamp(typeof maybe.saved_at === "string" ? maybe.saved_at : undefined),
       });
     }
@@ -228,6 +273,11 @@ export function createUnifiedBookmarkEntry(draft: UnifiedBookmarkDraft): Unified
     title: draft.title,
     description: draft.description ?? null,
     score: typeof draft.score === "number" ? draft.score : null,
+    target_href:
+      typeof draft.target_href === "string" || draft.target_href === null
+        ? draft.target_href
+        : null,
+    metadata: normalizeBookmarkMetadata(draft.metadata),
     saved_at: normalizeTimestamp(draft.saved_at),
   };
 }

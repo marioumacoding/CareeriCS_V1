@@ -7,7 +7,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from db.models import JobPost, JobPostSkill, Skill, JobUserInteraction, User, UserSkill
+from db.models import JobApplication, JobPost, JobPostSkill, Skill, JobUserInteraction, User, UserSkill
 from services.job_ingestion_helpers import clean_text, normalize_and_attach_skills, normalize_skill_name
 
 logger = logging.getLogger(__name__)
@@ -54,6 +54,7 @@ def _serialize_job_post(
     skills: List[str],
     *,
     interaction: Optional[JobUserInteraction] = None,
+    application: Optional[JobApplication] = None,
     match_percentage: Optional[float] = None,
 ) -> Dict[str, Any]:
     return {
@@ -80,8 +81,8 @@ def _serialize_job_post(
         "viewed_at": interaction.viewed_at if interaction else None,
         "view_count": interaction.view_count if interaction else 0,
         "last_interaction_at": interaction.last_interaction_at if interaction else None,
-        "application_status": "saved" if interaction and interaction.is_saved else None,
-        "applied_at": interaction.saved_at if interaction and interaction.is_saved else None,
+        "application_status": application.status if application else None,
+        "applied_at": application.applied_at if application else None,
     }
 
 
@@ -127,6 +128,33 @@ def _load_latest_interactions_map(
     return interactions_map
 
 
+def _load_latest_applications_map(
+    db: Session,
+    user_id: UUID,
+    job_ids: List[UUID],
+) -> Dict[UUID, JobApplication]:
+    if not job_ids:
+        return {}
+
+    rows = db.execute(
+        select(JobApplication)
+        .where(
+            JobApplication.user_id == user_id,
+            JobApplication.job_post_id.in_(job_ids),
+        )
+        .order_by(
+            JobApplication.updated_at.desc(),
+            JobApplication.applied_at.desc().nullslast(),
+        )
+    ).scalars().all()
+
+    applications_map: Dict[UUID, JobApplication] = {}
+    for application in rows:
+        applications_map.setdefault(application.job_post_id, application)
+
+    return applications_map
+
+
 def enrich_job_posts(
     db: Session,
     job_posts: List[JobPost],
@@ -140,9 +168,11 @@ def enrich_job_posts(
 
     user_skills: set[str] = set()
     interactions_map: Dict[UUID, JobUserInteraction] = {}
+    applications_map: Dict[UUID, JobApplication] = {}
     if user_id:
         user_skills = set(get_user_skills(db, user_id))
         interactions_map = _load_latest_interactions_map(db, user_id, job_ids)
+        applications_map = _load_latest_applications_map(db, user_id, job_ids)
 
     enriched_jobs: List[Dict[str, Any]] = []
     for job_post in job_posts:
@@ -156,6 +186,7 @@ def enrich_job_posts(
                 job_post,
                 job_skills,
                 interaction=interactions_map.get(job_post.id),
+                application=applications_map.get(job_post.id),
                 match_percentage=match_percentage,
             )
         )
@@ -551,6 +582,26 @@ def set_job_saved_state(db: Session, user_id: UUID, job_post_id: UUID, is_saved:
         .first()
     )
 
+    # Enforce max 3 unified bookmarks limit (roadmap + job bookmarks combined)
+    if is_saved and (not interaction or not interaction.is_saved):
+        # Only check limit when transitioning from unsaved to saved
+        from db.models import UserRoadmapBookmark
+        roadmap_bookmark_count = (
+            db.query(UserRoadmapBookmark)
+            .filter(UserRoadmapBookmark.user_id == user_id)
+            .count()
+        )
+        job_bookmark_count = (
+            db.query(JobUserInteraction)
+            .filter(
+                JobUserInteraction.user_id == user_id,
+                JobUserInteraction.is_saved == True,
+            )
+            .count()
+        )
+        if roadmap_bookmark_count + job_bookmark_count >= 3:
+            raise ValueError("Maximum 3 bookmarks allowed across all types")
+
     try:
         if interaction:
             interaction.is_saved = is_saved
@@ -590,18 +641,63 @@ def upsert_job_application(
         raise ValueError(f"Invalid application status: {status}")
 
     now = datetime.now(UTC)
-    interaction = set_job_saved_state(db, user_id, job_post_id, is_saved=True)
-    interaction.last_interaction_at = now
-    interaction.updated_at = now
+    application = (
+        db.query(JobApplication)
+        .filter(
+            JobApplication.user_id == user_id,
+            JobApplication.job_post_id == job_post_id,
+        )
+        .order_by(
+            JobApplication.updated_at.desc(),
+            JobApplication.applied_at.desc().nullslast(),
+        )
+        .first()
+    )
+
+    interaction = (
+        db.query(JobUserInteraction)
+        .filter(
+            JobUserInteraction.user_id == user_id,
+            JobUserInteraction.job_post_id == job_post_id,
+        )
+        .order_by(JobUserInteraction.updated_at.desc(), JobUserInteraction.created_at.desc())
+        .first()
+    )
+
+    if interaction:
+        interaction.last_interaction_at = now
+        interaction.updated_at = now
+    else:
+        interaction = JobUserInteraction(
+            user_id=user_id,
+            job_post_id=job_post_id,
+            last_interaction_at=now,
+            updated_at=now,
+        )
+        db.add(interaction)
+
+    if application:
+        application.status = normalized_status
+        if normalized_status != "saved" and application.applied_at is None:
+            application.applied_at = now
+    else:
+        application = JobApplication(
+            user_id=user_id,
+            job_post_id=job_post_id,
+            status=normalized_status,
+            applied_at=None if normalized_status == "saved" else now,
+        )
+        db.add(application)
+
     db.commit()
-    db.refresh(interaction)
+    db.refresh(application)
     return {
-        "id": interaction.id,
-        "job_post_id": interaction.job_post_id,
-        "user_id": interaction.user_id,
+        "id": application.id,
+        "job_post_id": application.job_post_id,
+        "user_id": application.user_id,
         "status": normalized_status,
-        "applied_at": now,
-        "updated_at": interaction.updated_at,
+        "applied_at": application.applied_at,
+        "updated_at": application.updated_at,
     }
 
 
@@ -638,6 +734,19 @@ def _ordered_unique_job_ids_from_interactions(
             continue
         seen.add(interaction.job_post_id)
         job_ids.append(interaction.job_post_id)
+    return job_ids
+
+
+def _ordered_unique_job_ids_from_applications(
+    applications: List[JobApplication],
+) -> List[UUID]:
+    job_ids: List[UUID] = []
+    seen: set[UUID] = set()
+    for application in applications:
+        if application.job_post_id in seen:
+            continue
+        seen.add(application.job_post_id)
+        job_ids.append(application.job_post_id)
     return job_ids
 
 
@@ -701,5 +810,20 @@ def fetch_user_applied_jobs(
 ) -> Tuple[List[JobPost], int]:
     limit = min(limit, 100)
     _validate_user_exists(db, user_id)
-    return fetch_jobs_paginated(db, skip=skip, limit=limit)
+
+    applications = (
+        db.query(JobApplication)
+        .filter(
+            JobApplication.user_id == user_id,
+            JobApplication.status != "saved",
+        )
+        .order_by(
+            JobApplication.applied_at.desc().nullslast(),
+            JobApplication.updated_at.desc(),
+        )
+        .all()
+    )
+
+    ordered_job_ids = _ordered_unique_job_ids_from_applications(applications)
+    return _load_jobs_by_ordered_ids(db, ordered_job_ids, skip, limit)
 

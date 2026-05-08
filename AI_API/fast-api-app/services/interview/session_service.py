@@ -60,6 +60,28 @@ def get_session_by_id_service(
     return session
 
 
+def update_session_service(
+    db: Session,
+    session_id: UUID,
+    payload: schemas.SessionUpdate,
+) -> models.Session:
+    session = db.get(models.Session, session_id)
+
+    if not session:
+        raise HTTPException(
+            status_code=404,
+            detail="Session not found",
+        )
+
+    updates = payload.model_dump(exclude_unset=True)
+    for field_name, value in updates.items():
+        setattr(session, field_name, value)
+
+    db.commit()
+    db.refresh(session)
+    return session
+
+
 # ---------------------
 # Delete Session
 # ---------------------

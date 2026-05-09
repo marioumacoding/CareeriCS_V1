@@ -1,7 +1,6 @@
 "use client";
-"use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import BookmarkCard from "@/components/ui/BookmarkCard";
 import ContinueCard from "@/components/ui/ContinueCard";
@@ -20,8 +19,6 @@ export default function JourneyPage() {
 
   const router = useRouter();
   const { user, isLoading: isAuthLoading } = useAuth();
-  const [savedCount, setSavedCount] = useState(0);
-  const [applicationCount, setApplicationCount] = useState(0);
   const [recentlyViewedJobs, setRecentlyViewedJobs] = useState<JobUiModel[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -40,25 +37,17 @@ export default function JourneyPage() {
           return;
         }
 
-        setSavedCount(0);
-        setApplicationCount(0);
         setRecentlyViewedJobs([]);
         setIsLoading(false);
         return;
       }
 
-      const [savedResponse, applicationsResponse, recentResponse] = await Promise.all([
-        jobService.getSavedJobs(user.id),
-        jobService.getUserApplications(user.id),
-        jobService.getRecentlyViewedJobs(user.id, { limit: 12 }),
-      ]);
+      const recentResponse = await jobService.getRecentlyViewedJobs(user.id, { limit: 12 });
 
       if (!isActive) {
         return;
       }
 
-      setSavedCount(savedResponse.success ? savedResponse.data.total : 0);
-      setApplicationCount(applicationsResponse.success ? applicationsResponse.data.total : 0);
       setRecentlyViewedJobs(
         recentResponse.success
           ? recentResponse.data.jobs.map(mapApiJobToUiModel)
@@ -73,22 +62,6 @@ export default function JourneyPage() {
       isActive = false;
     };
   }, [isAuthLoading, user?.id]);
-
-  const bookmarkDescription = useMemo(() => {
-    if (!savedCount) {
-      return "All of your saved jobs are here";
-    }
-
-    return `${savedCount} saved job${savedCount === 1 ? "" : "s"} waiting for you`;
-  }, [savedCount]);
-
-  const continueDescription = useMemo(() => {
-    if (!applicationCount) {
-      return "Your next opportunity awaits";
-    }
-
-    return `${applicationCount} application${applicationCount === 1 ? "" : "s"} already in motion`;
-  }, [applicationCount]);
 
   return (
     <JourneyTree
@@ -106,11 +79,11 @@ export default function JourneyPage() {
           padding: "45px",
         }}>
           <div style={{ gridArea: "1 / 1 / 2 / 3" }}>
-            <BookmarkCard description={bookmarkDescription} />
+            <BookmarkCard description="All of your saved jobs are here" />
           </div>
 
           <div style={{ gridArea: "1 / 3 / 2 / 5" }}>
-            <ContinueCard description={continueDescription} />
+            <ContinueCard description="Your next opportunity awaits" />
           </div>
 
           <div style={{ gridArea: "2 / 1 / 3 / 5" }}>

@@ -37,12 +37,16 @@ export default function JourneyFolder({
   primaryColor = "var(--dark-blue)",
   current = false,
   closed = false,
+  path,
+  locked = false,
 }: {
   phase?: number;
   children?: React.ReactNode;
   primaryColor?: string;
   current?: boolean;
   closed?: boolean;
+  path?: string;
+  locked?: boolean;
 }) {
   const router = useRouter();
 
@@ -52,7 +56,8 @@ export default function JourneyFolder({
     throw new Error(`Invalid phase: ${phase}`);
   }
 
-  const { label, path, marginTop } = config;
+  const { label, path: defaultPath, marginTop } = config;
+  const targetPath = path || defaultPath;
 
   const phaseColor = `var(--phase${phase}-color)`;
 
@@ -70,7 +75,10 @@ export default function JourneyFolder({
 
   const handleNavigation = (e: React.MouseEvent) => {
     e.stopPropagation(); // prevents nested click conflicts
-    router.push(path);
+    if (locked) {
+      return;
+    }
+    router.push(targetPath);
   };
 
   return (
@@ -107,6 +115,8 @@ export default function JourneyFolder({
           height: "100%",
           display: "flex",
           flexDirection: "column",
+          cursor: locked ? "not-allowed" : "pointer",
+          opacity: locked ? 0.55 : 1,
         }}
       >
         <div
@@ -126,10 +136,10 @@ export default function JourneyFolder({
             color: !current ? primaryColor : phaseColor,
             fontSize: "1rem",
             userSelect: "none",
-            cursor: "pointer",
+            cursor: locked ? "not-allowed" : "pointer",
           }}
         >
-          {label}
+          {locked ? `${label} (Locked)` : label}
         </div>
       </div>
     </div>

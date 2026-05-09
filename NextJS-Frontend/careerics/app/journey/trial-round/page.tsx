@@ -1,17 +1,19 @@
 "use client";
 
-import JourneyTree from "@/components/ui/journey-tree";
-import { Activity, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import RootLayout from "@/app/features/layout";
-import ArchiveCard from "@/components/ui/archive-card";
+
+import JourneyTree from "@/components/ui/journey-tree";
 import ChoiceCard from "@/components/ui/choice-card";
 import TipCard from "@/components/ui/3ateyat";
-import { interviewService } from "@/services/interview.service";
-import { useAuth } from "@/providers/auth-provider";
 import { CardsContainer } from "@/components/ui/cards-container";
 import { ActivityCard } from "@/components/ui/activity-card";
+import { useJourneyPhase } from "@/hooks/use-journey-phase";
+import { buildJourneyPhaseHref } from "@/lib/journey";
+import { interviewService } from "@/services/interview.service";
+import { useAuth } from "@/providers/auth-provider";
 
+// TODO: Keep "hr" until backend ships a dedicated technical question bank.
 const INTERVIEW_TYPE = "hr";
 
 function buildRecordingRoute(sessionId: string | null): string {
@@ -27,17 +29,42 @@ function buildRecordingRoute(sessionId: string | null): string {
   return `/interview-feature/recording?${params.toString()}`;
 }
 
-export default function JourneyPage() {
+function formatSessionDate(value?: string | null): string {
+  const parsed = new Date(value || "");
+  if (Number.isNaN(parsed.getTime())) {
+    return "Unknown";
+  }
 
+  return parsed.toLocaleDateString();
+}
+
+export default function JourneyTrialRoundPage() {
   const router = useRouter();
   const { user, isLoading } = useAuth();
+  const {
+    selectedTrack,
+    maxReached,
+    redirectPhase,
+    isLoadingTracks,
+    trackError,
+  } = useJourneyPhase(4);
 
   const [preparedSessionId, setPreparedSessionId] = useState("");
   const [isPreparingSession, setIsPreparingSession] = useState(false);
   const [isStartingInterview, setIsStartingInterview] = useState(false);
+  const [archiveItems, setArchiveItems] = useState<Array<{ id: string; title: string; date: string; type: string }>>([]);
+  const [archiveError, setArchiveError] = useState<string | null>(null);
 
   const pendingSessionCreationRef = useRef<Promise<string | null> | null>(null);
   const hasAutoPreparedRef = useRef(false);
+
+  useEffect(() => {
+    if (!redirectPhase || !selectedTrack?.id) {
+      return;
+    }
+
+    router.replace(buildJourneyPhaseHref(redirectPhase, selectedTrack.id));
+  }, [redirectPhase, router, selectedTrack?.id]);
 
   const createInterviewSession = useCallback(async (sessionName: string): Promise<string | null> => {
     if (!user?.id) {
@@ -83,6 +110,55 @@ export default function JourneyPage() {
     void createInterviewSession("HR");
   }, [createInterviewSession, isLoading, preparedSessionId, user?.id]);
 
+  useEffect(() => {
+    if (isLoading) {
+      return;
+    }
+
+    let alive = true;
+
+    const loadArchive = async () => {
+      if (!user?.id) {
+        setArchiveItems([]);
+        setArchiveError(null);
+        return;
+      }
+
+      const response = await interviewService.getUserSessions(user.id);
+      if (!alive) {
+        return;
+      }
+
+      if (!response.success) {
+        setArchiveItems([]);
+        setArchiveError(response.message || "Unable to load interview archive.");
+        return;
+      }
+
+      const sessions = (response.data ?? [])
+        .filter((session) => session.status?.toLowerCase() === "completed")
+        .sort((left, right) => {
+          return new Date(right.created_at || "").getTime() - new Date(left.created_at || "").getTime();
+        })
+        .slice(0, 12)
+        .map((session) => ({
+          id: session.id,
+          title: session.name || "Interview Session",
+          date: formatSessionDate(session.created_at),
+          type: session.type || "hr",
+        }));
+
+      setArchiveItems(sessions);
+      setArchiveError(null);
+    };
+
+    void loadArchive();
+
+    return () => {
+      alive = false;
+    };
+  }, [isLoading, user?.id]);
+
   const handleStartInterview = useCallback(async (sessionName: string) => {
     if (isStartingInterview) {
       return;
@@ -121,19 +197,56 @@ export default function JourneyPage() {
 
   const isStartDisabled = isLoading || isStartingInterview || (isPreparingSession && !preparedSessionId);
 
-  const archive = [
-    { id: "Tech-001", date: "5/3/2026" },
-    { id: "Tech-002", date: "5/3/2026" },
-    { id: "Tech-003", date: "5/3/2026" },
-    { id: "Tech-004", date: "5/3/2026" },
-    { id: "Tech-005", date: "5/3/2026" },
-    { id: "Tech-006", date: "5/3/2026" },
-  ];
+  if (!selectedTrack && !isLoadingTracks) {
+    return (
+      <JourneyTree
+        current={4}
+        maxReached={1}
+        renderContent={() => (
+          <div
+            style={{
+              width: "100%",
+              height: "100%",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "center",
+              alignItems: "center",
+              color: "white",
+              padding: "40px",
+              gap: "1rem",
+              textAlign: "center",
+            }}
+          >
+            <h1 style={{ margin: 0, fontSize: "1.5rem" }}>No Track Selected</h1>
+            <p style={{ margin: 0, color: "#C1CBE6", maxWidth: "60ch" }}>
+              Select a track from Home first, then continue your journey phases.
+            </p>
+            <button
+              type="button"
+              onClick={() => router.push("/features/home")}
+              style={{
+                border: "none",
+                borderRadius: "2vh",
+                backgroundColor: "var(--light-green)",
+                color: "black",
+                padding: "0.9rem 1.6rem",
+                fontFamily: "var(--font-nova-square)",
+                cursor: "pointer",
+              }}
+            >
+              Back To Home
+            </button>
+          </div>
+        )}
+      />
+    );
+  }
 
   return (
     <JourneyTree
       current={4}
-      maxReached={5}
+      maxReached={maxReached}
+      resolvePhasePath={(phase) => buildJourneyPhaseHref(phase, selectedTrack?.id)}
       renderContent={() => (
         <div
           style={{
@@ -149,7 +262,7 @@ export default function JourneyPage() {
         >
           <ChoiceCard
             title="Behavioral Mock Interview"
-            description="Practice answering the most common interview questions and improve how you present yourself and your skills."
+            description="Practice common interview questions and improve how you present your skills and experience."
             buttonVariant="primary-inverted"
             onClick={() => {
               void handleStartInterview("Behavioral");
@@ -162,7 +275,7 @@ export default function JourneyPage() {
 
           <ChoiceCard
             title="Technical Mock Interview"
-            description="This route currently uses the same HR question bank to keep frontend and backend fully aligned."
+            description="This route currently uses the same HR question bank to stay aligned with the current backend setup."
             buttonVariant="primary-inverted"
             onClick={() => {
               void handleStartInterview("Technical");
@@ -170,7 +283,7 @@ export default function JourneyPage() {
             disabled={isStartDisabled}
             buttonLabel={startButtonLabel}
             icon="/interview/tech.svg"
-            style={{ gridArea: "1 / 2 / 3 / 3",  backgroundColor: "var(--medium-blue)" }}
+            style={{ gridArea: "1 / 2 / 3 / 3", backgroundColor: "var(--medium-blue)" }}
           />
 
           <CardsContainer
@@ -180,22 +293,48 @@ export default function JourneyPage() {
             centerTitle
             style={{ gridArea: "1 / 3 / 3 / 4" }}
           >
-            {archive.map((item) => (
-              <ActivityCard
-                key={item.id}
-                title={item.id}
-                date={item.date}
-                variant="download"
-              />
-            ))}
+            {archiveItems.length ? (
+              archiveItems.map((item) => (
+                <ActivityCard
+                  key={item.id}
+                  title={item.title}
+                  date={item.date}
+                  variant="download"
+                  onClick={() =>
+                    router.push(
+                      `/interview-feature/last-analysis?type=${encodeURIComponent(
+                        item.type,
+                      )}&sessionId=${encodeURIComponent(item.id)}&q=1`,
+                    )
+                  }
+                />
+              ))
+            ) : (
+              <div
+                style={{
+                  color: archiveError ? "#FFD3D3" : "#D7E3FF",
+                  fontFamily: "var(--font-jura)",
+                  textAlign: "center",
+                  paddingInline: "10px",
+                }}
+              >
+                {archiveError || "No completed interview sessions yet."}
+              </div>
+            )}
           </CardsContainer>
 
           <TipCard
             title="Tip of the day"
-            description="Research the company and interviewers before your interview so you understand the company's goals and show how you fit."
+            description="Research the company and role before each mock. Your answers become stronger when they are contextual."
             icon="/global/tip.svg"
             style={{ gridArea: "3 / 1 / 4 / 4" }}
           />
+
+          {trackError ? (
+            <p style={{ margin: 0, color: "#FFD3D3", gridArea: "3 / 1 / 4 / 4", alignSelf: "end" }}>
+              {trackError}
+            </p>
+          ) : null}
         </div>
       )}
     />

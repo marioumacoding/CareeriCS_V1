@@ -1,26 +1,46 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+
 import BookmarkCard from "@/components/ui/BookmarkCard";
 import ContinueCard from "@/components/ui/ContinueCard";
 import TipCard from "@/components/ui/3ateyat";
 import LevelCard from "@/components/ui/LevelCard";
 import { CardsContainer } from "@/components/ui/cards-container";
 import { RectangularCard } from "@/components/ui/rectangular-card";
+import JourneyTree from "@/components/ui/journey-tree";
+import { useJourneyPhase } from "@/hooks/use-journey-phase";
+import { buildJourneyPhaseHref } from "@/lib/journey";
 import { buildJobDetailsHref, mapApiJobToUiModel } from "@/lib/jobs";
 import { useAuth } from "@/providers/auth-provider";
 import { jobService } from "@/services";
 import type { JobUiModel } from "@/types";
 
-import JourneyTree from "@/components/ui/journey-tree";
-
-export default function JourneyPage() {
-
+export default function JourneyJobHuntPage() {
   const router = useRouter();
   const { user, isLoading: isAuthLoading } = useAuth();
+  const {
+    selectedTrack,
+    maxReached,
+    redirectPhase,
+    isLoadingTracks,
+    trackError,
+  } = useJourneyPhase(5);
+
   const [recentlyViewedJobs, setRecentlyViewedJobs] = useState<JobUiModel[]>([]);
+  const [savedJobsCount, setSavedJobsCount] = useState(0);
+  const [applicationsCount, setApplicationsCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [jobsError, setJobsError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!redirectPhase || !selectedTrack?.id) {
+      return;
+    }
+
+    router.replace(buildJourneyPhaseHref(redirectPhase, selectedTrack.id));
+  }, [redirectPhase, router, selectedTrack?.id]);
 
   useEffect(() => {
     if (isAuthLoading) {
@@ -38,11 +58,18 @@ export default function JourneyPage() {
         }
 
         setRecentlyViewedJobs([]);
+        setSavedJobsCount(0);
+        setApplicationsCount(0);
+        setJobsError("Sign in to load your saved, recent, and applied jobs.");
         setIsLoading(false);
         return;
       }
 
-      const recentResponse = await jobService.getRecentlyViewedJobs(user.id, { limit: 12 });
+      const [recentResponse, savedResponse, applicationsResponse] = await Promise.all([
+        jobService.getRecentlyViewedJobs(user.id, { limit: 12 }),
+        jobService.getSavedJobs(user.id, { limit: 1 }),
+        jobService.getUserApplications(user.id, { limit: 1 }),
+      ]);
 
       if (!isActive) {
         return;
@@ -52,6 +79,16 @@ export default function JourneyPage() {
         recentResponse.success
           ? recentResponse.data.jobs.map(mapApiJobToUiModel)
           : [],
+      );
+      setSavedJobsCount(savedResponse.success ? savedResponse.data?.total ?? 0 : 0);
+      setApplicationsCount(applicationsResponse.success ? applicationsResponse.data?.total ?? 0 : 0);
+      setJobsError(
+        recentResponse.success && savedResponse.success && applicationsResponse.success
+          ? null
+          : recentResponse.message ||
+              savedResponse.message ||
+              applicationsResponse.message ||
+              "Unable to load job dashboard data.",
       );
       setIsLoading(false);
     };
@@ -63,10 +100,72 @@ export default function JourneyPage() {
     };
   }, [isAuthLoading, user?.id]);
 
+  const bookmarkDescription = useMemo(() => {
+    if (!savedJobsCount) {
+      return "Save jobs from Job Search to keep your high-fit roles organized.";
+    }
+
+    return `${savedJobsCount} saved job${savedJobsCount === 1 ? "" : "s"} ready for review.`;
+  }, [savedJobsCount]);
+
+  const continueDescription = useMemo(() => {
+    if (!applicationsCount) {
+      return "Your next opportunity awaits.";
+    }
+
+    return `${applicationsCount} tracked application${applicationsCount === 1 ? "" : "s"} so far.`;
+  }, [applicationsCount]);
+
+  if (!selectedTrack && !isLoadingTracks) {
+    return (
+      <JourneyTree
+        current={5}
+        maxReached={1}
+        renderContent={() => (
+          <div
+            style={{
+              width: "100%",
+              height: "100%",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "center",
+              alignItems: "center",
+              color: "white",
+              padding: "40px",
+              gap: "1rem",
+              textAlign: "center",
+            }}
+          >
+            <h1 style={{ margin: 0, fontSize: "1.5rem" }}>No Track Selected</h1>
+            <p style={{ margin: 0, color: "#C1CBE6", maxWidth: "60ch" }}>
+              Select a track from Home first, then continue your journey phases.
+            </p>
+            <button
+              type="button"
+              onClick={() => router.push("/features/home")}
+              style={{
+                border: "none",
+                borderRadius: "2vh",
+                backgroundColor: "var(--light-green)",
+                color: "black",
+                padding: "0.9rem 1.6rem",
+                fontFamily: "var(--font-nova-square)",
+                cursor: "pointer",
+              }}
+            >
+              Back To Home
+            </button>
+          </div>
+        )}
+      />
+    );
+  }
+
   return (
     <JourneyTree
       current={5}
-      maxReached={5}
+      maxReached={maxReached}
+      resolvePhasePath={(phase) => buildJourneyPhaseHref(phase, selectedTrack?.id)}
       renderContent={() => (
         <div style={{
           display: "grid",
@@ -79,23 +178,26 @@ export default function JourneyPage() {
           padding: "45px",
         }}>
           <div style={{ gridArea: "1 / 1 / 2 / 3" }}>
-            <BookmarkCard description="All of your saved jobs are here" />
+            <BookmarkCard description={bookmarkDescription} />
           </div>
 
           <div style={{ gridArea: "1 / 3 / 2 / 5" }}>
-            <ContinueCard description="Your next opportunity awaits" />
+            <ContinueCard description={continueDescription} />
           </div>
 
           <div style={{ gridArea: "2 / 1 / 3 / 5" }}>
             <TipCard
               title="Tip of the day"
-              description="Research the company and interviewers before your interview so you understand the company's goals and show how you fit."
+              description="Prioritize roles with strong fit and clear requirements, then tailor your CV before applying."
               icon="/global/tip.svg"
             />
           </div>
 
-          <div style={{ gridArea: "3 / 1 / 4 / 2"}}>
-            <LevelCard style={{ backgroundColor: "var(--medium-blue)"}}/>
+          <div style={{ gridArea: "3 / 1 / 4 / 2" }}>
+            <LevelCard
+              style={{ backgroundColor: "var(--medium-blue)" }}
+              onClick={() => router.push("/features/skill")}
+            />
           </div>
 
           <CardsContainer
@@ -125,8 +227,18 @@ export default function JourneyPage() {
               <div style={{ display: "flex", alignItems: "center", color: "white", opacity: 0.8 }}>
                 No recently viewed jobs yet.
               </div>
-            ) : null}
+            ) : (
+              <div style={{ display: "flex", alignItems: "center", color: "white", opacity: 0.8 }}>
+                Loading jobs...
+              </div>
+            )}
           </CardsContainer>
+
+          {trackError || jobsError ? (
+            <p style={{ margin: 0, color: "#FFD3D3", gridArea: "3 / 2 / 4 / 5", alignSelf: "end" }}>
+              {trackError || jobsError}
+            </p>
+          ) : null}
         </div>
       )}
     />

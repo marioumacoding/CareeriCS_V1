@@ -2,6 +2,20 @@ import type { ApiResponse } from "./api";
 
 export type JobApplicationStatus = "applied" | "interview" | "offer" | "rejected" | "saved";
 
+export interface APIJobFilterOption {
+  id: string;
+  title: string;
+  count: number;
+}
+
+export interface APIJobFilters {
+  countries: APIJobFilterOption[];
+  cities: APIJobFilterOption[];
+  job_types: APIJobFilterOption[];
+  work_types: APIJobFilterOption[];
+  career_levels: APIJobFilterOption[];
+}
+
 export interface APIJobPost {
   id: string;
   job_title: string;
@@ -9,10 +23,13 @@ export interface APIJobPost {
   job_url: string | null;
   source: string | null;
   location: string | null;
+  location_country: string | null;
+  location_city: string | null;
   posted_date: string | null;
   career_level: string | null;
   work_type: string | null;
   employment_type: string | null;
+  salary: string | null;
   description_about_role: string | null;
   description_key_responsibilities: string | null;
   description_requirements: string | null;
@@ -35,6 +52,9 @@ export interface APIJobListResponse {
   total: number;
   skip: number;
   limit: number;
+  page: number;
+  total_pages: number;
+  filters: APIJobFilters;
   jobs: APIJobPost[];
 }
 
@@ -63,8 +83,10 @@ export interface JobUiModel {
   title: string;
   company: string;
   location: string;
+  country?: string | null;
+  city?: string | null;
   locationFilterValue: string;
-  salary: string;
+  salary?: string | null;
   tags: string[];
   description: string;
   responsibilities?: string;
@@ -89,15 +111,18 @@ export interface JobUiModel {
 export interface JobFilterOption {
   id: string;
   title: string;
+  count?: number;
 }
 
 export type JobSortOption = "relevance" | "date" | "match";
 
 export interface JobFilters {
   searchQuery: string;
-  location: string;
-  jobType: string;
-  level: string;
+  countries: string[];
+  cities: string[];
+  jobTypes: string[];
+  workTypes: string[];
+  levels: string[];
 }
 
 export type JobApiResponse<T> = Promise<ApiResponse<T>>;

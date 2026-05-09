@@ -1,21 +1,23 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import React, { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import JobCard from "@/components/ui/jobCard";
 import JobDetailsCard from "@/components/ui/JobDetailsCard";
 import {
-  buildFilterOptions,
-  filterJobs,
-  getApplicationButtonLabel,
-  persistSelectedJobId,
-  readPersistedSelectedJobId,
-  sortJobs,
+  formatFilterTriggerLabel,
   mapApiJobToUiModel,
+  mergeSelectedFilterOptions,
+  persistSelectedJobId,
+  readSelectedJobIdFromUrl,
+  readPersistedSelectedJobId,
+  replaceSelectedJobIdInUrl,
 } from "@/lib/jobs";
 import { useAuth } from "@/providers/auth-provider";
 import { jobService } from "@/services";
 import type {
+  APIJobFilters,
+  JobApplicationStatus,
   JobFilterOption,
   JobSortOption,
   JobUiModel,
@@ -25,38 +27,134 @@ type JobBrowserMode = "all" | "applications";
 
 interface JobBrowserPageProps {
   mode: JobBrowserMode;
+  syncSelectionToUrl?: boolean;
 }
 
-interface DropdownProps {
-  placeholder?: string;
+interface MultiSelectDropdownProps {
+  placeholder: string;
   options: JobFilterOption[];
-  value: string;
-  onChange: (id: string) => void;
-  triggerColor?: string;
+  selectedValues: string[];
+  onToggle: (id: string) => void;
+  onClear: () => void;
+  emptyLabel?: string;
 }
 
-const DropdownMenu = ({
-  placeholder = "Select",
+const PAGE_SIZE = 20;
+const EMPTY_FILTER_OPTIONS: APIJobFilters = {
+  countries: [],
+  cities: [],
+  job_types: [],
+  work_types: [],
+  career_levels: [],
+};
+
+const EMPTY_SELECTED_VALUES: string[] = [];
+const DROPDOWN_MIN_WIDTH = 240;
+const DROPDOWN_MAX_WIDTH = 320;
+const DROPDOWN_GAP = 6;
+const DROPDOWN_VIEWPORT_MARGIN = 12;
+
+const dropdownSurfaceStyle: React.CSSProperties = {
+  position: "fixed",
+  backgroundColor: "#111827",
+  border: "1px solid rgba(255,255,255,0.12)",
+  borderRadius: "14px",
+  zIndex: 200,
+  overflow: "hidden",
+  boxShadow: "0 8px 28px rgba(0,0,0,0.5)",
+};
+
+function buildEmptyFilterState(): APIJobFilters {
+  return {
+    countries: [],
+    cities: [],
+    job_types: [],
+    work_types: [],
+    career_levels: [],
+  };
+}
+
+const MultiSelectDropdown = ({
+  placeholder,
   options,
-  value,
-  onChange,
-  triggerColor = "rgba(255,255,255,0.5)",
-}: DropdownProps) => {
+  selectedValues,
+  onToggle,
+  onClear,
+  emptyLabel = "No options available",
+}: MultiSelectDropdownProps) => {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [dropdownPosition, setDropdownPosition] = useState<{
+    left: number;
+    top: number;
+    width: number;
+    maxHeight: number;
+  } | null>(null);
 
-  const selectedLabel = options.find((option) => option.id === value)?.title ?? placeholder;
+  const triggerLabel = useMemo(
+    () => formatFilterTriggerLabel(placeholder, selectedValues, options),
+    [options, placeholder, selectedValues],
+  );
 
   useEffect(() => {
     const handler = (event: MouseEvent) => {
-      if (ref.current && !ref.current.contains(event.target as Node)) {
-        setOpen(false);
+      const target = event.target as Node;
+      if (ref.current?.contains(target) || dropdownRef.current?.contains(target)) {
+        return;
       }
+
+      setOpen(false);
     };
 
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    const updateDropdownPosition = () => {
+      const triggerRect = ref.current?.getBoundingClientRect();
+      if (!triggerRect) {
+        return;
+      }
+
+      const availableWidth = Math.max(
+        DROPDOWN_MIN_WIDTH,
+        window.innerWidth - (DROPDOWN_VIEWPORT_MARGIN * 2),
+      );
+      const desiredWidth = Math.max(DROPDOWN_MIN_WIDTH, triggerRect.width);
+      const width = Math.min(desiredWidth, DROPDOWN_MAX_WIDTH, availableWidth);
+      const left = Math.min(
+        Math.max(DROPDOWN_VIEWPORT_MARGIN, triggerRect.left),
+        window.innerWidth - width - DROPDOWN_VIEWPORT_MARGIN,
+      );
+      const top = triggerRect.bottom + DROPDOWN_GAP;
+      const maxHeight = Math.max(
+        160,
+        Math.min(280, window.innerHeight - top - DROPDOWN_VIEWPORT_MARGIN),
+      );
+
+      setDropdownPosition({
+        left,
+        top,
+        width,
+        maxHeight,
+      });
+    };
+
+    updateDropdownPosition();
+    window.addEventListener("resize", updateDropdownPosition);
+    window.addEventListener("scroll", updateDropdownPosition, true);
+
+    return () => {
+      window.removeEventListener("resize", updateDropdownPosition);
+      window.removeEventListener("scroll", updateDropdownPosition, true);
+    };
+  }, [open]);
 
   return (
     <div ref={ref} style={{ position: "relative", width: "fit-content", flexShrink: 0 }}>
@@ -66,11 +164,11 @@ const DropdownMenu = ({
         style={{
           display: "flex",
           alignItems: "center",
-          gap: "6px",
+          gap: "8px",
           height: "34px",
           padding: "0 14px",
           borderRadius: "999px",
-          border: `1.5px solid ${triggerColor}`,
+          border: "1.5px solid rgba(255,255,255,0.5)",
           backgroundColor: "#C1CBE6",
           color: "#000000",
           fontSize: "0.78rem",
@@ -78,10 +176,26 @@ const DropdownMenu = ({
           whiteSpace: "nowrap",
           outline: "none",
           width: "fit-content",
-          transition: "background 0.2s",
         }}
       >
-        <span>{selectedLabel}</span>
+        <span>{triggerLabel}</span>
+        {selectedValues.length > 1 && (
+          <span
+            style={{
+              minWidth: "20px",
+              height: "20px",
+              paddingInline: "6px",
+              borderRadius: "999px",
+              backgroundColor: "rgba(17,24,39,0.12)",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: "0.7rem",
+            }}
+          >
+            {selectedValues.length}
+          </span>
+        )}
         <svg
           width="10"
           height="10"
@@ -95,7 +209,7 @@ const DropdownMenu = ({
         >
           <path
             d="M1 3L5 7L9 3"
-            stroke={triggerColor}
+            stroke="rgba(0,0,0,0.7)"
             strokeWidth="1.8"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -103,86 +217,125 @@ const DropdownMenu = ({
         </svg>
       </button>
 
-      {open && (
+      {open && dropdownPosition && typeof document !== "undefined" && createPortal(
         <div
+          ref={dropdownRef}
           style={{
-            position: "absolute",
-            top: "calc(100% + 6px)",
-            left: 0,
-            width: "fit-content",
-            minWidth: "100%",
-            backgroundColor: "#111827",
-            border: "1px solid rgba(255,255,255,0.12)",
-            borderRadius: "12px",
-            overflow: "hidden",
-            zIndex: 100,
-            maxHeight: "260px",
-            overflowY: "auto",
-            scrollbarWidth: "thin",
-            scrollbarColor: "rgba(255,255,255,0.15) transparent",
-            boxShadow: "0 8px 28px rgba(0,0,0,0.5)",
-            animation: "ddIn 0.15s ease",
+            ...dropdownSurfaceStyle,
+            left: dropdownPosition.left,
+            top: dropdownPosition.top,
+            width: dropdownPosition.width,
+            maxHeight: dropdownPosition.maxHeight,
           }}
         >
-          <style>{`@keyframes ddIn { from { opacity:0; transform:translateY(-5px) } to { opacity:1; transform:translateY(0) } }`}</style>
-          {options.map((option) => {
-            const isActive = option.id === value;
-            return (
-              <button
-                key={option.id}
-                type="button"
-                onClick={() => {
-                  onChange(option.id);
-                  setOpen(false);
-                }}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  width: "100%",
-                  padding: "9px 14px",
-                  backgroundColor: isActive ? "rgba(197,255,65,0.1)" : "transparent",
-                  color: isActive ? "#C5FF41" : "rgba(255,255,255,0.85)",
-                  fontSize: "0.8rem",
-                  border: "none",
-                  cursor: "pointer",
-                  textAlign: "left",
-                  whiteSpace: "nowrap",
-                  transition: "background 0.15s",
-                }}
-                onMouseEnter={(event) => {
-                  if (!isActive) {
-                    event.currentTarget.style.backgroundColor = "rgba(255,255,255,0.06)";
-                  }
-                }}
-                onMouseLeave={(event) => {
-                  if (!isActive) {
-                    event.currentTarget.style.backgroundColor = "transparent";
-                  }
-                }}
-              >
-                <span>{option.title}</span>
-                {isActive && (
-                  <svg
-                    width="12"
-                    height="12"
-                    viewBox="0 0 12 12"
-                    fill="none"
-                    style={{ marginLeft: "10px", flexShrink: 0 }}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: "10px 14px",
+              borderBottom: "1px solid rgba(255,255,255,0.08)",
+            }}
+          >
+            <span style={{ color: "white", fontSize: "0.78rem", opacity: 0.8 }}>
+              {placeholder}
+            </span>
+            <button
+              type="button"
+              onClick={onClear}
+              disabled={!selectedValues.length}
+              style={{
+                background: "none",
+                border: "none",
+                color: selectedValues.length ? "#C5FF41" : "rgba(255,255,255,0.35)",
+                cursor: selectedValues.length ? "pointer" : "default",
+                fontSize: "0.75rem",
+                padding: 0,
+              }}
+            >
+              Clear
+            </button>
+          </div>
+
+          <div
+            style={{
+              maxHeight: Math.max(120, dropdownPosition.maxHeight - 60),
+              overflowY: "auto",
+              scrollbarWidth: "thin",
+              scrollbarColor: "rgba(255,255,255,0.15) transparent",
+            }}
+          >
+            {options.length ? (
+              options.map((option) => {
+                const isActive = selectedValues.includes(option.id);
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    onClick={() => onToggle(option.id)}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: "12px",
+                      width: "100%",
+                      padding: "10px 14px",
+                      backgroundColor: isActive ? "rgba(197,255,65,0.1)" : "transparent",
+                      color: "rgba(255,255,255,0.92)",
+                      border: "none",
+                      cursor: "pointer",
+                      textAlign: "left",
+                    }}
                   >
-                    <path
-                      d="M2 6L5 9L10 3"
-                      stroke="#C5FF41"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                )}
-              </button>
-            );
-          })}
-        </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0 }}>
+                      <div
+                        style={{
+                          width: "18px",
+                          height: "18px",
+                          borderRadius: "50%",
+                          border: isActive ? "2px solid #C5FF41" : "2px solid rgba(255,255,255,0.7)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          flexShrink: 0,
+                        }}
+                      >
+                        {isActive && (
+                          <div
+                            style={{
+                              width: "8px",
+                              height: "8px",
+                              borderRadius: "50%",
+                              backgroundColor: "#C5FF41",
+                            }}
+                          />
+                        )}
+                      </div>
+                      <span
+                        style={{
+                          fontSize: "0.82rem",
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
+                        {option.title}
+                      </span>
+                    </div>
+                    <span style={{ fontSize: "0.72rem", opacity: 0.58, flexShrink: 0 }}>
+                      {option.count ?? 0}
+                    </span>
+                  </button>
+                );
+              })
+            ) : (
+              <div style={{ color: "rgba(255,255,255,0.68)", padding: "14px", fontSize: "0.8rem" }}>
+                {emptyLabel}
+              </div>
+            )}
+          </div>
+        </div>,
+        document.body,
       )}
     </div>
   );
@@ -233,39 +386,38 @@ const SortLink = ({ label, isActive, onClick }: SortLinkProps) => {
   );
 };
 
-export default function JobBrowserPage({ mode }: JobBrowserPageProps) {
-  const { user, isLoading: isAuthLoading } = useAuth();
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const searchParamsString = searchParams.toString();
-  const routeJobId = searchParams.get("jobId");
+function toggleSelection(currentValues: string[], nextValue: string): string[] {
+  return currentValues.includes(nextValue)
+    ? currentValues.filter((value) => value !== nextValue)
+    : [...currentValues, nextValue];
+}
 
+export default function JobBrowserPage({
+  mode,
+  syncSelectionToUrl = false,
+}: JobBrowserPageProps) {
+  const { user, isLoading: isAuthLoading } = useAuth();
   const [jobs, setJobs] = useState<JobUiModel[]>([]);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+  const [selectedJobFallback, setSelectedJobFallback] = useState<JobUiModel | null>(null);
+  const urlJobIdRef = useRef<string | null>(syncSelectionToUrl ? readSelectedJobIdFromUrl() : null);
   const [searchQuery, setSearchQuery] = useState("");
+  const deferredSearchQuery = useDeferredValue(searchQuery.trim());
   const [activeSort, setActiveSort] = useState<JobSortOption>("relevance");
-  const [location, setLocation] = useState("all");
-  const [jobType, setJobType] = useState("all");
-  const [level, setLevel] = useState("all");
+  const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
+  const [selectedCities, setSelectedCities] = useState<string[]>([]);
+  const [selectedJobTypes, setSelectedJobTypes] = useState<string[]>([]);
+  const [selectedWorkTypes, setSelectedWorkTypes] = useState<string[]>([]);
+  const [selectedLevels, setSelectedLevels] = useState<string[]>([]);
+  const [filterOptions, setFilterOptions] = useState<APIJobFilters>(buildEmptyFilterState);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalJobs, setTotalJobs] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isApplying, setIsApplying] = useState(false);
   const [bookmarkingJobId, setBookmarkingJobId] = useState<string | null>(null);
-
-  const lastViewedJobIdRef = useRef<string | null>(null);
-
-  const uniqueJobs = useMemo(() => {
-    const jobsById = new Map<string, JobUiModel>();
-
-    for (const job of jobs) {
-      if (!jobsById.has(job.id)) {
-        jobsById.set(job.id, job);
-      }
-    }
-
-    return Array.from(jobsById.values());
-  }, [jobs]);
+  const fallbackRequestJobIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (isAuthLoading) {
@@ -279,24 +431,52 @@ export default function JobBrowserPage({ mode }: JobBrowserPageProps) {
       setError(null);
 
       if (mode === "applications" && !user?.id) {
+        if (!isActive) {
+          return;
+        }
+
         setJobs([]);
+        setFilterOptions(buildEmptyFilterState());
+        setTotalJobs(0);
+        setTotalPages(0);
         setIsLoading(false);
         setError("Please sign in to view your applications.");
         return;
       }
 
+      const requestParams = {
+        skip: (currentPage - 1) * PAGE_SIZE,
+        limit: PAGE_SIZE,
+        query: deferredSearchQuery || undefined,
+        countries: selectedCountries,
+        cities: selectedCities,
+        jobTypes: selectedJobTypes,
+        workTypes: selectedWorkTypes,
+        careerLevels: selectedLevels,
+        sort: activeSort,
+      };
+
       const response = mode === "applications" && user?.id
-        ? await jobService.getAllUserApplications(user.id)
-        : await jobService.getAllJobs(user?.id);
+        ? await jobService.getUserApplications(user.id, requestParams)
+        : await jobService.listJobs({
+          ...requestParams,
+          userId: user?.id,
+        });
 
       if (!isActive) {
         return;
       }
 
-      if (response.success) {
-        setJobs(response.data.map(mapApiJobToUiModel));
+      if (response.success && response.data) {
+        setJobs(response.data.jobs.map(mapApiJobToUiModel));
+        setFilterOptions(response.data.filters ?? EMPTY_FILTER_OPTIONS);
+        setTotalJobs(response.data.total ?? 0);
+        setTotalPages(response.data.total_pages ?? 0);
       } else {
         setJobs([]);
+        setFilterOptions(buildEmptyFilterState());
+        setTotalJobs(0);
+        setTotalPages(0);
         setError(response.message ?? "We could not load jobs right now.");
       }
 
@@ -308,57 +488,40 @@ export default function JobBrowserPage({ mode }: JobBrowserPageProps) {
     return () => {
       isActive = false;
     };
-  }, [isAuthLoading, mode, user?.id]);
-
-  const locationOptions = useMemo(
-    () => buildFilterOptions(uniqueJobs.map((job) => job.locationFilterValue), "Location"),
-    [uniqueJobs],
-  );
-  const typeOptions = useMemo(
-    () => buildFilterOptions(uniqueJobs.map((job) => job.employmentType), "Job type"),
-    [uniqueJobs],
-  );
-  const levelOptions = useMemo(
-    () => buildFilterOptions(uniqueJobs.map((job) => job.careerLevel), "Experience level"),
-    [uniqueJobs],
-  );
-
-  const filteredJobs = useMemo(() => {
-    const filtered = filterJobs(uniqueJobs, {
-      searchQuery,
-      location,
-      jobType,
-      level,
-    });
-
-    return sortJobs(filtered, activeSort);
-  }, [activeSort, jobType, level, location, searchQuery, uniqueJobs]);
+  }, [
+    activeSort,
+    currentPage,
+    deferredSearchQuery,
+    isAuthLoading,
+    mode,
+    selectedCities,
+    selectedCountries,
+    selectedJobTypes,
+    selectedLevels,
+    selectedWorkTypes,
+    user?.id,
+  ]);
 
   useEffect(() => {
-    if (!uniqueJobs.length) {
-      setSelectedJobId(null);
-      return;
+    if (!syncSelectionToUrl) {
+      urlJobIdRef.current = null;
+      replaceSelectedJobIdInUrl(null);
     }
+  }, [syncSelectionToUrl]);
 
-    if (selectedJobId && uniqueJobs.some((job) => job.id === selectedJobId)) {
-      return;
-    }
-
+  useEffect(() => {
+    const currentPageJobIds = new Set(jobs.map((job) => job.id));
     const storedJobId = readPersistedSelectedJobId();
-    const candidateIds = [
-      routeJobId,
-      storedJobId,
-      uniqueJobs[0]?.id,
-    ];
-
-    const nextSelectedJobId = candidateIds.find(
-      (candidate) => candidate && uniqueJobs.some((job) => job.id === candidate),
-    ) ?? uniqueJobs[0].id;
+    const nextSelectedJobId = urlJobIdRef.current
+      ?? (storedJobId && currentPageJobIds.has(storedJobId) ? storedJobId : null)
+      ?? jobs[0]?.id
+      ?? null;
 
     if (nextSelectedJobId !== selectedJobId) {
-      setSelectedJobId(nextSelectedJobId);
+      const timeoutId = window.setTimeout(() => setSelectedJobId(nextSelectedJobId), 0);
+      return () => window.clearTimeout(timeoutId);
     }
-  }, [routeJobId, selectedJobId, uniqueJobs]);
+  }, [jobs, selectedJobId, syncSelectionToUrl]);
 
   useEffect(() => {
     if (!selectedJobId) {
@@ -366,34 +529,65 @@ export default function JobBrowserPage({ mode }: JobBrowserPageProps) {
     }
 
     persistSelectedJobId(selectedJobId);
-
-    if (routeJobId === selectedJobId) {
-      return;
+    if (syncSelectionToUrl) {
+      replaceSelectedJobIdInUrl(selectedJobId);
+      urlJobIdRef.current = selectedJobId;
     }
-
-    const nextParams = new URLSearchParams(searchParamsString);
-    nextParams.set("jobId", selectedJobId);
-    router.replace(`${pathname}?${nextParams.toString()}`, { scroll: false });
-  }, [pathname, routeJobId, router, searchParamsString, selectedJobId]);
-
-  const selectedJob = useMemo(
-    () => uniqueJobs.find((job) => job.id === selectedJobId) ?? null,
-    [selectedJobId, uniqueJobs],
-  );
+  }, [selectedJobId, syncSelectionToUrl]);
 
   useEffect(() => {
-    if (!user?.id || !selectedJob?.id || lastViewedJobIdRef.current === selectedJob.id) {
-      return;
+    const fallbackRequestKey = `${user?.id ?? "guest"}:${selectedJobId ?? "none"}`;
+
+    if (!selectedJobId || jobs.some((job) => job.id === selectedJobId)) {
+      fallbackRequestJobIdRef.current = null;
+      if (!selectedJobFallback) {
+        return;
+      }
+
+      const timeoutId = window.setTimeout(() => setSelectedJobFallback(null), 0);
+      return () => window.clearTimeout(timeoutId);
     }
 
-    lastViewedJobIdRef.current = selectedJob.id;
-    void jobService.markJobViewed(selectedJob.id, user.id);
-  }, [selectedJob?.id, user?.id]);
+    if (fallbackRequestJobIdRef.current === fallbackRequestKey) {
+      return;
+    }
+    fallbackRequestJobIdRef.current = fallbackRequestKey;
+
+    let isActive = true;
+
+    const loadSelectedJob = async () => {
+      const response = await jobService.getJobDetails(selectedJobId, user?.id);
+      if (!isActive) {
+        return;
+      }
+
+      if (response.success && response.data) {
+        setSelectedJobFallback(mapApiJobToUiModel(response.data));
+      } else {
+        setSelectedJobFallback(null);
+      }
+    };
+
+    void loadSelectedJob();
+
+    return () => {
+      isActive = false;
+    };
+  }, [jobs, selectedJobFallback, selectedJobId, user?.id]);
+
+  const selectedJob = useMemo(
+    () => jobs.find((job) => job.id === selectedJobId)
+      ?? (selectedJobFallback?.id === selectedJobId ? selectedJobFallback : null),
+    [jobs, selectedJobFallback, selectedJobId],
+  );
 
   const updateSingleJob = (jobId: string, updater: (job: JobUiModel) => JobUiModel) => {
     setJobs((currentJobs) => currentJobs.map((job) => (
       job.id === jobId ? updater(job) : job
     )));
+    setSelectedJobFallback((currentJob) => (
+      currentJob?.id === jobId ? updater(currentJob) : currentJob
+    ));
   };
 
   const handleBookmarkToggle = async (job: JobUiModel) => {
@@ -422,21 +616,23 @@ export default function JobBrowserPage({ mode }: JobBrowserPageProps) {
   };
 
   const handleApply = async () => {
-    if (!selectedJob || !user?.id || selectedJob.applicationStatus) {
+    if (!selectedJob || !user?.id) {
+      setError("Please sign in to apply to jobs.");
       return;
     }
 
-    // If a job URL exists, open it in a new tab immediately (user action)
+    const nextStatus = (selectedJob.applicationStatus ?? "applied") as JobApplicationStatus;
+
     try {
       if (selectedJob.jobUrl && typeof window !== "undefined") {
         window.open(selectedJob.jobUrl, "_blank", "noopener,noreferrer");
       }
-    } catch (err) {
-      // ignore popup errors and continue to apply
+    } catch {
+      // Keep the apply flow alive even if opening the external tab is blocked.
     }
 
     setIsApplying(true);
-    const response = await jobService.applyToJob(selectedJob.id, user.id);
+    const response = await jobService.applyToJob(selectedJob.id, user.id, nextStatus);
 
     if (response.success) {
       jobService.invalidateJobList(user.id);
@@ -452,16 +648,60 @@ export default function JobBrowserPage({ mode }: JobBrowserPageProps) {
     setIsApplying(false);
   };
 
+  const hasActiveFilters = Boolean(
+    searchQuery.trim()
+    || selectedCountries.length
+    || selectedCities.length
+    || selectedJobTypes.length
+    || selectedWorkTypes.length
+    || selectedLevels.length,
+  );
+
+  const resetFilters = () => {
+    setSearchQuery("");
+    setSelectedCountries(EMPTY_SELECTED_VALUES);
+    setSelectedCities(EMPTY_SELECTED_VALUES);
+    setSelectedJobTypes(EMPTY_SELECTED_VALUES);
+    setSelectedWorkTypes(EMPTY_SELECTED_VALUES);
+    setSelectedLevels(EMPTY_SELECTED_VALUES);
+    setActiveSort("relevance");
+    setCurrentPage(1);
+  };
+
+  const countryOptions = useMemo(
+    () => mergeSelectedFilterOptions(filterOptions.countries, selectedCountries),
+    [filterOptions.countries, selectedCountries],
+  );
+  const cityOptions = useMemo(
+    () => mergeSelectedFilterOptions(filterOptions.cities, selectedCities),
+    [filterOptions.cities, selectedCities],
+  );
+  const jobTypeOptions = useMemo(
+    () => mergeSelectedFilterOptions(filterOptions.job_types, selectedJobTypes),
+    [filterOptions.job_types, selectedJobTypes],
+  );
+  const workTypeOptions = useMemo(
+    () => mergeSelectedFilterOptions(filterOptions.work_types, selectedWorkTypes),
+    [filterOptions.work_types, selectedWorkTypes],
+  );
+  const levelOptions = useMemo(
+    () => mergeSelectedFilterOptions(filterOptions.career_levels, selectedLevels),
+    [filterOptions.career_levels, selectedLevels],
+  );
+
+  const pageStart = totalJobs ? ((currentPage - 1) * PAGE_SIZE) + 1 : 0;
+  const pageEnd = totalJobs ? Math.min(totalJobs, currentPage * PAGE_SIZE) : 0;
+
   const renderLeftPanelContent = () => {
     if (isLoading) {
       return <p style={{ color: "white", opacity: 0.8, margin: 0 }}>Loading jobs...</p>;
     }
 
-    if (!filteredJobs.length) {
+    if (!jobs.length) {
       return <p style={{ color: "white", opacity: 0.8, margin: 0 }}>No jobs match your filters yet.</p>;
     }
 
-    return filteredJobs.map((job) => (
+    return jobs.map((job) => (
       <div
         key={job.id}
         style={{ width: "100%", cursor: "pointer" }}
@@ -492,12 +732,12 @@ export default function JobBrowserPage({ mode }: JobBrowserPageProps) {
       paddingTop: "0px",
     }}>
       <div style={{
-        width: "480px",
+        width: "500px",
         height: "110%",
         display: "flex",
         flexDirection: "column",
         position: "relative",
-        gap: "20px",
+        gap: "18px",
         top: "10vh",
         overflowY: "auto",
         paddingRight: "60px",
@@ -509,7 +749,10 @@ export default function JobBrowserPage({ mode }: JobBrowserPageProps) {
             type="text"
             placeholder="Search By Job Title"
             value={searchQuery}
-            onChange={(event) => setSearchQuery(event.target.value)}
+            onChange={(event) => {
+              setSearchQuery(event.target.value);
+              setCurrentPage(1);
+            }}
             style={{
               width: "100%",
               padding: "12px 20px",
@@ -536,33 +779,124 @@ export default function JobBrowserPage({ mode }: JobBrowserPageProps) {
         </div>
 
         <div style={{ display: "flex", gap: "8px", zIndex: 10, flexWrap: "wrap" }}>
-          <DropdownMenu
-            placeholder="Location"
-            options={locationOptions}
-            value={location}
-            onChange={setLocation}
+          <MultiSelectDropdown
+            placeholder="Country"
+            options={countryOptions}
+            selectedValues={selectedCountries}
+            onToggle={(value) => {
+              setCurrentPage(1);
+              setSelectedCountries((current) => toggleSelection(current, value));
+            }}
+            onClear={() => {
+              setCurrentPage(1);
+              setSelectedCountries([]);
+            }}
+            emptyLabel="No country options available"
           />
-          <DropdownMenu
+          <MultiSelectDropdown
+            placeholder="City"
+            options={cityOptions}
+            selectedValues={selectedCities}
+            onToggle={(value) => {
+              setCurrentPage(1);
+              setSelectedCities((current) => toggleSelection(current, value));
+            }}
+            onClear={() => {
+              setCurrentPage(1);
+              setSelectedCities([]);
+            }}
+            emptyLabel="No city options available"
+          />
+          <MultiSelectDropdown
             placeholder="Job Type"
-            options={typeOptions}
-            value={jobType}
-            onChange={setJobType}
+            options={jobTypeOptions}
+            selectedValues={selectedJobTypes}
+            onToggle={(value) => {
+              setCurrentPage(1);
+              setSelectedJobTypes((current) => toggleSelection(current, value));
+            }}
+            onClear={() => {
+              setCurrentPage(1);
+              setSelectedJobTypes([]);
+            }}
+            emptyLabel="No job type options available"
           />
-          <DropdownMenu
+          <MultiSelectDropdown
+            placeholder="Work Mode"
+            options={workTypeOptions}
+            selectedValues={selectedWorkTypes}
+            onToggle={(value) => {
+              setCurrentPage(1);
+              setSelectedWorkTypes((current) => toggleSelection(current, value));
+            }}
+            onClear={() => {
+              setCurrentPage(1);
+              setSelectedWorkTypes([]);
+            }}
+            emptyLabel="No work mode options available"
+          />
+          <MultiSelectDropdown
             placeholder="Experience Level"
             options={levelOptions}
-            value={level}
-            onChange={setLevel}
+            selectedValues={selectedLevels}
+            onToggle={(value) => {
+              setCurrentPage(1);
+              setSelectedLevels((current) => toggleSelection(current, value));
+            }}
+            onClear={() => {
+              setCurrentPage(1);
+              setSelectedLevels([]);
+            }}
+            emptyLabel="No experience levels available"
           />
+          <button
+            type="button"
+            onClick={resetFilters}
+            disabled={!hasActiveFilters}
+            style={{
+              height: "34px",
+              padding: "0 14px",
+              borderRadius: "999px",
+              border: "1.5px solid rgba(255,255,255,0.5)",
+              backgroundColor: hasActiveFilters ? "transparent" : "rgba(255,255,255,0.08)",
+              color: hasActiveFilters ? "white" : "rgba(255,255,255,0.45)",
+              cursor: hasActiveFilters ? "pointer" : "default",
+              whiteSpace: "nowrap",
+            }}
+          >
+            Reset Filters
+          </button>
         </div>
 
-        <div style={{ display: "flex", gap: "10px", fontSize: "0.85rem", color: "white", alignItems: "center" }}>
+        <div style={{ display: "flex", gap: "10px", fontSize: "0.85rem", color: "white", alignItems: "center", flexWrap: "wrap" }}>
           <span style={{ opacity: 0.7, flexShrink: 0 }}>Sort By:</span>
-          <SortLink label="Relevance" isActive={activeSort === "relevance"} onClick={() => setActiveSort("relevance")} />
+          <SortLink label="Relevance" isActive={activeSort === "relevance"} onClick={() => {
+            setCurrentPage(1);
+            setActiveSort("relevance");
+          }} />
           <span style={{ opacity: 0.4 }}>-</span>
-          <SortLink label="Date Posted" isActive={activeSort === "date"} onClick={() => setActiveSort("date")} />
+          <SortLink label="Date Posted" isActive={activeSort === "date"} onClick={() => {
+            setCurrentPage(1);
+            setActiveSort("date");
+          }} />
           <span style={{ opacity: 0.4 }}>-</span>
-          <SortLink label="Resume Match" isActive={activeSort === "match"} onClick={() => setActiveSort("match")} />
+          <SortLink label="Resume Match" isActive={activeSort === "match"} onClick={() => {
+            setCurrentPage(1);
+            setActiveSort("match");
+          }} />
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", color: "white", gap: "10px", flexWrap: "wrap" }}>
+          <span style={{ opacity: 0.8, fontSize: "0.85rem" }}>
+            {totalJobs
+              ? `Showing ${pageStart}-${pageEnd} of ${totalJobs} jobs`
+              : isLoading
+                ? "Loading jobs..."
+                : "No jobs found"}
+          </span>
+          <span style={{ opacity: 0.6, fontSize: "0.8rem" }}>
+            Page {Math.min(currentPage, Math.max(totalPages, 1))} of {Math.max(totalPages, 1)}
+          </span>
         </div>
 
         {error && (
@@ -573,6 +907,41 @@ export default function JobBrowserPage({ mode }: JobBrowserPageProps) {
 
         <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
           {renderLeftPanelContent()}
+        </div>
+
+        <div style={{ display: "flex", gap: "10px", justifyContent: "space-between", alignItems: "center", paddingBottom: "20px" }}>
+          <button
+            type="button"
+            onClick={() => setCurrentPage((page) => Math.max(page - 1, 1))}
+            disabled={currentPage <= 1 || isLoading}
+            style={{
+              minWidth: "120px",
+              height: "40px",
+              borderRadius: "999px",
+              border: "1px solid rgba(255,255,255,0.35)",
+              backgroundColor: currentPage > 1 && !isLoading ? "transparent" : "rgba(255,255,255,0.08)",
+              color: currentPage > 1 && !isLoading ? "white" : "rgba(255,255,255,0.45)",
+              cursor: currentPage > 1 && !isLoading ? "pointer" : "default",
+            }}
+          >
+            Previous
+          </button>
+          <button
+            type="button"
+            onClick={() => setCurrentPage((page) => Math.min(page + 1, Math.max(totalPages, 1)))}
+            disabled={currentPage >= totalPages || isLoading || !totalPages}
+            style={{
+              minWidth: "120px",
+              height: "40px",
+              borderRadius: "999px",
+              border: "1px solid rgba(255,255,255,0.35)",
+              backgroundColor: currentPage < totalPages && !isLoading ? "transparent" : "rgba(255,255,255,0.08)",
+              color: currentPage < totalPages && !isLoading ? "white" : "rgba(255,255,255,0.45)",
+              cursor: currentPage < totalPages && !isLoading ? "pointer" : "default",
+            }}
+          >
+            Next
+          </button>
         </div>
       </div>
 
@@ -601,18 +970,18 @@ export default function JobBrowserPage({ mode }: JobBrowserPageProps) {
         display: "flex",
         scrollbarWidth: "none",
       }}>
-        <div style={{ display: "flex", justifyContent: "center", alignItems: "flex-start" }}>
+        <div style={{ display: "flex", justifyContent: "center", alignItems: "flex-start", width: "100%" }}>
           {selectedJob ? (
             <JobDetailsCard
               jobData={selectedJob}
               onApply={handleApply}
               isApplying={isApplying}
-              actionLabel={getApplicationButtonLabel(selectedJob)}
-              isApplyDisabled={Boolean(selectedJob.applicationStatus)}
+              actionLabel="Apply"
+              isApplyDisabled={false}
             />
           ) : (
             <div style={{ color: "white", paddingTop: "60px" }}>
-              No job selected yet.
+              {isLoading ? "Loading job details..." : "No job selected yet."}
             </div>
           )}
         </div>

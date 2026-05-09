@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useReducer } from "react";
+import React from "react";
 import JourneyFolder from "@/components/ui/journey-folder";
 import { useRouter } from "next/navigation";
 
 type JourneyTreeProps = {
   current: number;
   maxReached: number;
+  resolvePhasePath?: (phase: number) => string;
   renderContent?: () => React.ReactNode;
 };
 
@@ -14,6 +15,7 @@ function renderChain(
   phases: number[],
   current: number,
   maxReached: number,
+  resolvePhasePath?: (phase: number) => string,
   renderContent?: () => React.ReactNode
 ): React.ReactNode {
   if (phases.length === 0) return null;
@@ -21,10 +23,17 @@ function renderChain(
   const [first, ...rest] = phases;
   const isCurrent = first === current;
   const isAheadOfMax = current < maxReached;
+  const isLocked = first > maxReached;
+  const targetPath = resolvePhasePath?.(first);
 
 
   return (
-    <JourneyFolder phase={first} current={isCurrent}>
+    <JourneyFolder
+      phase={first}
+      current={isCurrent}
+      locked={isLocked}
+      path={targetPath}
+    >
       {rest.length > 0 &&
         (isCurrent ? (
           <div
@@ -34,10 +43,10 @@ function renderChain(
               flexShrink: 0,
             }}
           >
-            {renderChain(rest, current, maxReached, renderContent)}
+            {renderChain(rest, current, maxReached, resolvePhasePath, renderContent)}
           </div>
         ) : (
-          renderChain(rest, current, maxReached, renderContent)
+          renderChain(rest, current, maxReached, resolvePhasePath, renderContent)
         ))}
 
       {isCurrent && (
@@ -57,9 +66,10 @@ function renderChain(
 export default function JourneyTree({
   current,
   maxReached,
+  resolvePhasePath,
   renderContent,
 }: JourneyTreeProps) {
-  const phases = Array.from({ length: maxReached }, (_, i) => i + 1);
+  const phases = Array.from({ length: 5 }, (_, i) => i + 1);
   const router = useRouter();
 
   return (
@@ -85,6 +95,7 @@ export default function JourneyTree({
       >
         <img
           src={"/global/close.svg"}
+          alt="Close journey"
           onClick={() => router.push("/features/home")}
           style={{
             width: "1.5rem",
@@ -100,7 +111,7 @@ export default function JourneyTree({
           width: "100%",
         }}
       >
-        {renderChain(phases, current, maxReached, renderContent)}
+        {renderChain(phases, current, maxReached, resolvePhasePath, renderContent)}
       </div>
     </div>
   );

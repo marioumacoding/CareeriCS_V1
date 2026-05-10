@@ -71,6 +71,15 @@ type JourneyUserSignals = {
 const JOURNEY_SELECTED_TRACK_STORAGE_KEY = "journey:selected-track-id";
 const JOURNEY_PHASE_STATE_STORAGE_KEY = "journey:phase-state";
 export const JOURNEY_PHASE_STATE_UPDATED_EVENT = "journey-phase-state-updated";
+const JOURNEY_TRACK_CARDS_CACHE_TTL_MS = 5_000;
+const journeyTrackCardsCache = new Map<
+  string,
+  {
+    data: JourneyTrackCard[];
+    expiresAt: number;
+  }
+>();
+const journeyTrackCardsPromiseCache = new Map<string, Promise<JourneyTrackCard[]>>();
 
 export const JOURNEY_PHASES: JourneyPhaseDefinition[] = [
   {
@@ -152,6 +161,42 @@ export function readSelectedJourneyTrackId(userId?: string | null): string | nul
   const scopedKey = `${JOURNEY_SELECTED_TRACK_STORAGE_KEY}:${userId ?? "guest"}`;
   const value = window.localStorage.getItem(scopedKey);
   return value?.trim() || null;
+}
+
+function getJourneyTrackCardsCacheKey(userId: string): string {
+  return userId.trim();
+}
+
+function getCachedJourneyTrackCards(
+  userId: string,
+): JourneyTrackCard[] | null {
+  const cacheKey = getJourneyTrackCardsCacheKey(userId);
+  const cached = journeyTrackCardsCache.get(cacheKey);
+
+  if (!cached) {
+    return null;
+  }
+
+  if (cached.expiresAt <= Date.now()) {
+    journeyTrackCardsCache.delete(cacheKey);
+    return null;
+  }
+
+  return cached.data;
+}
+
+export function invalidateJourneyTrackCardsCache(
+  userId?: string | null,
+): void {
+  if (!userId) {
+    journeyTrackCardsCache.clear();
+    journeyTrackCardsPromiseCache.clear();
+    return;
+  }
+
+  const cacheKey = getJourneyTrackCardsCacheKey(userId);
+  journeyTrackCardsCache.delete(cacheKey);
+  journeyTrackCardsPromiseCache.delete(cacheKey);
 }
 
 export function persistSelectedJourneyTrackId(
@@ -580,27 +625,55 @@ export async function loadJourneyTrackCards(
     return [];
   }
 
-  const [roadmapBookmarksResponse, roadmapListResponse, recommendations] = await Promise.all([
+  const cachedTracks = getCachedJourneyTrackCards(userId);
+  if (cachedTracks) {
+    return cachedTracks;
+  }
+
+  const cacheKey = getJourneyTrackCardsCacheKey(userId);
+  const pendingRequest = journeyTrackCardsPromiseCache.get(cacheKey);
+  if (pendingRequest) {
+    return pendingRequest;
+  }
+
+  const nextRequest = Promise.all([
     roadmapService.getUserRoadmapBookmarks(userId),
     roadmapService.listRoadmaps(),
     getLatestCareerRecommendations(userId),
-  ]);
+  ])
+    .then(([roadmapBookmarksResponse, roadmapListResponse, recommendations]) => {
+      const roadmaps = roadmapListResponse.success
+        ? normalizeRoadmapListPayload(roadmapListResponse.data)
+        : [];
 
-  const roadmaps = roadmapListResponse.success
-    ? normalizeRoadmapListPayload(roadmapListResponse.data)
-    : [];
+      let bookmarks = getUnifiedBookmarks(userId);
 
-  let bookmarks = getUnifiedBookmarks(userId);
+      if (
+        roadmapBookmarksResponse.success &&
+        roadmapBookmarksResponse.data?.bookmarks &&
+        roadmaps.length
+      ) {
+        bookmarks = syncBackendRoadmapBookmarksToUnifiedList({
+          userId,
+          backendBookmarks: roadmapBookmarksResponse.data.bookmarks,
+          roadmaps,
+        });
+      }
 
-  if (roadmapBookmarksResponse.success && roadmapBookmarksResponse.data?.bookmarks && roadmaps.length) {
-    bookmarks = syncBackendRoadmapBookmarksToUnifiedList({
-      userId,
-      backendBookmarks: roadmapBookmarksResponse.data.bookmarks,
-      roadmaps,
+      const tracks = normalizeTrackCards(bookmarks, recommendations, roadmaps);
+      journeyTrackCardsCache.set(cacheKey, {
+        data: tracks,
+        expiresAt: Date.now() + JOURNEY_TRACK_CARDS_CACHE_TTL_MS,
+      });
+
+      return tracks;
+    })
+    .finally(() => {
+      journeyTrackCardsPromiseCache.delete(cacheKey);
     });
-  }
 
-  return normalizeTrackCards(bookmarks, recommendations, roadmaps);
+  journeyTrackCardsPromiseCache.set(cacheKey, nextRequest);
+  return nextRequest;
 }
 
 export async function loadJourneySummaryForTrack(options: {

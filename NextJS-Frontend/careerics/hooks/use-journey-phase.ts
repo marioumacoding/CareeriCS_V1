@@ -26,8 +26,6 @@ type UseJourneyPhaseState = {
   isLoadingTracks: boolean;
   trackError: string | null;
   queryTrackId: string | null;
-  isPhaseLocked: boolean;
-  redirectPhase: JourneyPhaseNumber | null;
 };
 
 function normalizeTrackId(value: string | null): string | null {
@@ -35,40 +33,41 @@ function normalizeTrackId(value: string | null): string | null {
   return normalized.length ? normalized : null;
 }
 
-export function useJourneyPhase(currentPhase: JourneyPhaseNumber): UseJourneyPhaseState {
+export function useJourneyPhase(
+  currentPhase: JourneyPhaseNumber,
+): UseJourneyPhaseState {
   const searchParams = useSearchParams();
   const queryTrackId = normalizeTrackId(searchParams.get("trackId"));
+
   const { user, isLoading: isAuthLoading } = useAuth();
   const userId = user?.id ?? null;
 
   const [tracks, setTracks] = useState<JourneyTrackCard[]>([]);
   const [isLoadingTracks, setIsLoadingTracks] = useState(true);
   const [trackError, setTrackError] = useState<string | null>(null);
-  const [, setPhaseStateRefreshNonce] = useState(0);
+  const [, setRefresh] = useState(0);
 
+  // -------------------------
+  // Load tracks
+  // -------------------------
   useEffect(() => {
     let alive = true;
 
     const loadTracks = async () => {
-      if (isAuthLoading) {
-        return;
-      }
+      if (isAuthLoading) return;
 
       setIsLoadingTracks(true);
       setTrackError(null);
 
       try {
         const nextTracks = await loadJourneyTrackCards(userId);
-        if (!alive) {
-          return;
-        }
+
+        if (!alive) return;
 
         setTracks(nextTracks);
         setIsLoadingTracks(false);
       } catch {
-        if (!alive) {
-          return;
-        }
+        if (!alive) return;
 
         setTracks([]);
         setTrackError("Unable to load your journey tracks right now.");
@@ -83,74 +82,71 @@ export function useJourneyPhase(currentPhase: JourneyPhaseNumber): UseJourneyPha
     };
   }, [isAuthLoading, userId]);
 
+  // -------------------------
+  // Select track (query → storage → fallback)
+  // -------------------------
   const selectedTrack = useMemo(() => {
-    if (!tracks.length) {
-      return null;
-    }
+    if (!tracks.length) return null;
 
-    const fromQuery = queryTrackId ? getTrackById(tracks, queryTrackId) : null;
-    if (fromQuery) {
-      return fromQuery;
-    }
+    const fromQuery = queryTrackId
+      ? getTrackById(tracks, queryTrackId)
+      : null;
+    if (fromQuery) return fromQuery;
 
-    const persistedTrackId = readSelectedJourneyTrackId(userId);
-    const fromStorage = persistedTrackId ? getTrackById(tracks, persistedTrackId) : null;
-    if (fromStorage) {
-      return fromStorage;
-    }
+    const stored = readSelectedJourneyTrackId(userId);
+    const fromStorage = stored ? getTrackById(tracks, stored) : null;
+    if (fromStorage) return fromStorage;
 
     return tracks[0] || null;
   }, [queryTrackId, tracks, userId]);
 
-  const selectedTrackId = selectedTrack?.id || null;
+  const selectedTrackId = selectedTrack?.id ?? null;
 
+  // -------------------------
+  // Persist selected track
+  // -------------------------
   useEffect(() => {
     persistSelectedJourneyTrackId(selectedTrackId, userId);
   }, [selectedTrackId, userId]);
 
+  // -------------------------
+  // Visit tracking (IMPORTANT)
+  // -------------------------
   useEffect(() => {
-    if (!selectedTrackId || !selectedTrack) {
-      return;
-    }
-
-    const storedState = readJourneyPhaseState(selectedTrackId, userId);
-
-    if (currentPhase > storedState.maxReached) {
-      return;
-    }
+    if (!selectedTrackId || !selectedTrack) return;
 
     visitJourneyPhase(selectedTrackId, currentPhase, userId);
   }, [currentPhase, selectedTrack, selectedTrackId, userId]);
 
+  // -------------------------
+  // React to storage updates
+  // -------------------------
   useEffect(() => {
-    const handleJourneyPhaseStateUpdated = () => {
-      setPhaseStateRefreshNonce((previous) => previous + 1);
-    };
+    const handler = () => setRefresh((p) => p + 1);
 
     window.addEventListener(
       JOURNEY_PHASE_STATE_UPDATED_EVENT,
-      handleJourneyPhaseStateUpdated as EventListener,
+      handler as EventListener,
     );
 
     return () => {
       window.removeEventListener(
         JOURNEY_PHASE_STATE_UPDATED_EVENT,
-        handleJourneyPhaseStateUpdated as EventListener,
+        handler as EventListener,
       );
     };
   }, []);
 
+  // -------------------------
+  // Phase state
+  // -------------------------
   const phaseState: JourneyPhaseState = selectedTrackId
     ? readJourneyPhaseState(selectedTrackId, userId)
     : { maxReached: 1 };
 
-  const redirectPhase = !selectedTrackId
-    ? null
-    : (() => {
-        const storedState = readJourneyPhaseState(selectedTrackId, userId);
-        return currentPhase > storedState.maxReached ? storedState.maxReached : null;
-      })();
-
+  // -------------------------
+  // Return
+  // -------------------------
   return {
     tracks,
     selectedTrack,
@@ -160,7 +156,5 @@ export function useJourneyPhase(currentPhase: JourneyPhaseNumber): UseJourneyPha
     isLoadingTracks,
     trackError,
     queryTrackId,
-    isPhaseLocked: Boolean(redirectPhase),
-    redirectPhase,
   };
 }

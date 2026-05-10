@@ -44,7 +44,6 @@ export default function JourneyTrialRoundPage() {
   const {
     selectedTrack,
     maxReached,
-    redirectPhase,
     isLoadingTracks,
     trackError,
   } = useJourneyPhase(4);
@@ -58,13 +57,7 @@ export default function JourneyTrialRoundPage() {
   const pendingSessionCreationRef = useRef<Promise<string | null> | null>(null);
   const hasAutoPreparedRef = useRef(false);
 
-  useEffect(() => {
-    if (!redirectPhase || !selectedTrack?.id) {
-      return;
-    }
-
-    router.replace(buildJourneyPhaseHref(redirectPhase, selectedTrack.id));
-  }, [redirectPhase, router, selectedTrack?.id]);
+ 
 
   const createInterviewSession = useCallback(async (sessionName: string): Promise<string | null> => {
     if (!user?.id) {
@@ -197,11 +190,58 @@ export default function JourneyTrialRoundPage() {
 
   const isStartDisabled = isLoading || isStartingInterview || (isPreparingSession && !preparedSessionId);
 
+  // Delay render until all data is ready
+  const isInitializing = isLoadingTracks || isLoading;
+  if (isInitializing && !selectedTrack) {
+    return (
+      <JourneyTree
+        current={4}
+        maxReached={4}
+        renderContent={() => (
+          <div
+            style={{
+              width: "100%",
+              height: "100%",
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              color: "white",
+            }}
+          >
+            <div style={{ textAlign: "center" }}>
+              <div
+                style={{
+                  fontSize: "1rem",
+                  marginBottom: "1rem",
+                  opacity: 0.8,
+                }}
+              >
+                Loading interview sessions...
+              </div>
+              <div
+                style={{
+                  width: "30px",
+                  height: "30px",
+                  border: "2px solid #4A5FC1",
+                  borderTop: "2px solid transparent",
+                  borderRadius: "50%",
+                  animation: "spin 0.8s linear infinite",
+                  margin: "0 auto",
+                }}
+              />
+              <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+            </div>
+          </div>
+        )}
+      />
+    );
+  }
+
   if (!selectedTrack && !isLoadingTracks) {
     return (
       <JourneyTree
         current={4}
-        maxReached={1}
+        maxReached={4}
         renderContent={() => (
           <div
             style={{
@@ -242,10 +282,14 @@ export default function JourneyTrialRoundPage() {
     );
   }
 
+  const nextPhase = maxReached < 5
+    ? maxReached + 1
+    : maxReached;
+
   return (
     <JourneyTree
       current={4}
-      maxReached={maxReached}
+      maxReached={nextPhase}
       resolvePhasePath={(phase) => buildJourneyPhaseHref(phase, selectedTrack?.id)}
       renderContent={() => (
         <div

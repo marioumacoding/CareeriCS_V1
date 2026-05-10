@@ -69,7 +69,7 @@ export default function JourneyTree({
   resolvePhasePath,
   renderContent,
 }: JourneyTreeProps) {
-  const phases = Array.from({ length: 5 }, (_, i) => i + 1);
+  const phases = Array.from({ length: maxReached }, (_, i) => i + 1);
   const router = useRouter();
 
   return (

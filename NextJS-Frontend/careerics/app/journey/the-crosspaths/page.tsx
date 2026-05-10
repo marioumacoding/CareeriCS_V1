@@ -100,16 +100,9 @@ export default function JourneyCrosspathsPage() {
     maxReached,
     isLoadingTracks,
     trackError,
-    redirectPhase,
   } = useJourneyPhase(1);
 
-  useEffect(() => {
-    if (!redirectPhase || !selectedTrack?.id) {
-      return;
-    }
-
-    router.replace(buildJourneyPhaseHref(redirectPhase, selectedTrack.id));
-  }, [redirectPhase, router, selectedTrack?.id]);
+  
 
   useEffect(() => {
     let alive = true;
@@ -230,6 +223,52 @@ export default function JourneyCrosspathsPage() {
     return levelData[selectedLevel] || DEFAULT_LEVEL_DATA;
   }, [levelData, selectedLevel]);
 
+  // Delay render until all data is ready
+  if (isLoadingTracks || isLoadingData || !selectedTrack) {
+    return (
+      <JourneyTree
+        current={1}
+        maxReached={1}
+        renderContent={() => (
+          <div
+            style={{
+              width: "100%",
+              height: "100%",
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              color: "white",
+            }}
+          >
+            <div style={{ textAlign: "center" }}>
+              <div
+                style={{
+                  fontSize: "1rem",
+                  marginBottom: "1rem",
+                  opacity: 0.8,
+                }}
+              >
+                Loading your career path...
+              </div>
+              <div
+                style={{
+                  width: "30px",
+                  height: "30px",
+                  border: "2px solid #4A5FC1",
+                  borderTop: "2px solid transparent",
+                  borderRadius: "50%",
+                  animation: "spin 0.8s linear infinite",
+                  margin: "0 auto",
+                }}
+              />
+              <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+            </div>
+          </div>
+        )}
+      />
+    );
+  }
+
   if (!selectedTrack && !isLoadingTracks) {
     return (
       <JourneyTree
@@ -275,10 +314,14 @@ export default function JourneyCrosspathsPage() {
     );
   }
 
+  const nextPhase = maxReached < 5
+    ? maxReached + 1
+    : maxReached;  
+
   return (
     <JourneyTree
       current={1}
-      maxReached={maxReached}
+      maxReached={nextPhase}
       resolvePhasePath={(phase) => buildJourneyPhaseHref(phase, selectedTrack?.id)}
       renderContent={() => (
         <div

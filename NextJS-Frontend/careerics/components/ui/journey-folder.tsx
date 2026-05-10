@@ -22,7 +22,7 @@ const PHASE_CONFIG = {
   4: {
     label: "Trial Round",
     path: "/journey/trial-round",
-    marginTop: "24rem",
+    marginTop: "20rem",
   },
   5: {
     label: "Job Hunt",
@@ -116,7 +116,6 @@ export default function JourneyFolder({
           display: "flex",
           flexDirection: "column",
           cursor: locked ? "not-allowed" : "pointer",
-          opacity: locked ? 0.55 : 1,
         }}
       >
         <div
@@ -137,6 +136,7 @@ export default function JourneyFolder({
             fontSize: "1rem",
             userSelect: "none",
             cursor: locked ? "not-allowed" : "pointer",
+            whiteSpace:"nowrap",
           }}
         >
           {locked ? `${label} (Locked)` : label}

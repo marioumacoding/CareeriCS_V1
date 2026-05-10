@@ -23,7 +23,6 @@ export default function JourneyJobHuntPage() {
   const {
     selectedTrack,
     maxReached,
-    redirectPhase,
     isLoadingTracks,
     trackError,
   } = useJourneyPhase(5);
@@ -34,13 +33,6 @@ export default function JourneyJobHuntPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [jobsError, setJobsError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!redirectPhase || !selectedTrack?.id) {
-      return;
-    }
-
-    router.replace(buildJourneyPhaseHref(redirectPhase, selectedTrack.id));
-  }, [redirectPhase, router, selectedTrack?.id]);
 
   useEffect(() => {
     if (isAuthLoading) {
@@ -116,11 +108,58 @@ export default function JourneyJobHuntPage() {
     return `${applicationsCount} tracked application${applicationsCount === 1 ? "" : "s"} so far.`;
   }, [applicationsCount]);
 
+  // Delay render until all data is ready
+  const isInitializing = isLoadingTracks || isLoading || isAuthLoading;
+  if (isInitializing && !selectedTrack) {
+    return (
+      <JourneyTree
+        current={5}
+        maxReached={5}
+        renderContent={() => (
+          <div
+            style={{
+              width: "100%",
+              height: "100%",
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              color: "white",
+            }}
+          >
+            <div style={{ textAlign: "center" }}>
+              <div
+                style={{
+                  fontSize: "1rem",
+                  marginBottom: "1rem",
+                  opacity: 0.8,
+                }}
+              >
+                Loading job opportunities...
+              </div>
+              <div
+                style={{
+                  width: "30px",
+                  height: "30px",
+                  border: "2px solid #4A5FC1",
+                  borderTop: "2px solid transparent",
+                  borderRadius: "50%",
+                  animation: "spin 0.8s linear infinite",
+                  margin: "0 auto",
+                }}
+              />
+              <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+            </div>
+          </div>
+        )}
+      />
+    );
+  }
+
   if (!selectedTrack && !isLoadingTracks) {
     return (
       <JourneyTree
         current={5}
-        maxReached={1}
+        maxReached={5}
         renderContent={() => (
           <div
             style={{
@@ -161,10 +200,11 @@ export default function JourneyJobHuntPage() {
     );
   }
 
+
   return (
     <JourneyTree
       current={5}
-      maxReached={maxReached}
+      maxReached={5}
       resolvePhasePath={(phase) => buildJourneyPhaseHref(phase, selectedTrack?.id)}
       renderContent={() => (
         <div style={{

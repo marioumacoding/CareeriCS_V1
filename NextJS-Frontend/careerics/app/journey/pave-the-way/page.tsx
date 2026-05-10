@@ -31,7 +31,6 @@ export default function JourneyPaveTheWayPage() {
   const {
     selectedTrack,
     maxReached,
-    redirectPhase,
     isLoadingTracks,
     trackError,
   } = useJourneyPhase(2);
@@ -42,13 +41,6 @@ export default function JourneyPaveTheWayPage() {
   const [isLoadingRoadmap, setIsLoadingRoadmap] = useState(false);
   const [roadmapError, setRoadmapError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!redirectPhase || !selectedTrack?.id) {
-      return;
-    }
-
-    router.replace(buildJourneyPhaseHref(redirectPhase, selectedTrack.id));
-  }, [redirectPhase, router, selectedTrack?.id]);
 
   useEffect(() => {
     let alive = true;
@@ -107,12 +99,12 @@ export default function JourneyPaveTheWayPage() {
   const steps = !roadmap?.sections?.length
     ? []
     : roadmap.sections
-        .slice()
-        .sort((left, right) => left.order - right.order)
-        .map((section) => ({
-          label: section.title,
-          href: section.id,
-        }));
+      .slice()
+      .sort((left, right) => left.order - right.order)
+      .map((section) => ({
+        label: section.title,
+        href: section.id,
+      }));
 
   const courses: CourseItem[] = (() => {
     if (!roadmapCourses?.sections?.length) {
@@ -158,11 +150,57 @@ export default function JourneyPaveTheWayPage() {
     }
   };
 
+  // Delay render until all data is ready
+  if (isLoadingTracks || isLoadingRoadmap || !selectedTrack) {
+    return (
+      <JourneyTree
+        current={2}
+        maxReached={2}
+        renderContent={() => (
+          <div
+            style={{
+              width: "100%",
+              height: "100%",
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              color: "white",
+            }}
+          >
+            <div style={{ textAlign: "center" }}>
+              <div
+                style={{
+                  fontSize: "1rem",
+                  marginBottom: "1rem",
+                  opacity: 0.8,
+                }}
+              >
+                Loading your learning path...
+              </div>
+              <div
+                style={{
+                  width: "30px",
+                  height: "30px",
+                  border: "2px solid #4A5FC1",
+                  borderTop: "2px solid transparent",
+                  borderRadius: "50%",
+                  animation: "spin 0.8s linear infinite",
+                  margin: "0 auto",
+                }}
+              />
+              <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+            </div>
+          </div>
+        )}
+      />
+    );
+  }
+
   if (!selectedTrack && !isLoadingTracks) {
     return (
       <JourneyTree
         current={2}
-        maxReached={1}
+        maxReached={2}
         renderContent={() => (
           <div
             style={{
@@ -203,10 +241,14 @@ export default function JourneyPaveTheWayPage() {
     );
   }
 
+  const nextPhase = maxReached < 5
+    ? maxReached + 1
+    : maxReached;
+
   return (
     <JourneyTree
       current={2}
-      maxReached={maxReached}
+      maxReached={nextPhase}
       resolvePhasePath={(phase) => buildJourneyPhaseHref(phase, selectedTrack?.id)}
       renderContent={() => (
         <div

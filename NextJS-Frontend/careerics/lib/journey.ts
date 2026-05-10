@@ -264,22 +264,15 @@ export function visitJourneyPhase(
 ): JourneyPhaseState {
   const currentState = readJourneyPhaseState(trackId, userId);
 
-  if (phase > currentState.maxReached) {
-    return currentState;
-  }
-
-  const nextUnlockedPhase =
-    phase >= 5 ? 5 : normalizeJourneyPhaseNumber(phase + 1);
+  const nextMaxReached: JourneyPhaseNumber = Math.max(
+    currentState.maxReached,
+    phase
+  ) as JourneyPhaseNumber;
 
   return persistJourneyPhaseState(
     trackId,
-    {
-      maxReached:
-        nextUnlockedPhase > currentState.maxReached
-          ? nextUnlockedPhase
-          : currentState.maxReached,
-    },
-    userId,
+    { maxReached: nextMaxReached },
+    userId
   );
 }
 

@@ -30,7 +30,6 @@ export default function JourneyDocumentItPage() {
   const {
     selectedTrack,
     maxReached,
-    redirectPhase,
     isLoadingTracks,
     trackError,
   } = useJourneyPhase(3);
@@ -42,13 +41,7 @@ export default function JourneyDocumentItPage() {
   const [extractorMessage, setExtractorMessage] = useState<string | null>(null);
   const [isExtracting, setIsExtracting] = useState(false);
 
-  useEffect(() => {
-    if (!redirectPhase || !selectedTrack?.id) {
-      return;
-    }
-
-    router.replace(buildJourneyPhaseHref(redirectPhase, selectedTrack.id));
-  }, [redirectPhase, router, selectedTrack?.id]);
+ 
 
   const refreshReports = async (): Promise<APIReport[]> => {
     if (!user?.id) {
@@ -145,11 +138,57 @@ export default function JourneyDocumentItPage() {
     link.remove();
   };
 
+  // Delay render until all data is ready
+  if (isLoadingTracks || isLoadingReports || !selectedTrack) {
+    return (
+      <JourneyTree
+        current={3}
+        maxReached={3}
+        renderContent={() => (
+          <div
+            style={{
+              width: "100%",
+              height: "100%",
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              color: "white",
+            }}
+          >
+            <div style={{ textAlign: "center" }}>
+              <div
+                style={{
+                  fontSize: "1rem",
+                  marginBottom: "1rem",
+                  opacity: 0.8,
+                }}
+              >
+                Loading your CV tools...
+              </div>
+              <div
+                style={{
+                  width: "30px",
+                  height: "30px",
+                  border: "2px solid #4A5FC1",
+                  borderTop: "2px solid transparent",
+                  borderRadius: "50%",
+                  animation: "spin 0.8s linear infinite",
+                  margin: "0 auto",
+                }}
+              />
+              <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+            </div>
+          </div>
+        )}
+      />
+    );
+  }
+
   if (!selectedTrack && !isLoadingTracks) {
     return (
       <JourneyTree
         current={3}
-        maxReached={1}
+        maxReached={3}
         renderContent={() => (
           <div
             style={{
@@ -190,10 +229,14 @@ export default function JourneyDocumentItPage() {
     );
   }
 
+  const nextPhase = maxReached < 5
+    ? maxReached + 1
+    : maxReached;
+
   return (
     <JourneyTree
       current={3}
-      maxReached={maxReached}
+      maxReached={nextPhase}
       resolvePhasePath={(phase) => buildJourneyPhaseHref(phase, selectedTrack?.id)}
       renderContent={() => (
         <>

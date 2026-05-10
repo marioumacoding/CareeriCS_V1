@@ -8,7 +8,7 @@ interface JobDetailsProps {
     title: string;
     company: string;
     location: string;
-    salary: string;
+    salary?: string | null;
     tags: string[];
     description: string;
     responsibilities?: string;
@@ -154,9 +154,11 @@ const JobDetailsCard: React.FC<JobDetailsProps> = ({
             ))}
           </div>
           
-          <div style={{ backgroundColor: "#d4ff8e", color: "black", padding: "8px 25px", borderRadius: "25px", fontWeight: "bold", maxWidth: "100%", wordBreak: "break-word" }}>
-            Salary: {jobData.salary}
-          </div>
+          {jobData.salary ? (
+            <div style={{ backgroundColor: "#d4ff8e", color: "black", padding: "8px 25px", borderRadius: "25px", fontWeight: "bold", maxWidth: "100%", wordBreak: "break-word" }}>
+              Salary: {jobData.salary}
+            </div>
+          ) : null}
         </div>
       </div>
 

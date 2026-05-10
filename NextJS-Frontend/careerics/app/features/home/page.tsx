@@ -12,22 +12,13 @@ import {
   careerService,
   interviewService,
   jobService,
-  roadmapService,
   skillAssessmentService,
 } from "@/services";
 import {
   COURSE_PROGRESS_UPDATED_EVENT,
   loadCourseProgress,
 } from "@/lib/course-progress";
-import {
-  getUnifiedBookmarks,
-  UNIFIED_BOOKMARKS_UPDATED_EVENT,
-} from "@/lib/unified-bookmarks";
-import { resolveUnifiedBookmarkHref } from "@/lib/bookmark-targets";
-import {
-  normalizeRoadmapListPayload,
-  syncBackendRoadmapBookmarksToUnifiedList,
-} from "@/lib/roadmap-bookmark-sync";
+import { UNIFIED_BOOKMARKS_UPDATED_EVENT } from "@/lib/unified-bookmarks";
 import {
   CAREER_FEATURE_ROUTE,
   buildCareerQuizResultsHref,
@@ -35,18 +26,17 @@ import {
   startCareerQuizSession,
 } from "@/lib/career-quiz";
 import { buildJobDetailsHref, mapApiJobToUiModel } from "@/lib/jobs";
-import type { UnifiedBookmarkEntry } from "@/types";
-
-type CareerCardItem = {
-  key: string;
-  title: string;
-  desc: string;
-  href?: string;
-  buttonLabel?: string;
-  type?: string;
-  disabled?: boolean;
-  onAction?: () => void;
-};
+import {
+  JOURNEY_PHASE_STATE_UPDATED_EVENT,
+  JOURNEY_PHASES,
+  type JourneyTrackCard,
+  buildJourneyPhaseHref,
+  loadJourneyTrackCards,
+  persistSelectedJourneyTrackId,
+  readJourneyPhaseState,
+  readSelectedJourneyTrackId,
+  toProgressBucket,
+} from "@/lib/journey";
 
 type RecentActivityItem = {
   key: string;
@@ -120,47 +110,22 @@ function dedupeActivities(activities: RecentActivityItem[]): RecentActivityItem[
   return Array.from(byKey.values()).sort((a, b) => b.timestamp - a.timestamp);
 }
 
-function toProgressBucket(value: number): number {
-  const clamped = Math.min(Math.max(value, 0), 100);
-  const roundedToTen = Math.round(clamped / 10) * 10;
-  return Math.min(100, Math.max(10, roundedToTen));
-}
-
-function toCurrentPhase(progress: number): number {
-  if (progress >= 90) return 5;
-  if (progress >= 70) return 4;
-  if (progress >= 45) return 3;
-  if (progress >= 20) return 2;
-  return 1;
-}
-
-function getBookmarkKey(bookmark: UnifiedBookmarkEntry): string {
-  return `${bookmark.kind}:${bookmark.entity_id}`;
-}
-
 export default function HomePage() {
   const router = useRouter();
   const { user, isLoading: isAuthLoading } = useAuth();
   const userId = user?.id ?? null;
 
   const [projectActivities, setProjectActivities] = useState<RecentActivityItem[]>([]);
-  const [selectedCareerKey, setSelectedCareerKey] = useState<string | null>(null);
+  const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
   const [isStartingCareerQuiz, setIsStartingCareerQuiz] = useState(false);
   const [careerQuizError, setCareerQuizError] = useState<string | null>(null);
   const [activityRefreshNonce, setActivityRefreshNonce] = useState(0);
   const [bookmarkRefreshNonce, setBookmarkRefreshNonce] = useState(0);
+  const [, setPhaseStateRefreshNonce] = useState(0);
 
-  const handleContinue = (career: CareerCardItem) => {
-    setSelectedCareerKey(career.key);
-  };
-
-  const bookmarks = useMemo(() => {
-    if (isAuthLoading) {
-      return [];
-    }
-
-    return getUnifiedBookmarks(userId);
-  }, [bookmarkRefreshNonce, isAuthLoading, userId]);
+  const [journeyTracks, setJourneyTracks] = useState<JourneyTrackCard[]>([]);
+  const [isLoadingJourneyTracks, setIsLoadingJourneyTracks] = useState(false);
+  const [journeyError, setJourneyError] = useState<string | null>(null);
 
   const handleStartCareerQuiz = async () => {
     if (isStartingCareerQuiz || isAuthLoading) {
@@ -190,16 +155,28 @@ export default function HomePage() {
   };
 
   useEffect(() => {
+    const handleJourneyPhaseStateUpdated = () => {
+      setPhaseStateRefreshNonce((previous) => previous + 1);
+    };
+
     const handleBookmarksUpdated = () => {
       if (!isAuthLoading) {
         setBookmarkRefreshNonce((previous) => previous + 1);
       }
     };
 
+    window.addEventListener(
+      JOURNEY_PHASE_STATE_UPDATED_EVENT,
+      handleJourneyPhaseStateUpdated as EventListener,
+    );
     window.addEventListener(UNIFIED_BOOKMARKS_UPDATED_EVENT, handleBookmarksUpdated as EventListener);
     window.addEventListener("storage", handleBookmarksUpdated);
 
     return () => {
+      window.removeEventListener(
+        JOURNEY_PHASE_STATE_UPDATED_EVENT,
+        handleJourneyPhaseStateUpdated as EventListener,
+      );
       window.removeEventListener(
         UNIFIED_BOOKMARKS_UPDATED_EVENT,
         handleBookmarksUpdated as EventListener,
@@ -207,45 +184,6 @@ export default function HomePage() {
       window.removeEventListener("storage", handleBookmarksUpdated);
     };
   }, [isAuthLoading]);
-
-  useEffect(() => {
-    if (isAuthLoading || !userId) {
-      return;
-    }
-
-    let isCancelled = false;
-
-    const syncRoadmapBookmarks = async () => {
-      const [roadmapBookmarksResponse, roadmapListResponse] = await Promise.all([
-        roadmapService.getUserRoadmapBookmarks(userId),
-        roadmapService.listRoadmaps(),
-      ]);
-
-      if (isCancelled) {
-        return;
-      }
-
-      if (
-        !roadmapBookmarksResponse.success ||
-        !roadmapBookmarksResponse.data?.bookmarks ||
-        !roadmapListResponse.success
-      ) {
-        return;
-      }
-
-      syncBackendRoadmapBookmarksToUnifiedList({
-        userId,
-        backendBookmarks: roadmapBookmarksResponse.data.bookmarks,
-        roadmaps: normalizeRoadmapListPayload(roadmapListResponse.data),
-      });
-    };
-
-    void syncRoadmapBookmarks();
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [isAuthLoading, userId]);
 
   useEffect(() => {
     const handleCourseProgressUpdated = () => {
@@ -369,7 +307,7 @@ export default function HomePage() {
             )}&sessionId=${encodeURIComponent(session.id)}&q=1`,
           }));
 
-        const courseActivities = loadCourseProgress().completed.map((course) => {
+        const courseActivities = loadCourseProgress(user?.id).completed.map((course) => {
           const activityDate = course.completedAt ?? course.updatedAt ?? "";
 
           return {
@@ -418,7 +356,66 @@ export default function HomePage() {
     return () => {
       isCancelled = true;
     };
-  }, [activityRefreshNonce, isAuthLoading, userId]);
+  }, [activityRefreshNonce, isAuthLoading, userId, user?.id]);
+
+  useEffect(() => {
+    let alive = true;
+
+    const loadTracks = async () => {
+      if (isAuthLoading) {
+        return;
+      }
+
+      if (!userId) {
+        setJourneyTracks([]);
+        setSelectedTrackId(null);
+        setJourneyError(null);
+        setIsLoadingJourneyTracks(false);
+        return;
+      }
+
+      setIsLoadingJourneyTracks(true);
+      setJourneyError(null);
+
+      try {
+        const tracks = await loadJourneyTrackCards(userId);
+
+        if (!alive) {
+          return;
+        }
+
+        setJourneyTracks(tracks);
+
+        const persistedTrackId = readSelectedJourneyTrackId(userId);
+        const selectedFromStorage = persistedTrackId
+          ? tracks.find((track) => track.id === persistedTrackId) || null
+          : null;
+        const fallbackTrack = selectedFromStorage || tracks[0] || null;
+
+        setSelectedTrackId(fallbackTrack?.id || null);
+        if (fallbackTrack?.id) {
+          persistSelectedJourneyTrackId(fallbackTrack.id, userId);
+        }
+
+        setIsLoadingJourneyTracks(false);
+      } catch {
+        if (!alive) {
+          return;
+        }
+
+        setJourneyTracks([]);
+        setSelectedTrackId(null);
+        setJourneyError("Unable to load your journey tracks right now.");
+        setIsLoadingJourneyTracks(false);
+      }
+    };
+
+    void loadTracks();
+
+    return () => {
+      alive = false;
+    };
+  }, [bookmarkRefreshNonce, isAuthLoading, userId]);
 
   const recentActivities = useMemo<RecentActivityItem[]>(() => {
     if (!projectActivities.length) {
@@ -428,86 +425,66 @@ export default function HomePage() {
     return projectActivities;
   }, [projectActivities]);
 
-  const careerData: CareerCardItem[] = useMemo(() => {
-    if (bookmarks.length > 0) {
-      return bookmarks.map((bookmark) => {
-        const href = resolveUnifiedBookmarkHref(bookmark);
-        const bookmarkKey = getBookmarkKey(bookmark);
-
-        return {
-          key: bookmarkKey,
-          title: bookmark.title,
-          desc:
-            bookmark.kind === "roadmap"
-              ? bookmark.description || "Continue your roadmap journey."
-              : bookmark.description || `Match score: ${bookmark.score ?? 0}%`,
-          href,
-          buttonLabel:
-            bookmark.kind === "roadmap"
-              ? "Continue"
-              : "Learn More",
-          onAction: () => {
-            router.push(href);
-          },
-        };
-      });
-    }
-
-    return [
-      {
-        key: "career-quiz-empty-state",
-        title: "No Bookmarks Yet",
-        desc: "Take the career quiz to generate your first recommendation and roadmap.",
-        buttonLabel: isStartingCareerQuiz ? "Starting..." : "Take Quiz",
-        type: "bookmark",
-        disabled: isStartingCareerQuiz || isAuthLoading,
-        onAction: () => {
-          void handleStartCareerQuiz();
-        },
-      },
-    ];
-  }, [bookmarks, handleStartCareerQuiz, isAuthLoading, isStartingCareerQuiz, router]);
-
-  const activeSelectedCareerKey = selectedCareerKey ?? careerData[0]?.key ?? null;
-
-  const selectedBookmark = useMemo(() => {
-    if (!activeSelectedCareerKey) {
+  const activeTrack = useMemo(() => {
+    if (!journeyTracks.length) {
       return null;
     }
 
-    return (
-      bookmarks.find((bookmark) => getBookmarkKey(bookmark) === activeSelectedCareerKey) || null
-    );
-  }, [activeSelectedCareerKey, bookmarks]);
+    if (selectedTrackId) {
+      const matched = journeyTracks.find((track) => track.id === selectedTrackId);
+      if (matched) {
+        return matched;
+      }
+    }
+
+    return journeyTracks[0];
+  }, [journeyTracks, selectedTrackId]);
+
+  const activePhaseState = activeTrack?.id
+    ? readJourneyPhaseState(activeTrack.id, userId)
+    : { maxReached: 1 as const };
 
   const dashboardData = useMemo(() => {
-    const selectedScore =
-      selectedBookmark?.kind === "career" && typeof selectedBookmark.score === "number"
-        ? selectedBookmark.score
-        : 10;
-
-    const progress = toProgressBucket(selectedScore);
-    const currentPhase = toCurrentPhase(progress);
-    const nextPhase = Math.min(5, currentPhase + 1);
-
-    if (!selectedBookmark) {
+    if (!activeTrack) {
       return {
         activities: recentActivities,
         progress: 10,
         currentPhase: 1,
         nextPhase: 2,
-        nextPhaseDesc: "Take the quiz or save a roadmap to see your next phase details.",
+        nextPhaseDesc: JOURNEY_PHASES[1].description,
       };
     }
 
+    const currentPhase = activePhaseState.maxReached;
+    const nextPhase = currentPhase >= 5 ? 5 : currentPhase + 1;
+    const progressValue =
+      currentPhase <= 1
+        ? 10
+        : toProgressBucket(((currentPhase - 1) / 4) * 100);
+
     return {
       activities: recentActivities,
-      progress,
+      progress: progressValue,
       currentPhase,
       nextPhase,
-      nextPhaseDesc: selectedBookmark.description ?? "No next phase description available.",
+      nextPhaseDesc: JOURNEY_PHASES[nextPhase - 1]?.description || "No next phase description available.",
     };
-  }, [recentActivities, selectedBookmark]);
+  }, [activePhaseState.maxReached, activeTrack, recentActivities]);
+
+  const handleSelectTrack = (trackId: string) => {
+    setSelectedTrackId(trackId);
+    persistSelectedJourneyTrackId(trackId, userId);
+  };
+
+  const openTrackJourney = (track: JourneyTrackCard) => {
+    persistSelectedJourneyTrackId(track.id, userId);
+    setSelectedTrackId(track.id);
+
+    const targetPhase = readJourneyPhaseState(track.id, userId).maxReached;
+    router.push(buildJourneyPhaseHref(targetPhase, track.id));
+  };
+
+  const showJourneyPlaceholder = !isLoadingJourneyTracks && !journeyTracks.length;
 
   return (
     <div
@@ -540,21 +517,57 @@ export default function HomePage() {
           </p>
         ) : null}
 
-        {careerData.map((career) => (
+        {journeyError ? (
+          <p
+            style={{
+              margin: "0 0 1rem 0",
+              color: "#FFD3D3",
+              fontFamily: "var(--font-jura)",
+              fontSize: "0.9rem",
+            }}
+          >
+            {journeyError}
+          </p>
+        ) : null}
+
+        {isLoadingJourneyTracks ? (
           <ChoiceCard
-            key={career.key}
-            isSelected={activeSelectedCareerKey === career.key}
-            title={career.title}
-            image={`/landing/Rectangle.svg`}
-            description={career.desc}
-            buttonLabel={career.buttonLabel}
-            blogPath={career.href}
-            onClick={() => handleContinue(career)}
-            type={career.type || ""}
-            disabled={career.disabled}
-            onAction={career.onAction}
+            key="journey-loading"
+            title="Loading Tracks"
+            image="/landing/Rectangle.svg"
+            description="Fetching your saved careers and latest recommendations."
+            buttonLabel="Loading..."
+            type="bookmark"
+            disabled
+          />
+        ) : null}
+
+        {journeyTracks.map((track) => (
+          <ChoiceCard
+            key={track.id}
+            isSelected={activeTrack?.id === track.id}
+            title={track.title}
+            image="/landing/Rectangle.svg"
+            description={track.description}
+            buttonLabel="Continue"
+            onClick={() => handleSelectTrack(track.id)}
+            onAction={() => openTrackJourney(track)}
           />
         ))}
+
+        {showJourneyPlaceholder ? (
+          <ChoiceCard
+            key="journey-empty-state"
+            title="No Journey Started Yet"
+            description="Take the career quiz to get track recommendations, then continue your 5-phase journey."
+            buttonLabel={isStartingCareerQuiz ? "Starting..." : "Take Quiz"}
+            type="bookmark"
+            disabled={isStartingCareerQuiz || isAuthLoading}
+            onAction={() => {
+              void handleStartCareerQuiz();
+            }}
+          />
+        ) : null}
       </CareerCardsContainer>
 
       <RecentActivityCard
@@ -576,7 +589,9 @@ export default function HomePage() {
       <PhaseCard
         type="next"
         phaseNumber={String(dashboardData.nextPhase)}
-        desc={dashboardData.nextPhaseDesc || "No next phase description available."}
+        desc={
+          dashboardData.nextPhaseDesc || "No next phase description available."
+        }
         style={{ gridArea: "3 / 3 / 5 / 6" }}
       />
     </div>

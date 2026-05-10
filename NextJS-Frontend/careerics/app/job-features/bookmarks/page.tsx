@@ -1,36 +1,29 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import JobCard from "@/components/ui/jobCard";
 import JobDetailsCard from "@/components/ui/JobDetailsCard";
 import {
   clearPersistedSelectedJobId,
   mapApiJobToUiModel,
   persistSelectedJobId,
-  readPersistedSelectedJobId,
+  readSelectedJobIdFromUrl,
+  replaceSelectedJobIdInUrl,
 } from "@/lib/jobs";
 import { useAuth } from "@/providers/auth-provider";
 import { jobService } from "@/services";
-import type { JobUiModel } from "@/types";
+import type { JobApplicationStatus, JobUiModel } from "@/types";
 
 export default function BookmarkedJobs() {
   const { user, isLoading: isAuthLoading } = useAuth();
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const searchParamsString = searchParams.toString();
-  const routeJobId = searchParams.get("jobId");
-
   const [jobs, setJobs] = useState<JobUiModel[]>([]);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+  const urlJobIdRef = useRef<string | null>(readSelectedJobIdFromUrl());
   const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isApplying, setIsApplying] = useState(false);
   const [bookmarkingJobId, setBookmarkingJobId] = useState<string | null>(null);
-
-  const lastViewedJobIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (isAuthLoading) {
@@ -74,7 +67,10 @@ export default function BookmarkedJobs() {
 
   useEffect(() => {
     if (!jobs.length) {
-      setSelectedJobId(null);
+      if (selectedJobId !== null) {
+        const timeoutId = window.setTimeout(() => setSelectedJobId(null), 0);
+        return () => window.clearTimeout(timeoutId);
+      }
       return;
     }
 
@@ -82,51 +78,32 @@ export default function BookmarkedJobs() {
       return;
     }
 
-    if (!routeJobId) {
+    if (!urlJobIdRef.current) {
       return;
     }
 
-    if (jobs.some((job) => job.id === routeJobId)) {
-      setSelectedJobId(routeJobId);
+    if (jobs.some((job) => job.id === urlJobIdRef.current)) {
+      const timeoutId = window.setTimeout(() => setSelectedJobId(urlJobIdRef.current), 0);
+      return () => window.clearTimeout(timeoutId);
     }
-  }, [jobs, routeJobId, selectedJobId]);
+  }, [jobs, selectedJobId]);
 
   useEffect(() => {
     if (!selectedJobId) {
-      if (routeJobId) {
-        const nextParams = new URLSearchParams(searchParamsString);
-        nextParams.delete("jobId");
-        const query = nextParams.toString();
-        router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
-      }
-
+      replaceSelectedJobIdInUrl(null);
+      urlJobIdRef.current = null;
       return;
     }
 
     persistSelectedJobId(selectedJobId);
-
-    if (routeJobId === selectedJobId) {
-      return;
-    }
-
-    const nextParams = new URLSearchParams(searchParamsString);
-    nextParams.set("jobId", selectedJobId);
-    router.replace(`${pathname}?${nextParams.toString()}`, { scroll: false });
-  }, [pathname, routeJobId, router, searchParamsString, selectedJobId]);
+    replaceSelectedJobIdInUrl(selectedJobId);
+    urlJobIdRef.current = selectedJobId;
+  }, [selectedJobId]);
 
   const selectedJob = useMemo(
     () => jobs.find((job) => job.id === selectedJobId) ?? null,
     [jobs, selectedJobId],
   );
-
-  useEffect(() => {
-    if (!user?.id || !selectedJob?.id || lastViewedJobIdRef.current === selectedJob.id) {
-      return;
-    }
-
-    lastViewedJobIdRef.current = selectedJob.id;
-    void jobService.markJobViewed(selectedJob.id, user.id);
-  }, [selectedJob?.id, user?.id]);
 
   const filteredJobs = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase();
@@ -171,21 +148,23 @@ export default function BookmarkedJobs() {
   };
 
   const handleApply = async () => {
-    if (!selectedJob || !user?.id || Boolean(selectedJob.applicationStatus)) {
+    if (!selectedJob || !user?.id) {
       return;
     }
+
+    const nextStatus = (selectedJob.applicationStatus ?? "applied") as JobApplicationStatus;
 
     // Open external job URL in a new tab if available (user action)
     try {
       if (selectedJob.jobUrl && typeof window !== "undefined") {
         window.open(selectedJob.jobUrl, "_blank", "noopener,noreferrer");
       }
-    } catch (err) {
+    } catch {
       // ignore popup errors and continue
     }
 
     setIsApplying(true);
-    const response = await jobService.applyToJob(selectedJob.id, user.id);
+    const response = await jobService.applyToJob(selectedJob.id, user.id, nextStatus);
 
     if (response.success) {
       jobService.invalidateJobList(user.id);
@@ -199,16 +178,6 @@ export default function BookmarkedJobs() {
     }
 
     setIsApplying(false);
-  };
-
-  const handleCloseDetails = () => {
-    setSelectedJobId(null);
-    clearPersistedSelectedJobId();
-
-    const nextParams = new URLSearchParams(searchParamsString);
-    nextParams.delete("jobId");
-    const query = nextParams.toString();
-    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
   };
 
   const renderBookmarkCards = () => {
@@ -300,7 +269,7 @@ export default function BookmarkedJobs() {
               onApply={handleApply}
               isApplying={isApplying}
               actionLabel="Apply"
-              isApplyDisabled={Boolean(selectedJob.applicationStatus)}
+              isApplyDisabled={false}
             />
           )}
         </div>

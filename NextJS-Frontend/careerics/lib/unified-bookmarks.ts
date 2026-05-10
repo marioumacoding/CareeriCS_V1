@@ -146,6 +146,10 @@ function parseUnifiedBookmarks(raw: string | null): UnifiedBookmarkEntry[] {
   }
 }
 
+function serializeUnifiedBookmarks(entries: UnifiedBookmarkEntry[]): string {
+  return JSON.stringify(normalizeAndCap(entries));
+}
+
 function parseLegacyCareerBookmarks(raw: string | null): UnifiedBookmarkEntry[] {
   if (!raw) {
     return [];
@@ -261,7 +265,16 @@ export function setUnifiedBookmarks(
     return normalized;
   }
 
-  window.localStorage.setItem(getStorageKey(userId), JSON.stringify(normalized));
+  const storageKey = getStorageKey(userId);
+  const currentRaw = window.localStorage.getItem(storageKey);
+  const currentSerialized = serializeUnifiedBookmarks(parseUnifiedBookmarks(currentRaw));
+  const nextSerialized = serializeUnifiedBookmarks(normalized);
+
+  if (currentSerialized === nextSerialized) {
+    return normalized;
+  }
+
+  window.localStorage.setItem(storageKey, nextSerialized);
   notifyUnifiedBookmarksUpdated(userId);
   return normalized;
 }

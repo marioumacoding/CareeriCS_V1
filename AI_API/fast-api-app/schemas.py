@@ -741,6 +741,7 @@ class JobPostBase(BaseModel):
     career_level: Optional[str] = None
     work_type: Optional[str] = None
     employment_type: Optional[str] = None
+    salary: Optional[str] = None
     description_about_role: Optional[str] = None
     description_key_responsibilities: Optional[str] = None
     description_requirements: Optional[str] = None
@@ -763,6 +764,8 @@ class JobBulkImportRequest(BaseModel):
 
 class JobPostResponse(JobPostBase):
     id: UUID
+    location_country: Optional[str] = None
+    location_city: Optional[str] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
     skills: List[str] = Field(default_factory=list)
@@ -777,11 +780,28 @@ class JobPostResponse(JobPostBase):
     model_config = ConfigDict(from_attributes=True)
 
 
+class JobFilterOptionResponse(BaseModel):
+    id: str
+    title: str
+    count: int
+
+
+class JobFilterOptionsResponse(BaseModel):
+    countries: List[JobFilterOptionResponse] = Field(default_factory=list)
+    cities: List[JobFilterOptionResponse] = Field(default_factory=list)
+    job_types: List[JobFilterOptionResponse] = Field(default_factory=list)
+    work_types: List[JobFilterOptionResponse] = Field(default_factory=list)
+    career_levels: List[JobFilterOptionResponse] = Field(default_factory=list)
+
+
 class JobListResponse(BaseModel):
     query: Optional[str] = None
     total: int
     skip: int
     limit: int
+    page: int = 1
+    total_pages: int = 0
+    filters: JobFilterOptionsResponse = Field(default_factory=JobFilterOptionsResponse)
     jobs: List[JobPostResponse]
 
 
@@ -818,6 +838,9 @@ class UserJobsListResponse(BaseModel):
     total: int
     skip: int
     limit: int
+    page: int = 1
+    total_pages: int = 0
+    filters: JobFilterOptionsResponse = Field(default_factory=JobFilterOptionsResponse)
     jobs: List[JobPostResponse]
 
 

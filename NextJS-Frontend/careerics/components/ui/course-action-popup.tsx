@@ -1,9 +1,8 @@
 "use client";
 
-import React from "react";
 import { Button } from "./button";
 
-type CourseActionMode = "enroll" | "complete";
+type CourseActionMode = "enroll" | "complete" | "retake";
 
 interface CourseActionPopupProps {
   courseTitle: string;
@@ -12,6 +11,7 @@ interface CourseActionPopupProps {
   isLoading?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
+  onContinue?: () => void;
 }
 
 export default function CourseActionPopup({
@@ -21,8 +21,11 @@ export default function CourseActionPopup({
   isLoading = false,
   onConfirm,
   onCancel,
+  onContinue,
 }: CourseActionPopupProps) {
   const isEnrollMode = mode === "enroll";
+  const isCompleteMode = mode === "complete";
+  const isRetakeMode = mode === "retake";
 
   return (
     <div
@@ -31,7 +34,9 @@ export default function CourseActionPopup({
       aria-label={
         isEnrollMode
           ? "Course enrollment confirmation"
-          : "Course completion confirmation"
+          : isCompleteMode
+            ? "Course completion confirmation"
+            : "Course retake confirmation"
       }
       onClick={onCancel}
       style={{
@@ -78,14 +83,16 @@ export default function CourseActionPopup({
               fontSize: "22px",
               fontWeight: 400,
               lineHeight: 1.5,
+              margin: 0,
             }}
           >
-
             Courses Details
           </h2>
+
           <img
             onClick={onCancel}
             src="/global/close.svg"
+            alt="Close popup"
             style={{
               width: "2rem",
               height: "2rem",
@@ -104,7 +111,6 @@ export default function CourseActionPopup({
           }}
         />
 
-        {/* Course Name */}
         <div
           style={{
             display: "flex",
@@ -113,7 +119,9 @@ export default function CourseActionPopup({
             alignItems: "flex-start",
           }}
         >
-          <p style={{ marginRight: "1rem", whiteSpace: "nowrap", paddingBlock:"0.5rem" }}>Course Name:</p>
+          <p style={{ margin: 0, marginRight: "1rem", whiteSpace: "nowrap", paddingBlock: "0.5rem" }}>
+            Course Name:
+          </p>
           <div
             style={{
               paddingInline: "1rem",
@@ -123,11 +131,10 @@ export default function CourseActionPopup({
               color: "white",
             }}
           >
-            <p>{courseTitle}</p>
+            <p style={{ margin: 0 }}>{courseTitle}</p>
           </div>
         </div>
 
-        {/* Organization */}
         <div
           style={{
             display: "flex",
@@ -136,7 +143,7 @@ export default function CourseActionPopup({
             alignItems: "flex-start",
           }}
         >
-          <p style={{paddingTop:"0.5rem"}}>Organization:</p>
+          <p style={{ margin: 0, paddingTop: "0.5rem" }}>Organization:</p>
           <div
             style={{
               paddingInline: "1rem",
@@ -146,12 +153,11 @@ export default function CourseActionPopup({
               color: "white",
             }}
           >
-            <p>{courseOrg}</p>
+            <p style={{ margin: 0 }}>{courseOrg}</p>
           </div>
         </div>
 
-        {/* Actions */}
-        {mode === "complete" &&
+        {isCompleteMode ? (
           <div
             style={{
               display: "flex",
@@ -163,6 +169,8 @@ export default function CourseActionPopup({
             <Button
               onClick={onConfirm}
               variant="popup-inverted"
+              isLoading={isLoading}
+              disabled={isLoading}
               style={{
                 minWidth: "45%",
                 flex: 0,
@@ -173,8 +181,9 @@ export default function CourseActionPopup({
             </Button>
 
             <Button
-              onClick={onCancel}
+              onClick={onContinue ?? onCancel}
               variant="popup"
+              disabled={isLoading}
               style={{
                 minWidth: "45%",
                 flex: 0,
@@ -184,9 +193,9 @@ export default function CourseActionPopup({
               Continue
             </Button>
           </div>
-        }
+        ) : null}
 
-        {mode === "enroll" &&
+        {isEnrollMode ? (
           <div
             style={{
               display: "flex",
@@ -198,6 +207,8 @@ export default function CourseActionPopup({
             <Button
               onClick={onConfirm}
               variant="popup"
+              isLoading={isLoading}
+              disabled={isLoading}
               style={{
                 flex: 1,
                 whiteSpace: "nowrap",
@@ -206,8 +217,45 @@ export default function CourseActionPopup({
               Enroll
             </Button>
           </div>
-        }
+        ) : null}
 
+        {isRetakeMode ? (
+          <div
+            style={{
+              display: "flex",
+              width: "100%",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <Button
+              onClick={onConfirm}
+              variant="popup"
+              isLoading={isLoading}
+              disabled={isLoading}
+              style={{
+                minWidth: "45%",
+                flex: 0,
+                whiteSpace: "nowrap",
+              }}
+            >
+              Retake
+            </Button>
+
+            <Button
+              onClick={onCancel}
+              variant="popup-inverted"
+              disabled={isLoading}
+              style={{
+                minWidth: "45%",
+                flex: 0,
+                whiteSpace: "nowrap",
+              }}
+            >
+              Cancel
+            </Button>
+          </div>
+        ) : null}
       </div>
     </div>
   );

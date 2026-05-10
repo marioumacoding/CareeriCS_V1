@@ -10,11 +10,9 @@
  */
 
 import { fastapiApi } from "@/lib/api";
-import { getAuthToken } from "@/lib/auth/token";
-import type { ApiResponse } from "@/types";
+import type { ApiResponse, CVProfile } from "@/types";
 
 async function postCvPdf(path: string, body: BodyInit | object): Promise<Blob> {
-  const token = await getAuthToken();
   const headers: HeadersInit = {
     Accept: "application/pdf",
   };
@@ -22,9 +20,6 @@ async function postCvPdf(path: string, body: BodyInit | object): Promise<Blob> {
   const isFormData = body instanceof FormData;
   if (!isFormData) {
     headers["Content-Type"] = "application/json";
-  }
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
   }
 
   const response = await fetch(`/api/fastapi${path}`, {
@@ -42,6 +37,10 @@ async function postCvPdf(path: string, body: BodyInit | object): Promise<Blob> {
 }
 
 export const cvService = {
+  getProfile(userId: string): Promise<ApiResponse<CVProfile>> {
+    return fastapiApi.get<CVProfile>(`/cv/profile/${userId}`);
+  },
+
   /**
    * Upload a PDF or DOCX CV file.
    * The server runs AI extraction, persists the structured data, and maps skills.

@@ -6,8 +6,15 @@ import { LoaderCircle } from "lucide-react";
 
 import CourseActionPopup from "@/components/ui/course-action-popup";
 import { CourseCards } from "@/components/ui/courseCards";
+import { useAuth } from "@/providers/auth-provider";
 import { roadmapService } from "@/services";
-import { enrollCourse } from "@/lib/course-progress";
+import {
+  COURSE_PROGRESS_UPDATED_EVENT,
+  completeCourse,
+  enrollCourse,
+  loadCourseProgress,
+  type CourseProgressState,
+} from "@/lib/course-progress";
 import type { RoadmapCoursesRead } from "@/types";
 
 function LoadingState({ label }: { label: string }) {
@@ -46,12 +53,15 @@ function LoadingState({ label }: { label: string }) {
 export default function CourseLibraryPage() {
   const searchParams = useSearchParams();
   const roadmapId = searchParams.get("roadmapId") || "";
+  const { user } = useAuth();
 
   const [searchTerm, setSearchTerm] = useState("");
   const [roadmapCourses, setRoadmapCourses] = useState<RoadmapCoursesRead | null>(null);
+  const [courseProgress, setCourseProgress] = useState<CourseProgressState>({ current: [], completed: [] });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [pendingEnrollmentCourse, setPendingEnrollmentCourse] = useState<
+  const [activePopupMode, setActivePopupMode] = useState<"enroll" | "complete" | null>(null);
+  const [activePopupCourse, setActivePopupCourse] = useState<
     RoadmapCoursesRead["sections"][number]["courses"][number] | null
   >(null);
 
@@ -92,6 +102,29 @@ export default function CourseLibraryPage() {
     };
   }, [roadmapId]);
 
+  useEffect(() => {
+    const syncCourseProgress = () => {
+      setCourseProgress(loadCourseProgress(user?.id));
+    };
+
+    syncCourseProgress();
+
+    const handleCourseProgressUpdated = () => {
+      syncCourseProgress();
+    };
+
+    window.addEventListener(COURSE_PROGRESS_UPDATED_EVENT, handleCourseProgressUpdated as EventListener);
+    window.addEventListener("storage", handleCourseProgressUpdated);
+
+    return () => {
+      window.removeEventListener(
+        COURSE_PROGRESS_UPDATED_EVENT,
+        handleCourseProgressUpdated as EventListener,
+      );
+      window.removeEventListener("storage", handleCourseProgressUpdated);
+    };
+  }, [user?.id]);
+
   const filteredSections = useMemo(() => {
     if (!roadmapCourses) {
       return [];
@@ -113,27 +146,78 @@ export default function CourseLibraryPage() {
       .filter((section) => section.courses.length > 0 || section.section_title.toLowerCase().includes(normalizedSearch));
   }, [roadmapCourses, searchTerm]);
 
+  const courseStatusById: Partial<Record<string, "enrolled" | "completed">> = {};
+
+  for (const course of courseProgress.current) {
+    courseStatusById[course.id] = "enrolled";
+  }
+
+  for (const course of courseProgress.completed) {
+    courseStatusById[course.id] = "completed";
+  }
+
   const totalTopics = filteredSections.length;
   const totalCourses = filteredSections.reduce((acc, section) => acc + section.courses.length, 0);
-  const completedCount = 0;
+  const completedCount = filteredSections.reduce(
+    (acc, section) =>
+      acc + section.courses.filter((course) => courseStatusById[course.id] === "completed").length,
+    0,
+  );
 
   const handleCourseClick = (course: RoadmapCoursesRead["sections"][number]["courses"][number]) => {
-    window.open(course.url, "_blank", "noopener,noreferrer");
-    setPendingEnrollmentCourse(course);
-  };
-
-  const confirmEnrollment = () => {
-    if (!pendingEnrollmentCourse) {
+    if (courseStatusById[course.id] === "enrolled") {
+      setActivePopupCourse(course);
+      setActivePopupMode("complete");
       return;
     }
 
-    enrollCourse({
-      id: pendingEnrollmentCourse.id,
-      title: pendingEnrollmentCourse.title,
-      provider: pendingEnrollmentCourse.provider,
-    });
+    if (courseStatusById[course.id] === "completed") {
+      window.open(course.url, "_blank", "noopener,noreferrer");
+      return;
+    }
 
-    setPendingEnrollmentCourse(null);
+    window.open(course.url, "_blank", "noopener,noreferrer");
+    setActivePopupCourse(course);
+    setActivePopupMode("enroll");
+  };
+
+  const confirmEnrollment = () => {
+    if (!activePopupCourse) {
+      return;
+    }
+
+    const nextProgress = enrollCourse(
+      {
+        id: activePopupCourse.id,
+        title: activePopupCourse.title,
+        provider: activePopupCourse.provider,
+        url: activePopupCourse.url,
+      },
+      user?.id,
+    );
+
+    setCourseProgress(nextProgress);
+    setActivePopupMode("complete");
+  };
+
+  const confirmCompletion = () => {
+    if (!activePopupCourse) {
+      return;
+    }
+
+    const nextProgress = completeCourse(activePopupCourse.id, user?.id);
+    setCourseProgress(nextProgress);
+    setActivePopupCourse(null);
+    setActivePopupMode(null);
+  };
+
+  const handleContinueCourse = () => {
+    if (activePopupCourse?.url) {
+      window.open(activePopupCourse.url, "_blank", "noopener,noreferrer");
+    }
+
+    setActivePopupCourse(null);
+    setActivePopupMode(null);
   };
 
   if (isLoading) {
@@ -258,7 +342,11 @@ export default function CourseLibraryPage() {
               <h3 style={{ fontSize: "20px", marginBottom: "40px", fontWeight: "400" }}>
                 {section.section_title}:
               </h3>
-              <CourseCards courses={section.courses} onCourseClick={handleCourseClick} />
+              <CourseCards
+                courses={section.courses}
+                onCourseClick={handleCourseClick}
+                statusByCourseId={courseStatusById}
+              />
             </div>
           ))
         ) : (
@@ -275,13 +363,17 @@ export default function CourseLibraryPage() {
         )}
       </div>
 
-      {pendingEnrollmentCourse ? (
+      {activePopupCourse && activePopupMode ? (
         <CourseActionPopup
-          mode="enroll"
-          courseTitle={pendingEnrollmentCourse.title}
-          courseOrg={pendingEnrollmentCourse.provider}
-          onConfirm={confirmEnrollment}
-          onCancel={() => setPendingEnrollmentCourse(null)}
+          mode={activePopupMode}
+          courseTitle={activePopupCourse.title}
+          courseOrg={activePopupCourse.provider}
+          onConfirm={activePopupMode === "enroll" ? confirmEnrollment : confirmCompletion}
+          onCancel={() => {
+            setActivePopupCourse(null);
+            setActivePopupMode(null);
+          }}
+          onContinue={activePopupMode === "complete" ? handleContinueCourse : undefined}
         />
       ) : null}
     </div>

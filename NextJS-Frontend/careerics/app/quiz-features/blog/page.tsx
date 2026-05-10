@@ -1,115 +1,217 @@
 "use client";
-import React, { useState, Suspense, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { fetchCareerBlogDetails, type CareerBlogDetails } from "@/lib/career-blog";
 
-interface LevelContent {
-  salary: string;
-  demand: string;
-  demandColor: string;
-  responsibilities: string[];
-  fitReason: string[];
+import React, { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+
+import { Button } from "@/components/ui/button";
+import { fetchCareerBlogDetails, type CareerBlogDetails, type LevelDetail } from "@/lib/career-blog";
+
+type Level = "Entry" | "Junior" | "Senior";
+
+const LEVELS: Level[] = ["Entry", "Junior", "Senior"];
+
+const EMPTY_LEVEL_CONTENT: LevelDetail = {
+  salary: "Not available yet",
+  demand: "Unknown",
+  demandColor: "#C1CBE6",
+  responsibilities: [],
+  fitReason: [],
+  skills: [],
+};
+
+function createEmptyLevelState(): Record<Level, LevelDetail | null> {
+  return {
+    Entry: null,
+    Junior: null,
+    Senior: null,
+  };
+}
+
+function renderLoadingState(label: string) {
+  return (
+    <div
+      style={{
+        width: "100%",
+        minHeight: "70vh",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        color: "white",
+        fontFamily: "var(--font-nova-square)",
+      }}
+    >
+      <div style={{ textAlign: "center" }}>
+        <div style={{ fontSize: "1rem", marginBottom: "1rem", opacity: 0.85 }}>{label}</div>
+        <div
+          style={{
+            width: "30px",
+            height: "30px",
+            border: "2px solid #4A5FC1",
+            borderTop: "2px solid transparent",
+            borderRadius: "50%",
+            animation: "blog-spin 0.8s linear infinite",
+            margin: "0 auto",
+          }}
+        />
+        <style>{`@keyframes blog-spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    </div>
+  );
 }
 
 function BlogContent() {
   const searchParams = useSearchParams();
-
-  // Get career ID (trackId) and job title from URL
   const careerId = searchParams.get("trackId") || "";
   const jobTitle = searchParams.get("jobTitle") || "Job Title";
 
-  const [activeLevel, setActiveLevel] = useState<"Entry" | "Junior" | "Senior">("Junior");
-  const [careerDetails, setCareerDetails] = useState<CareerBlogDetails | null>(null);
+  const [activeLevel, setActiveLevel] = useState<Level>("Junior");
+  const [careerDetailsByLevel, setCareerDetailsByLevel] = useState<Record<Level, LevelDetail | null>>(
+    createEmptyLevelState,
+  );
+  const [isLoadingDetails, setIsLoadingDetails] = useState(false);
+  const [detailsError, setDetailsError] = useState<string | null>(null);
 
-  // Fetch career details when careerId or activeLevel changes
+  const activeLevelDetails = careerDetailsByLevel[activeLevel];
+
   useEffect(() => {
-    if (!careerId) return;
-    
+    setCareerDetailsByLevel(createEmptyLevelState());
+    setDetailsError(null);
+  }, [careerId]);
+
+  useEffect(() => {
+    if (!careerId) {
+      setIsLoadingDetails(false);
+      setDetailsError("No career track was selected.");
+      return;
+    }
+
+    if (activeLevelDetails) {
+      setIsLoadingDetails(false);
+      return;
+    }
+
+    let alive = true;
+
     const loadCareerDetails = async () => {
+      setIsLoadingDetails(true);
+      setDetailsError(null);
+
       try {
         const response = await fetchCareerBlogDetails(careerId, activeLevel);
-        if (response.success && response.data) {
-          setCareerDetails(response.data);
+        if (!alive) {
+          return;
         }
-      } catch (err) {
-        console.error("Error loading career details:", err);
+
+        if (!response.success || !response.data) {
+          setDetailsError(response.message || "Unable to load career details right now.");
+          return;
+        }
+
+        const incoming = response.data as Partial<CareerBlogDetails>;
+
+        setCareerDetailsByLevel((previous) => {
+          const next = { ...previous };
+
+          for (const level of LEVELS) {
+            if (incoming[level]) {
+              next[level] = incoming[level];
+            }
+          }
+
+          return next;
+        });
+      } catch (error) {
+        if (!alive) {
+          return;
+        }
+
+        console.error("Error loading career details:", error);
+        setDetailsError("Unable to load career details right now.");
+      } finally {
+        if (alive) {
+          setIsLoadingDetails(false);
+        }
       }
     };
 
-    loadCareerDetails();
-  }, [careerId, activeLevel]);
+    void loadCareerDetails();
 
-  // Fallback contentMap in case backend data is unavailable
-  const fallbackContentMap: Record<"Entry" | "Junior" | "Senior", LevelContent> = {
-    Entry: {
-      salary: "E£ 10-15K",
-      demand: "Low",
-      demandColor: "#FFBC6A",
-      responsibilities: ["bla bla bla bla", "bla bla bla bla bla bla", "bla bla bla bla", "bla bla bla bla bla bla", "bla bla bla bla", "bla bla bla bla bla bla"],
-      fitReason: ["bla bla bla bla", "bla bla bla bla bla bla", "bla bla bla bla", "bla bla bla bla bla bla"],
-    },
-    Junior: {
-      salary: "E£ 20-35K",
-      demand: "Medium",
-      demandColor: "#FFF47C",
-      responsibilities: ["Junior task 1", "Junior task 2", "Junior task 3"],
-      fitReason: ["Fit for junior 1", "Fit for junior 2"],
-    },
-    Senior: {
-      salary: "E£ 50-80K+",
-      demand: "High",
-      demandColor: "#E6FFB2",
-      responsibilities: ["Senior lead 1", "Senior lead 2"],
-      fitReason: ["Expert level 1", "Expert level 2"],
-    },
-  };
+    return () => {
+      alive = false;
+    };
+  }, [activeLevel, activeLevelDetails, careerId]);
 
-  // Use fetched data or fallback
-  const current = careerDetails?.[activeLevel] || fallbackContentMap[activeLevel];
+  const current = activeLevelDetails || EMPTY_LEVEL_CONTENT;
+
+  if (!careerId) {
+    return (
+      <div style={{ width: "100%", color: "#fff", fontFamily: "var(--font-nova-square)", padding: "10vh 3vw" }}>
+        <div
+          style={{
+            minHeight: "70vh",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            textAlign: "center",
+          }}
+        >
+          <div>
+            <h1 style={{ marginBottom: "1rem" }}>No Career Selected</h1>
+            <p style={{ color: "#C1CBE6", margin: 0 }}>
+              Open this page from Career Exploration so we can load the correct blog details.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (isLoadingDetails && !activeLevelDetails) {
+    return renderLoadingState(`Loading ${jobTitle} details...`);
+  }
 
   return (
     <div style={{ width: "100%", color: "#fff", fontFamily: "var(--font-nova-square)", padding: "10vh 3vw" }}>
-      
-      {/* --- TOP ROW: Title & Selectors --- */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "6vh" }}>
-        
-        {/* Left Side: Title & Skills */}
         <div>
           <h1 style={{ fontSize: "4.8vh", margin: 0 }}>{jobTitle}</h1>
           <p style={{ color: "#9CA3AF", fontSize: "2.2vh", marginTop: "1vh" }}>Career Path Details</p>
-          <div style={{ display: "flex", gap: "1vw", marginTop: "3vh" }}>
-            
-            {/* 4. Render el skills men el database */}
-            {careerDetails?.[activeLevel]?.skills?.map((skill, index) => (
-              <div 
-                key={index} 
-                style={{ 
-                  backgroundColor: "#1E3A8A", 
-                  color: "#fafbfd", 
+          <div style={{ display: "flex", gap: "1vw", marginTop: "3vh", flexWrap: "wrap" }}>
+            {current.skills.map((skill, index) => (
+              <div
+                key={`${skill}-${index}`}
+                style={{
+                  backgroundColor: "#1E3A8A",
+                  color: "#fafbfd",
                   padding: "1.2vh 2.5vw",
-                  borderRadius: "1.2vh", 
+                  borderRadius: "1.2vh",
                   fontSize: "1.8vh",
-                  display: "flex", 
-                  alignItems: "center",      
-                  justifyContent: "center",   
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
                   textAlign: "center",
-                  minWidth: "fit-content"
+                  minWidth: "fit-content",
                 }}
               >
                 {skill.trim()}
               </div>
             ))}
+
+            {!current.skills.length ? (
+              <p style={{ color: "#9CA3AF", margin: 0, fontSize: "1.8vh" }}>
+                Skills for this level are not available yet.
+              </p>
+            ) : null}
           </div>
         </div>
 
-        {/* Right Side: Levels & Info */}
         <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "5vh", marginRight: "2vw", paddingLeft: "20vw" }}>
           <div style={{ display: "flex", gap: "3vw", padding: "1vh", borderRadius: "4vh" }}>
-            {(["Entry", "Junior", "Senior"] as const).map((level) => (
+            {LEVELS.map((level) => (
               <Button
                 key={level}
                 onClick={() => setActiveLevel(level)}
+                disabled={isLoadingDetails && activeLevel === level}
                 style={{
                   backgroundColor: activeLevel === level ? "#E6FFB2" : "#C1CBE6",
                   color: "#142143",
@@ -119,13 +221,20 @@ function BlogContent() {
                   fontWeight: "bold",
                   height: "6vh",
                   width: "10vw",
-                  border: "none"
+                  border: "none",
+                  opacity: isLoadingDetails && activeLevel === level ? 0.75 : 1,
                 }}
               >
                 {level === "Entry" ? "Entry Level" : level}
               </Button>
             ))}
           </div>
+
+          {isLoadingDetails ? (
+            <p style={{ margin: 0, color: "#C1CBE6", fontSize: "1.8vh" }}>
+              Loading level details...
+            </p>
+          ) : null}
 
           <div style={{ display: "flex", gap: "5vw", marginRight: "9vw" }}>
             <div style={{ textAlign: "left" }}>
@@ -140,40 +249,55 @@ function BlogContent() {
         </div>
       </div>
 
-      {/* --- BOTTOM ROW: Responsibilities & Fit Card --- */}
       <div style={{ display: "flex", gap: "5vw", alignItems: "flex-start" }}>
-        
-        {/* Key Responsibilities List */}
         <div style={{ flex: 1 }}>
           <h2 style={{ fontSize: "3.5vh", marginBottom: "4vh" }}>Key Responsibilities</h2>
-          <ul style={{ listStyle: "none", padding: 0 }}>
-            {current.responsibilities.map((item, i) => (
-              <li key={i} style={{ color: "#D1D5DB", fontSize: "2.4vh", marginBottom: "2vh", display: "flex", alignItems: "center", gap: "1vw" }}>
-                <span style={{ color: "#ffffff", fontSize: "2vh" }}>•</span> {item}
-              </li>
-            ))}
-          </ul>
+          {current.responsibilities.length ? (
+            <ul style={{ listStyle: "none", padding: 0 }}>
+              {current.responsibilities.map((item, index) => (
+                <li key={`${item}-${index}`} style={{ color: "#D1D5DB", fontSize: "2.4vh", marginBottom: "2vh", display: "flex", alignItems: "center", gap: "1vw" }}>
+                  <span style={{ color: "#ffffff", fontSize: "2vh" }}>•</span> {item}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p style={{ color: "#9CA3AF", fontSize: "2.2vh", margin: 0 }}>
+              No responsibilities are available for this level yet.
+            </p>
+          )}
         </div>
 
-        {/* Dynamic Blue Card: This Would Fit You If */}
-        <div style={{ 
-          flex: 0.6, 
-          backgroundColor: "#1C427B", 
-          borderRadius: "4vh", 
-          padding: "6vh 2vw",
-          minHeight: "45vh",
-        }}>
+        <div
+          style={{
+            flex: 0.6,
+            backgroundColor: "#1C427B",
+            borderRadius: "4vh",
+            padding: "6vh 2vw",
+            minHeight: "45vh",
+          }}
+        >
           <h2 style={{ fontSize: "3.5vh", marginBottom: "4vh" }}>This Would fit you if</h2>
-          <ul style={{ listStyle: "none", padding: 0 }}>
-            {current.fitReason.map((item, i) => (
-              <li key={i} style={{ color: "#D1D5DB", fontSize: "2.4vh", marginBottom: "2vh", display: "flex", alignItems: "center", gap: "1vw" }}>
-                <span style={{ color: "#ffffff", fontSize: "2vh" }}>•</span> {item}
-              </li>
-            ))}
-          </ul>
+          {current.fitReason.length ? (
+            <ul style={{ listStyle: "none", padding: 0 }}>
+              {current.fitReason.map((item, index) => (
+                <li key={`${item}-${index}`} style={{ color: "#D1D5DB", fontSize: "2.4vh", marginBottom: "2vh", display: "flex", alignItems: "center", gap: "1vw" }}>
+                  <span style={{ color: "#ffffff", fontSize: "2vh" }}>•</span> {item}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p style={{ color: "#D1D5DB", fontSize: "2.2vh", margin: 0 }}>
+              Fit guidance is not available for this level yet.
+            </p>
+          )}
         </div>
-
       </div>
+
+      {detailsError ? (
+        <p style={{ color: "#FFD3D3", marginTop: "3vh", fontSize: "1.8vh" }}>
+          {detailsError}
+        </p>
+      ) : null}
     </div>
   );
 }

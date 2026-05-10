@@ -758,7 +758,7 @@ export default function CareerQuestionsPage() {
             </button>
 
             <img
-              src="/Landing/Rectangle.svg"
+              src="/landing/Rectangle.svg"
               alt={track.track_name}
               style={{ width: "15vh", height: "auto", alignSelf: "flex-start" }}
             />

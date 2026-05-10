@@ -764,19 +764,6 @@ export default function CVBuilderPage() {
                           <img src="/global/drive.svg" style={{ width: "18px" }} alt="Drive" />
                           {isOpeningDrive ? "Opening Drive..." : "Google Drive"}
                         </button>
-                        <Button
-                          onClick={() => router.push("/features/cv")}
-                          style={{
-                            width: "240px",
-                            height: "40px",
-                            flex: "none",
-                            borderRadius: "12px",
-                            backgroundColor: "#C1CBE6",
-                            color: "black",
-                          }}
-                        >
-                          Back to CV Hub
-                        </Button>
                       </div>
                     </div>
                   }
@@ -1219,7 +1206,14 @@ export default function CVBuilderPage() {
                 style={{
                   marginTop: "3vh",
                   width: "100%",
+                  display: "flex",
+                  alignItems: "center",
                   justifyContent: "flex-end",
+                  position: "sticky",
+                  bottom: 0,
+                  paddingTop: "20px",
+                  paddingBottom: "12px",
+                  zIndex: 5,
                 }}
               >
                 <Button
@@ -1237,25 +1231,42 @@ export default function CVBuilderPage() {
                       setSidebarExpandedId(next);
                     }
                   }}
-                  disabled={expandedStepId === 7 ? !isFormValid() : !isStepComplete()}
+                  disabled={
+                    isBuilding ||
+                    (expandedStepId === 7 ? !isFormValid() : !isStepComplete())
+                  }
+                  isLoading={isBuilding}
                   style={{
                     width: "160px",
                     minWidth: "100px",
-                    left: "40vw",
                     height: "45px",
+                    flex: "none",
                     borderRadius: "12px",
-                    alignSelf: "flex-end",
                     backgroundColor: "#bfff4f",
                     color: "black",
                     fontWeight: "bold",
                     fontSize: "14px",
                     border: "none",
-                    opacity: expandedStepId === 7 ? (isFormValid() ? 1 : 0.5) : isStepComplete() ? 1 : 0.5,
-                    cursor: expandedStepId === 7 ? (isFormValid() ? "pointer" : "not-allowed") : isStepComplete() ? "pointer" : "not-allowed",
+                    opacity:
+                      isBuilding
+                        ? 0.7
+                        : expandedStepId === 7
+                          ? (isFormValid() ? 1 : 0.5)
+                          : isStepComplete()
+                            ? 1
+                            : 0.5,
+                    cursor:
+                      isBuilding
+                        ? "default"
+                        : expandedStepId === 7
+                          ? (isFormValid() ? "pointer" : "not-allowed")
+                          : isStepComplete()
+                            ? "pointer"
+                            : "not-allowed",
                     transition: "opacity 0.3s ease",
                   }}
                 >
-                  {expandedStepId === 7 ? "Build CV" : "Next Step"}
+                  {expandedStepId === 7 ? (isBuilding ? "Building..." : "Build CV") : "Next"}
                 </Button>
               </div>
             </>

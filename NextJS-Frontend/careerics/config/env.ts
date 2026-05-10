@@ -21,12 +21,28 @@ function requireEnv(name: string): string {
   return value ?? "";
 }
 
+function trimTrailingSlash(value: string): string {
+  return value.replace(/\/+$/, "");
+}
+
+function toFastApiGraphqlUrl(baseUrl: string): string {
+  const normalizedBaseUrl = trimTrailingSlash(baseUrl);
+  const rootBaseUrl = normalizedBaseUrl.endsWith("/api")
+    ? normalizedBaseUrl.slice(0, -4)
+    : normalizedBaseUrl;
+
+  return `${rootBaseUrl}/graphql`;
+}
+
+const publicFastApiUrl =
+  process.env.NEXT_PUBLIC_FASTAPI_URL ?? "http://localhost:8000/api";
+
 // ──────────────────────────────────────────────
 // Public (client-safe) config
 // ──────────────────────────────────────────────
 export const publicConfig = {
-  fastapiUrl: process.env.NEXT_PUBLIC_FASTAPI_URL ?? "http://localhost:8000/api",
-  fastapiGraphqlUrl: process.env.NEXT_PUBLIC_FASTAPI_GRAPHQL_URL ?? "http://localhost:8000/graphql",
+  fastapiUrl: publicFastApiUrl,
+  fastapiGraphqlUrl: toFastApiGraphqlUrl(publicFastApiUrl),
   enableGraphql: process.env.NEXT_PUBLIC_ENABLE_GRAPHQL === "true",
 
   // ── Supabase (client-safe — protected by RLS on the server) ──
@@ -38,12 +54,16 @@ export const publicConfig = {
 // Server-only config (never leaked to the bundle)
 // ──────────────────────────────────────────────
 export const serverConfig = isServer
-  ? {
-      fastapiUrl: requireEnv("FASTAPI_URL"),
-      fastapiGraphqlUrl: requireEnv("FASTAPI_GRAPHQL_URL"),
-      authSecret: requireEnv("NEXTAUTH_SECRET"),
-      authUrl: requireEnv("NEXTAUTH_URL"),
-    }
+  ? (() => {
+      const fastapiUrl = requireEnv("FASTAPI_URL");
+
+      return {
+        fastapiUrl,
+        fastapiGraphqlUrl: toFastApiGraphqlUrl(fastapiUrl),
+        authSecret: requireEnv("NEXTAUTH_SECRET"),
+        authUrl: requireEnv("NEXTAUTH_URL"),
+      };
+    })()
   : undefined;
 
 export type ServerConfig = NonNullable<typeof serverConfig>;

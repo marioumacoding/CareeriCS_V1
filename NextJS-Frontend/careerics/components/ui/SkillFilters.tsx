@@ -78,7 +78,6 @@ const  SkillFilters = ({
             
           }}
         >
-          <option value="">Choose a track </option>
           {tracks.map((track) => (
             <option key={track.id} value={track.id}>
               {track.title}

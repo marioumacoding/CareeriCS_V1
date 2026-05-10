@@ -63,8 +63,24 @@ class SessionUpdate(BaseModel):
 class SessionRead(SessionBase):
     id: UUID
     user_id: UUID
+    created_at: Optional[datetime] = None
     sentiment_evaluation: Optional[Dict] = None
     model_config = ConfigDict(from_attributes=True)
+
+
+class CompleteInterviewSessionResponse(BaseModel):
+    session: SessionRead
+    report: "ReportSchema"
+
+
+class InterviewArchiveItemRead(BaseModel):
+    session_id: UUID
+    session_name: str
+    session_type: str
+    session_created_at: Optional[datetime] = None
+    report_id: UUID
+    report_filename: str
+    report_created_at: datetime
 
 
 # ======================================================
@@ -382,6 +398,9 @@ class ReportSchema(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+CompleteInterviewSessionResponse.model_rebuild()
 
 
 # =====================================================
@@ -897,6 +916,48 @@ class BulkCourseImportResult(BaseModel):
     skipped: int
     total_processed: int
     duplicates: List[str]
+
+
+# =====================================================
+# CAREER LEVEL (Blog/Details) SCHEMAS
+# =====================================================
+
+class CareerLevelBase(BaseModel):
+    job_title: str
+    level: Literal["Entry", "Junior", "Senior"]
+    salary: Optional[str] = None
+    demand: Optional[str] = None
+    responsibilities: Optional[List[str]] = None
+    fit_reasons: Optional[List[str]] = None
+    skills: Optional[List[str]] = None
+
+
+class CareerLevelCreate(CareerLevelBase):
+    pass
+
+
+class CareerLevelRead(CareerLevelBase):
+    id: UUID
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    model_config = ConfigDict(from_attributes=True)
+
+
+class CareerLevelDetailResponse(BaseModel):
+    """Response for a single level (Entry/Junior/Senior)"""
+    salary: str
+    demand: str
+    demandColor: str
+    responsibilities: List[str]
+    fitReason: List[str]
+
+
+class CareerBlogDetailsResponse(BaseModel):
+    """Full career blog details response with all levels"""
+    jobTitle: str
+    skills: List[str]
+    levels: Dict[str, CareerLevelDetailResponse]
+
 
 
 class UserCoursesListResponse(BaseModel):

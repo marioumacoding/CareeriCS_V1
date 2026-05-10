@@ -144,7 +144,7 @@ export default function FeatureCard({
           fontFamily: "var(--font-jura)",
           position: "absolute",
           color: "var(--text-grey)",
-          fontSize: "1vw",
+          fontSize: "0.83rem",
           fontWeight: "400",
           top: layout.descTop,
           left: layout.left,

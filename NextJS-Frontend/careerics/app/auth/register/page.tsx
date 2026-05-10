@@ -58,7 +58,7 @@ export default function Register() {
       return "Add at least one number.";
     }
 
-    if (!/[@$!%*?&]/.test(value)) {
+    if (!/[!"#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~]/.test(value)) {
       return "Add at least one special character.";
     }
 
@@ -299,7 +299,7 @@ export default function Register() {
           onClick={handleGoogleRegister}
           style={{ whiteSpace: "nowrap" }}
         >
-          <img src="/auth/google.svg" alt="Google" style={{ height: "4vh" }} />
+          <img src="/auth/google.svg" alt="Google" style={{ height: "3vh" }} />
           Continue with Google
         </Button>
       </div>

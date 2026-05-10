@@ -57,9 +57,8 @@ export default function UpdatePassword() {
       return;
     }
 
-    if (!/[@$!%*?&]/.test(value)) {
-      setPasswordError("Add at least one special character.");
-      return;
+    if (!/[!"#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~]/.test(value)) {
+      return "Add at least one special character.";
     }
 
     setPasswordError(null);

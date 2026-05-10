@@ -25,9 +25,7 @@ function requireEnv(name: string): string {
 // Public (client-safe) config
 // ──────────────────────────────────────────────
 export const publicConfig = {
-  dotnetApiUrl: process.env.NEXT_PUBLIC_DOTNET_API_URL ?? "http://localhost:5000/api",
   fastapiUrl: process.env.NEXT_PUBLIC_FASTAPI_URL ?? "http://localhost:8000/api",
-  dotnetGraphqlUrl: process.env.NEXT_PUBLIC_DOTNET_GRAPHQL_URL ?? "http://localhost:5000/graphql",
   fastapiGraphqlUrl: process.env.NEXT_PUBLIC_FASTAPI_GRAPHQL_URL ?? "http://localhost:8000/graphql",
   enableGraphql: process.env.NEXT_PUBLIC_ENABLE_GRAPHQL === "true",
 
@@ -41,9 +39,7 @@ export const publicConfig = {
 // ──────────────────────────────────────────────
 export const serverConfig = isServer
   ? {
-      dotnetApiUrl: requireEnv("DOTNET_API_URL"),
       fastapiUrl: requireEnv("FASTAPI_URL"),
-      dotnetGraphqlUrl: requireEnv("DOTNET_GRAPHQL_URL"),
       fastapiGraphqlUrl: requireEnv("FASTAPI_GRAPHQL_URL"),
       authSecret: requireEnv("NEXTAUTH_SECRET"),
       authUrl: requireEnv("NEXTAUTH_URL"),

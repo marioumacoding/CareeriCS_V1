@@ -1,11 +1,8 @@
 /**
  * Singleton API client instances.
  *
- * There are two "backends":
- *   1. dotnet  – ASP.NET Core API (identity, core business logic)
- *   2. fastapi – Python FastAPI   (ML models, analytics, etc.)
- *
- * Each exposes both a REST HttpClient and a GraphQL client.
+ * The frontend currently talks to FastAPI for backend data and Supabase for auth.
+ * We expose both a REST HttpClient and a GraphQL client for FastAPI.
  * Token injection happens via the `onRequest` interceptor so every
  * outgoing call automatically includes the current auth token.
  */
@@ -23,9 +20,7 @@ function resolveFastApiBaseUrl(baseUrl: string, proxyPath: string): string {
   return baseUrl;
 }
 
-// ──────────────────────────────────────────────
-// Shared interceptor that injects the bearer token
-// ──────────────────────────────────────────────
+// Shared interceptor that injects the bearer token.
 async function withAuth(init: RequestInit): Promise<RequestInit> {
   const token = await getAuthToken();
   if (token) {
@@ -49,23 +44,6 @@ async function withFastApiProxyAuth(init: RequestInit): Promise<RequestInit> {
   return withAuth(init);
 }
 
-// ──────────────────────────────────────────────
-// .NET API clients
-// ──────────────────────────────────────────────
-export const dotnetApi = new HttpClient({
-  baseUrl: publicConfig.dotnetApiUrl,
-  onRequest: withAuth,
-  next: { revalidate: 0 }, // default: no caching (override per-call)
-});
-
-export const dotnetGraphql = new GraphQLClient({
-  baseUrl: publicConfig.dotnetGraphqlUrl,
-  onRequest: withAuth,
-});
-
-// ──────────────────────────────────────────────
-// FastAPI clients
-// ──────────────────────────────────────────────
 export const fastapiApi = new HttpClient({
   baseUrl: resolveFastApiBaseUrl(publicConfig.fastapiUrl, "/api/fastapi"),
   onRequest: withFastApiProxyAuth,

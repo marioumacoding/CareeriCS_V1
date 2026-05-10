@@ -17,6 +17,24 @@ def get_user_reports_by_type(db: Session, user_id: str, report_type: ReportTypeE
     return reports
 
 
+def find_user_report_by_filename(
+    db: Session,
+    user_id: str,
+    filename: str,
+    report_type: ReportTypeEnum,
+):
+    return (
+        db.query(Report)
+        .filter(
+            Report.user_id == user_id,
+            Report.filename == filename,
+            Report.type == report_type,
+        )
+        .order_by(Report.created_at.desc())
+        .first()
+    )
+
+
 # -----------------------------
 # Download Report by ID
 # -----------------------------

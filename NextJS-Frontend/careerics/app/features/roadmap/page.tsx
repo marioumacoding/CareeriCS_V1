@@ -108,10 +108,7 @@ export default function RoadmapPage() {
   }, []);
 
   const options = useMemo(
-    () => [
-      { id: DEFAULT_PATH_OPTION, title: "Find a new path" },
-      ...roadmaps.map((roadmap) => ({ id: roadmap.id, title: roadmap.title })),
-    ],
+    () => roadmaps.map((roadmap) => ({ id: roadmap.id, title: roadmap.title })),
     [roadmaps],
   );
 
@@ -142,7 +139,7 @@ export default function RoadmapPage() {
       return bookmarkedSelection;
     }
 
-    return roadmaps[0]?.id || DEFAULT_PATH_OPTION;
+    return DEFAULT_PATH_OPTION;
   }, [bookmarkedRoadmapIds, roadmaps, selectedRoadmapPreferenceId]);
 
   const bookmarkCards = useMemo(() => {
@@ -472,7 +469,7 @@ export default function RoadmapPage() {
   const roadmapHeading = selectedRoadmapDetails?.id === selectedRoadmapId && selectedRoadmapDetails.title
     ? `${selectedRoadmapDetails.title} Roadmap`
     : selectedRoadmapId === DEFAULT_PATH_OPTION
-      ? "Choose a roadmap"
+      ? ""
       : "Loading roadmap...";
 
   return (
@@ -503,7 +500,7 @@ export default function RoadmapPage() {
         maxwidth="22vw"
           value={selectedRoadmapId}
           options={options}
-          placeholder="Find a new path"
+          placeholder="select a path to view roadmap"
           onChange={onRoadmapChange}
         />
 
@@ -566,15 +563,17 @@ export default function RoadmapPage() {
           }}
         >
           <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
-            <h1
-              style={{
-                fontSize: "1.2rem",
-                color: "white",
-                margin: 0,
-              }}
-            >
-              {roadmapHeading}
-            </h1>
+            {roadmapHeading ? (
+              <h1
+                style={{
+                  fontSize: "1.2rem",
+                  color: "white",
+                  margin: 0,
+                }}
+              >
+                {roadmapHeading}
+              </h1>
+            ) : null}
 
             {bookmarkError ? (
               <p style={{ margin: 0, color: "#FFD3D3", fontSize: "0.9rem" }}>
@@ -642,9 +641,10 @@ export default function RoadmapPage() {
                   justifyContent: "center",
                   fontFamily: "var(--font-nova-square)",
                   color: "white",
+                  fontSize: selectedRoadmapId === DEFAULT_PATH_OPTION ? "2.5rem" : "1rem",
                 }}
               >
-                {selectedRoadmapId === DEFAULT_PATH_OPTION ? "Choose a roadmap to begin." : "Loading..."}
+                {selectedRoadmapId === DEFAULT_PATH_OPTION ? "select a path to view roadmap" : "Loading..."}
               </div>
             )}
           </div>

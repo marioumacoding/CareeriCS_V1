@@ -4,12 +4,14 @@ import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 import { useAuth } from "@/providers/auth-provider";
+import { UNIFIED_BOOKMARKS_UPDATED_EVENT } from "@/lib/unified-bookmarks";
 import {
   JOURNEY_PHASE_STATE_UPDATED_EVENT,
   type JourneyPhaseNumber,
   type JourneyPhaseState,
   type JourneyTrackCard,
   getTrackById,
+  invalidateJourneyTrackCardsCache,
   loadJourneyTrackCards,
   persistSelectedJourneyTrackId,
   readSelectedJourneyTrackId,
@@ -45,7 +47,7 @@ export function useJourneyPhase(
   const [tracks, setTracks] = useState<JourneyTrackCard[]>([]);
   const [isLoadingTracks, setIsLoadingTracks] = useState(true);
   const [trackError, setTrackError] = useState<string | null>(null);
-  const [, setRefresh] = useState(0);
+  const [refreshToken, setRefreshToken] = useState(0);
 
   // -------------------------
   // Load tracks
@@ -80,7 +82,7 @@ export function useJourneyPhase(
     return () => {
       alive = false;
     };
-  }, [isAuthLoading, userId]);
+  }, [isAuthLoading, refreshToken, userId]);
 
   // -------------------------
   // Select track (query → storage → fallback)
@@ -122,20 +124,34 @@ export function useJourneyPhase(
   // React to storage updates
   // -------------------------
   useEffect(() => {
-    const handler = () => setRefresh((p) => p + 1);
+    const handlePhaseUpdate = () => setRefreshToken((previous) => previous + 1);
+    const handleBookmarksUpdated = () => {
+      invalidateJourneyTrackCardsCache(userId);
+      setRefreshToken((previous) => previous + 1);
+    };
 
     window.addEventListener(
       JOURNEY_PHASE_STATE_UPDATED_EVENT,
-      handler as EventListener,
+      handlePhaseUpdate as EventListener,
     );
+    window.addEventListener(
+      UNIFIED_BOOKMARKS_UPDATED_EVENT,
+      handleBookmarksUpdated as EventListener,
+    );
+    window.addEventListener("storage", handleBookmarksUpdated);
 
     return () => {
       window.removeEventListener(
         JOURNEY_PHASE_STATE_UPDATED_EVENT,
-        handler as EventListener,
+        handlePhaseUpdate as EventListener,
       );
+      window.removeEventListener(
+        UNIFIED_BOOKMARKS_UPDATED_EVENT,
+        handleBookmarksUpdated as EventListener,
+      );
+      window.removeEventListener("storage", handleBookmarksUpdated);
     };
-  }, []);
+  }, [userId]);
 
   // -------------------------
   // Phase state

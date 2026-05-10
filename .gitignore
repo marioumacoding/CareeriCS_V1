@@ -34,4 +34,5 @@ appsettings.Development.json
 **/bin/
 **/obj/
 **/Debug/
-**/Release/
+**/Release/node_modules/ 
+**/node_modules/ 

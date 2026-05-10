@@ -81,6 +81,21 @@ export interface APISessionUpdate {
   sentiment_evaluation?: Record<string, unknown> | null;
 }
 
+export interface APIInterviewArchiveItem {
+  session_id: string;
+  session_name: string;
+  session_type: string;
+  session_created_at?: string | null;
+  report_id: string;
+  report_filename: string;
+  report_created_at: string;
+}
+
+export interface APICompleteInterviewSessionResponse {
+  session: APISession;
+  report: APIReport;
+}
+
 export interface APIQuestion {
   id: string;
   type: string;

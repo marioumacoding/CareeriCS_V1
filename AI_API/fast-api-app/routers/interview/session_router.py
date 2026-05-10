@@ -7,9 +7,11 @@ from sqlalchemy.orm import Session
 import schemas
 from dependencies import get_db
 from services.interview.session_service import (
+    complete_session_service,
     create_session_service,
     get_sessions_by_user_service,
     get_session_by_id_service,
+    list_completed_session_archives_service,
     update_session_service,
     delete_session_service,
 )
@@ -38,6 +40,14 @@ def get_sessions_by_user(
     return get_sessions_by_user_service(db, user_id)
 
 
+@router.get("/user/{user_id}/archive", response_model=List[schemas.InterviewArchiveItemRead])
+def get_completed_session_archive(
+    user_id: UUID,
+    db: Session = Depends(get_db),
+):
+    return list_completed_session_archives_service(db, user_id)
+
+
 @router.get("/{session_id}", response_model=schemas.SessionRead)
 def get_session(
     session_id: UUID,
@@ -53,6 +63,18 @@ def update_session(
     db: Session = Depends(get_db),
 ):
     return update_session_service(db, session_id, payload)
+
+
+@router.post("/{session_id}/complete", response_model=schemas.CompleteInterviewSessionResponse)
+def complete_session(
+    session_id: UUID,
+    db: Session = Depends(get_db),
+):
+    session, report = complete_session_service(db, session_id)
+    return {
+        "session": session,
+        "report": report,
+    }
 
 
 @router.delete("/{session_id}")

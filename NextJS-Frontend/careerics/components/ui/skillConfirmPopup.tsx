@@ -76,6 +76,7 @@ export default function SkillConfirmPopup({
           <img
             onClick={onCancel}
             src="/global/close.svg"
+            alt="Close popup"
             style={{
               width: "2rem",
               height: "2rem",
@@ -94,7 +95,6 @@ export default function SkillConfirmPopup({
           }}
         />
 
-        {/* Code */}
         <div
           style={{
             display: "flex",
@@ -104,7 +104,7 @@ export default function SkillConfirmPopup({
           }}
         >
           <p style={{ marginRight: "1rem", whiteSpace: "nowrap" }}>
-            Assessment's Code:
+            Assessment Code:
           </p>
           <div
             style={{
@@ -120,7 +120,6 @@ export default function SkillConfirmPopup({
           </div>
         </div>
 
-        {/* Skill */}
         <div
           style={{
             display: "flex",
@@ -146,7 +145,6 @@ export default function SkillConfirmPopup({
           </div>
         </div>
 
-        {/* Questions */}
         <div
           style={{
             display: "flex",
@@ -162,12 +160,11 @@ export default function SkillConfirmPopup({
           <input
             type="text"
             inputMode="numeric"
-            placeholder="Enter number (5–20)"
+            placeholder="Enter number (5-20)"
             value={questions}
             onChange={(e) => {
               const value = e.target.value;
 
-              // allow only digits
               if (!/^\d*$/.test(value)) return;
 
               if (value === "") {
@@ -204,34 +201,45 @@ export default function SkillConfirmPopup({
           />
         </div>
 
-        {/* Buttons */}
         <div
           style={{
             display: "flex",
             width: "100%",
-            justifyContent: "space-between",
             alignItems: "center",
+            gap: "0.9rem",
           }}
         >
-            <Button
-              onClick={onCancel}
-              variant="popup-inverted"
-              style={{
-                minWidth: "45%",
-                flex: 0,
-                whiteSpace: "nowrap",
-              }}
-            >
-              Cancel
-            </Button>
+          <Button
+            onClick={onCancel}
+            variant="popup-inverted"
+            style={{
+              flex: "1 1 0",
+              minWidth: 0,
+              height: "auto",
+              paddingBlock: "0.95rem",
+              paddingInline: "0.9rem",
+              fontSize: "0.95rem",
+              lineHeight: 1.2,
+              textAlign: "center",
+              whiteSpace: "nowrap",
+            }}
+          >
+            Cancel
+          </Button>
 
           <Button
             onClick={() => onConfirm(numericValue)}
             disabled={!isValid || isLoading}
             variant="popup"
             style={{
-              minWidth: "45%",
-              flex: 0,
+              flex: "1 1 0",
+              minWidth: 0,
+              height: "auto",
+              paddingBlock: "0.95rem",
+              paddingInline: "0.9rem",
+              fontSize: "0.95rem",
+              lineHeight: 1.2,
+              textAlign: "center",
               whiteSpace: "nowrap",
             }}
           >

@@ -11,7 +11,7 @@ import { authService } from "@/services/auth.service";
  * Supabase session (JWT). Demonstrates:
  *
  * 1. Reading user info from the auth context (extracted from JWT claims)
- * 2. Calling the .NET API with the JWT in the Authorization header
+ * 2. Reading the current authenticated user through the shared auth service
  * 3. Logging out via Supabase
  */
 function DashboardContent() {
@@ -31,11 +31,7 @@ function DashboardContent() {
   }
 
   /**
-   * Example: call the .NET API's GET /api/users/me endpoint.
-   * The HttpClient interceptor automatically attaches
-   * Authorization: Bearer <supabase_access_token>.
-   *
-   * If the .NET API is not running, this will fail gracefully.
+   * Example: read the current authenticated user through authService.me().
    */
   async function handleCallApi() {
     setApiLoading(true);
@@ -95,7 +91,7 @@ function DashboardContent() {
           Access Token (JWT)
         </h3>
         <p style={{ fontSize: "0.75rem", color: "var(--text-grey)", marginBottom: "0.5rem" }}>
-          Copy this to test .NET API endpoints in Postman:
+          Copy this token for authenticated API requests if needed:
           <br />
           <code>Authorization: Bearer &lt;token&gt;</code>
         </p>
@@ -117,7 +113,7 @@ function DashboardContent() {
         />
       </div>
 
-      {/* Test .NET API call */}
+      {/* Test auth service call */}
       <div
         style={{
           backgroundColor: "var(--form-grey)",
@@ -128,7 +124,7 @@ function DashboardContent() {
         }}
       >
         <h3 style={{ marginBottom: "1rem", color: "var(--primary-green)" }}>
-          Test .NET API Call
+          Test Current User Call
         </h3>
         <button
           onClick={handleCallApi}
@@ -143,7 +139,7 @@ function DashboardContent() {
             marginBottom: "1rem",
           }}
         >
-          {apiLoading ? "Calling..." : "GET /api/users/me"}
+          {apiLoading ? "Calling..." : "Read current user"}
         </button>
         {apiResponse && (
           <pre

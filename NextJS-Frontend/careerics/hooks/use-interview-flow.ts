@@ -4,10 +4,11 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { interviewService } from "@/services/interview.service";
 import { normalizeInterviewAudioUrl } from "@/lib/interview-media";
+import { normalizeInterviewType as normalizeCanonicalInterviewType } from "@/lib/interview";
 
 const INTERVIEW_TEST_QUESTION_LIMIT = 2;
 
-export type InterviewType = "hr";
+export type InterviewType = string;
 
 export interface UIQuestion {
   id: number;
@@ -37,18 +38,11 @@ interface AnalyzingOverrides {
 }
 
 function normalizeInterviewType(rawType: string | null | undefined): InterviewType {
-  if (!rawType) return "hr";
-  const normalized = rawType.trim().toLowerCase();
-
-  if (normalized === "hr") {
-    return "hr";
-  }
-
-  return "hr";
+  return normalizeCanonicalInterviewType(rawType);
 }
 
-async function getQuestionsByCanonicalType() {
-  return interviewService.getQuestionsByType("HR");
+async function getQuestionsByCanonicalType(interviewType: InterviewType) {
+  return interviewService.getQuestionsByType(interviewType);
 }
 
 export function useInterviewFlow() {
@@ -83,7 +77,7 @@ export function useInterviewFlow() {
       setIsQuestionsLoading(true);
       setQuestionsError("");
 
-      const response = await getQuestionsByCanonicalType();
+      const response = await getQuestionsByCanonicalType(interviewType);
       if (!alive) return;
 
       if (!response.success || !response.data?.length) {

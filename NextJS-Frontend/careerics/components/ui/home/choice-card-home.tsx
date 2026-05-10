@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import React, { CSSProperties, ReactNode } from "react";
+import { X } from "lucide-react";
 
 interface ChoiceCardProps {
   icon?: string;
@@ -21,6 +22,7 @@ interface ChoiceCardProps {
   blogPath?: string;
   type?: string;
   onAction?: () => void;
+  onRemove?: () => void;
 }
 
 export default function ChoiceCard({
@@ -36,8 +38,11 @@ export default function ChoiceCard({
   blogPath,
   type,
   onAction,
+  onRemove,
 }: ChoiceCardProps) {
   const router = useRouter();
+  const [isRemoveHovered, setIsRemoveHovered] = React.useState(false);
+  const [isRemoveFocused, setIsRemoveFocused] = React.useState(false);
 
 
   const isBookmark = type === "bookmark";
@@ -89,22 +94,71 @@ export default function ChoiceCard({
             }}
           />}
 
-          {!isBookmark && (
-            <div
-              style={{
-                marginLeft: "auto",
-                fontSize: "0.8rem",
-                position: "relative",
-                color: effectiveSelected ? "var(--light-green)" : "black",
-                cursor: effectiveSelected ? "default" : "pointer",
-                fontFamily: "var(--font-nova-square)",
-                height: "fit-content",
-              }}
-              onClick={onClick}
-            >
-              {effectiveSelected ? "selected" : "See stats"}
-            </div>
-          )}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.45rem",
+              marginLeft: "auto",
+            }}
+          >
+            {!isBookmark && (
+              <div
+                style={{
+                  fontSize: "0.8rem",
+                  position: "relative",
+                  color: effectiveSelected ? "var(--light-green)" : "black",
+                  cursor: effectiveSelected ? "default" : "pointer",
+                  fontFamily: "var(--font-nova-square)",
+                  height: "fit-content",
+                }}
+                onClick={onClick}
+              >
+                {effectiveSelected ? "selected" : "See stats"}
+              </div>
+            )}
+
+            {onRemove ? (
+              <button
+                type="button"
+                aria-label={`Remove ${title || "career"}`}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onRemove();
+                }}
+                onMouseEnter={() => setIsRemoveHovered(true)}
+                onMouseLeave={() => setIsRemoveHovered(false)}
+                onFocus={() => setIsRemoveFocused(true)}
+                onBlur={() => setIsRemoveFocused(false)}
+                style={{
+                  width: "1.8rem",
+                  height: "1.8rem",
+                  borderRadius: "999px",
+                  border: "none",
+                  backgroundColor:
+                    isRemoveHovered || isRemoveFocused
+                      ? effectiveSelected
+                        ? "rgba(230, 255, 178, 0.18)"
+                        : "rgba(0, 0, 0, 0.08)"
+                      : "transparent",
+                  color: effectiveSelected ? "var(--light-green)" : "black",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  outline: "none",
+                  boxShadow: isRemoveFocused
+                    ? `0 0 0 2px ${effectiveSelected ? "rgba(230, 255, 178, 0.55)" : "rgba(0, 0, 0, 0.16)"}`
+                    : "none",
+                  transition: "background-color 0.18s ease, box-shadow 0.18s ease",
+                  padding: 0,
+                  flexShrink: 0,
+                }}
+              >
+                <X size={14} strokeWidth={2.4} />
+              </button>
+            ) : null}
+          </div>
 
         </div>
 

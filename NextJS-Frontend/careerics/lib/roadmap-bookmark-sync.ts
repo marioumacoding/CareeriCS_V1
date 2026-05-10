@@ -59,6 +59,8 @@ export function syncBackendRoadmapBookmarksToUnifiedList(options: {
         title: roadmap?.title || existingBookmark?.title || "Roadmap",
         description: roadmap?.description ?? existingBookmark?.description ?? null,
         savedAt: bookmark.created_at || existingBookmark?.saved_at,
+        trackId: existingBookmark?.metadata?.track_id ?? null,
+        trackName: existingBookmark?.metadata?.track_name ?? existingBookmark?.title ?? roadmap?.title ?? null,
       }),
     );
   });

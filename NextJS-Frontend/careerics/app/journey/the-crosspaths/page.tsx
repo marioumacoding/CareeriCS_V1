@@ -5,30 +5,26 @@ import { useRouter } from "next/navigation";
 
 import JourneyTree from "@/components/ui/journey-tree";
 import { RectangularCard } from "@/components/ui/rectangular-card";
-import { useJourneyPhase } from "@/hooks/use-journey-phase";
-import { useAuth } from "@/providers/auth-provider";
+import { fetchCareerBlogDetails, type CareerBlogDetails, type LevelDetail } from "@/lib/career-blog";
 import { buildJourneyPhaseHref } from "@/lib/journey";
-import { mapApiJobToUiModel } from "@/lib/jobs";
-import { jobService, roadmapService } from "@/services";
+import { useJourneyPhase } from "@/hooks/use-journey-phase";
+import { careerService } from "@/services";
 
 type Level = "Entry" | "Junior" | "Senior";
 
-type LevelData = {
-  salary: string;
-  demand: string;
-  demandColor: string;
-  responsibilities: string[];
-  fit: string[];
-};
-
 const LEVELS: Level[] = ["Entry", "Junior", "Senior"];
+const FALLBACK_SKILLS = ["Learning Path", "Core Skills", "Career Growth"];
+const MAX_SKILLS = 3;
+const MAX_RESPONSIBILITIES = 6;
+const MAX_FIT_REASONS = 5;
 
-const DEFAULT_LEVEL_DATA: LevelData = {
+const DEFAULT_LEVEL_DATA: LevelDetail = {
   salary: "Not available yet",
   demand: "Unknown",
   demandColor: "#C1CBE6",
   responsibilities: [],
-  fit: [],
+  fitReason: [],
+  skills: [],
 };
 
 function splitSentences(value: string): string[] {
@@ -38,177 +34,188 @@ function splitSentences(value: string): string[] {
     .filter(Boolean);
 }
 
-function normalizeDemand(count: number): { label: string; color: string } {
-  if (count <= 0) {
-    return { label: "Unknown", color: "#C1CBE6" };
-  }
-
-  if (count <= 4) {
-    return { label: "Low", color: "#FFBC6A" };
-  }
-
-  if (count <= 12) {
-    return { label: "Medium", color: "#FFF47C" };
-  }
-
-  return { label: "High", color: "var(--light-green)" };
+function normalizeLabel(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/roadmap$/i, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
 }
 
-function resolveLevelBucket(careerLevel?: string | null): Level {
-  const normalized = (careerLevel || "").toLowerCase();
-
-  if (
-    normalized.includes("senior") ||
-    normalized.includes("lead") ||
-    normalized.includes("principal") ||
-    normalized.includes("staff")
-  ) {
-    return "Senior";
+function normalizeItems(value: string[] | null | undefined): string[] {
+  if (!Array.isArray(value)) {
+    return [];
   }
 
-  if (
-    normalized.includes("junior") ||
-    normalized.includes("mid") ||
-    normalized.includes("associate")
-  ) {
-    return "Junior";
-  }
-
-  return "Entry";
-}
-
-function collectJobResponsibilities(text?: string | null): string[] {
-  return splitSentences(text || "")
-    .map((item) => item.replace(/^[•\-–\s]+/g, "").trim())
+  return value
+    .map((item) => item.trim())
     .filter(Boolean);
+}
+
+function normalizeLevelData(value: LevelDetail | null | undefined): LevelDetail {
+  return {
+    salary: value?.salary?.trim() || DEFAULT_LEVEL_DATA.salary,
+    demand: value?.demand?.trim() || DEFAULT_LEVEL_DATA.demand,
+    demandColor: value?.demandColor?.trim() || DEFAULT_LEVEL_DATA.demandColor,
+    responsibilities: normalizeItems(value?.responsibilities),
+    fitReason: normalizeItems(value?.fitReason),
+    skills: normalizeItems(value?.skills),
+  };
+}
+
+function buildFallbackResponsibilities(trackTitle: string): string[] {
+  return [
+    `Build practical ${trackTitle.toLowerCase()} foundations.`,
+    `Ship hands-on projects that demonstrate your progress.`,
+    "Collaborate clearly and improve your work through feedback.",
+    "Keep up with the tools, workflows, and trends used in the field.",
+  ];
+}
+
+function buildFallbackFitReasons(trackTitle: string, description?: string | null): string[] {
+  const fromDescription = splitSentences(description || "").slice(0, 5);
+  if (fromDescription.length) {
+    return fromDescription;
+  }
+
+  return [
+    `You enjoy solving real ${trackTitle.toLowerCase()} problems.`,
+    "You like structured learning paths and visible progress.",
+    "You want to learn through practical work, not theory alone.",
+    "You are comfortable improving through feedback and iteration.",
+  ];
+}
+
+function renderLoadingState() {
+  return (
+    <div
+      style={{
+        width: "100%",
+        height: "100%",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        color: "white",
+      }}
+    >
+      <div style={{ textAlign: "center" }}>
+        <div
+          style={{
+            fontSize: "1rem",
+            marginBottom: "1rem",
+            opacity: 0.8,
+          }}
+        >
+          Loading your career path...
+        </div>
+        <div
+          style={{
+            width: "30px",
+            height: "30px",
+            border: "2px solid #4A5FC1",
+            borderTop: "2px solid transparent",
+            borderRadius: "50%",
+            animation: "spin 0.8s linear infinite",
+            margin: "0 auto",
+          }}
+        />
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    </div>
+  );
 }
 
 export default function JourneyCrosspathsPage() {
   const router = useRouter();
-  const { user } = useAuth();
   const [selectedLevel, setSelectedLevel] = useState<Level>("Entry");
-  const [skills, setSkills] = useState<string[]>([]);
-  const [levelData, setLevelData] = useState<Record<Level, LevelData>>({
-    Entry: DEFAULT_LEVEL_DATA,
-    Junior: DEFAULT_LEVEL_DATA,
-    Senior: DEFAULT_LEVEL_DATA,
-  });
+  const [careerDetails, setCareerDetails] = useState<CareerBlogDetails | null>(null);
   const [isLoadingData, setIsLoadingData] = useState(false);
+  const [dataError, setDataError] = useState<string | null>(null);
+  const [resolvedCareerTrackId, setResolvedCareerTrackId] = useState<string | null>(null);
 
-  const {
-    selectedTrack,
-    maxReached,
-    isLoadingTracks,
-    trackError,
-  } = useJourneyPhase(1);
+  const { selectedTrack, maxReached, isLoadingTracks, trackError } = useJourneyPhase(1);
 
-  
+  useEffect(() => {
+    let alive = true;
+
+    const resolveCareerTrackId = async () => {
+      if (!selectedTrack) {
+        setResolvedCareerTrackId(null);
+        return;
+      }
+
+      const response = await careerService.listTracks();
+      if (!alive) {
+        return;
+      }
+
+      if (!response.success || !response.data?.length) {
+        setResolvedCareerTrackId(selectedTrack.id);
+        return;
+      }
+
+      const exactIdMatch = response.data.find((track) => track.id === selectedTrack.id);
+      if (exactIdMatch) {
+        setResolvedCareerTrackId(exactIdMatch.id);
+        return;
+      }
+
+      const normalizedSelectedTitle = normalizeLabel(selectedTrack.title || "");
+      const matchedByTitle = response.data.find((track) => {
+        return normalizeLabel(track.name || "") === normalizedSelectedTitle;
+      });
+
+      if (matchedByTitle) {
+        setResolvedCareerTrackId(matchedByTitle.id);
+        return;
+      }
+
+      const partialTitleMatch = response.data.find((track) => {
+        const normalizedTrackName = normalizeLabel(track.name || "");
+        return (
+          normalizedSelectedTitle.includes(normalizedTrackName) ||
+          normalizedTrackName.includes(normalizedSelectedTitle)
+        );
+      });
+
+      setResolvedCareerTrackId(partialTitleMatch?.id || selectedTrack.id);
+    };
+
+    void resolveCareerTrackId();
+
+    return () => {
+      alive = false;
+    };
+  }, [selectedTrack]);
 
   useEffect(() => {
     let alive = true;
 
     const loadTrackDetails = async () => {
-      if (!selectedTrack) {
-        setSkills([]);
-        setLevelData({
-          Entry: DEFAULT_LEVEL_DATA,
-          Junior: DEFAULT_LEVEL_DATA,
-          Senior: DEFAULT_LEVEL_DATA,
-        });
+      if (!selectedTrack?.id || !resolvedCareerTrackId) {
+        setCareerDetails(null);
+        setDataError(null);
+        setIsLoadingData(Boolean(selectedTrack?.id && !resolvedCareerTrackId));
         return;
       }
 
       setIsLoadingData(true);
+      setDataError(null);
 
-      const [roadmapResponse, jobsResponse] = await Promise.all([
-        selectedTrack.roadmapId
-          ? roadmapService.getRoadmapById(selectedTrack.roadmapId)
-          : Promise.resolve({ success: false, data: null, message: "" }),
-        jobService.searchJobs({
-          query: selectedTrack.title,
-          limit: 40,
-          userId: user?.id ?? undefined,
-          sort: "match",
-        }),
-      ]);
-
+      const response = await fetchCareerBlogDetails(resolvedCareerTrackId, selectedLevel);
       if (!alive) {
         return;
       }
 
-      const roadmap = roadmapResponse.success ? roadmapResponse.data : null;
-      const jobs = jobsResponse.success ? jobsResponse.data?.jobs.map(mapApiJobToUiModel) || [] : [];
-
-      const skillsFromRoadmap = (roadmap?.sections || [])
-        .slice()
-        .sort((left, right) => left.order - right.order)
-        .map((section) => section.title)
-        .filter(Boolean)
-        .slice(0, 3);
-
-      setSkills(skillsFromRoadmap.length ? skillsFromRoadmap : ["Learning Path", "Core Skills", "Career Growth"]);
-
-      const bucketedJobs: Record<Level, typeof jobs> = {
-        Entry: [],
-        Junior: [],
-        Senior: [],
-      };
-
-      for (const job of jobs) {
-        bucketedJobs[resolveLevelBucket(job.careerLevel)].push(job);
+      if (!response.success || !response.data) {
+        setCareerDetails(null);
+        setDataError(response.message || "Unable to load career details for this track.");
+        setIsLoadingData(false);
+        return;
       }
 
-      const fitFromDescription = splitSentences(selectedTrack.description || "").slice(0, 5);
-      const fitFallback = [
-        `You enjoy solving real ${selectedTrack.title.toLowerCase()} challenges.`,
-        "You like structured learning paths and measurable progress.",
-        "You are ready to build practical projects and iterate fast.",
-        "You can grow through feedback from assessments and interviews.",
-        "You want a long-term path from learning to hiring.",
-      ];
-      const fitLines = fitFromDescription.length ? fitFromDescription : fitFallback;
-
-      const fallbackResponsibilities = (roadmap?.sections || [])
-        .slice()
-        .sort((left, right) => left.order - right.order)
-        .flatMap((section) => section.steps.slice().sort((left, right) => left.order - right.order))
-        .map((step) => step.title)
-        .filter(Boolean)
-        .slice(0, 6);
-
-      const nextLevelData: Record<Level, LevelData> = {
-        Entry: DEFAULT_LEVEL_DATA,
-        Junior: DEFAULT_LEVEL_DATA,
-        Senior: DEFAULT_LEVEL_DATA,
-      };
-
-      for (const level of LEVELS) {
-        const levelJobs = bucketedJobs[level].length ? bucketedJobs[level] : jobs;
-        const firstSalary = levelJobs.find((job) => job.salary)?.salary || "Not available yet";
-        const demand = normalizeDemand(levelJobs.length);
-
-        const responsibilities = Array.from(
-          new Set(
-            levelJobs
-              .flatMap((job) => [
-                ...collectJobResponsibilities(job.responsibilities),
-                ...collectJobResponsibilities(job.requirements),
-                ...collectJobResponsibilities(job.description),
-              ])
-              .filter(Boolean),
-          ),
-        ).slice(0, 6);
-
-        nextLevelData[level] = {
-          salary: firstSalary,
-          demand: demand.label,
-          demandColor: demand.color,
-          responsibilities: responsibilities.length ? responsibilities : fallbackResponsibilities,
-          fit: fitLines,
-        };
-      }
-
-      setLevelData(nextLevelData);
+      setCareerDetails(response.data);
+      setDataError(null);
       setIsLoadingData(false);
     };
 
@@ -217,59 +224,47 @@ export default function JourneyCrosspathsPage() {
     return () => {
       alive = false;
     };
-  }, [selectedTrack, user?.id]);
+  }, [resolvedCareerTrackId, selectedLevel, selectedTrack?.id]);
 
   const currentLevelData = useMemo(() => {
-    return levelData[selectedLevel] || DEFAULT_LEVEL_DATA;
-  }, [levelData, selectedLevel]);
+    return normalizeLevelData(careerDetails?.[selectedLevel]);
+  }, [careerDetails, selectedLevel]);
 
-  // Delay render until all data is ready
-  if (isLoadingTracks || isLoadingData || !selectedTrack) {
+  const displaySkills = useMemo(() => {
+    const skills = currentLevelData.skills.length ? currentLevelData.skills : FALLBACK_SKILLS;
+    return skills.slice(0, MAX_SKILLS);
+  }, [currentLevelData.skills]);
+
+  const displayResponsibilities = useMemo(() => {
+    if (currentLevelData.responsibilities.length) {
+      return currentLevelData.responsibilities.slice(0, MAX_RESPONSIBILITIES);
+    }
+
+    return buildFallbackResponsibilities(selectedTrack?.title || "this career").slice(0, MAX_RESPONSIBILITIES);
+  }, [currentLevelData.responsibilities, selectedTrack?.title]);
+
+  const displayFitReasons = useMemo(() => {
+    if (currentLevelData.fitReason.length) {
+      return currentLevelData.fitReason.slice(0, MAX_FIT_REASONS);
+    }
+
+    return buildFallbackFitReasons(
+      selectedTrack?.title || "this career",
+      selectedTrack?.description,
+    ).slice(0, MAX_FIT_REASONS);
+  }, [currentLevelData.fitReason, selectedTrack?.description, selectedTrack?.title]);
+
+  if (isLoadingTracks || (isLoadingData && !careerDetails && Boolean(selectedTrack))) {
     return (
       <JourneyTree
         current={1}
         maxReached={1}
-        renderContent={() => (
-          <div
-            style={{
-              width: "100%",
-              height: "100%",
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              color: "white",
-            }}
-          >
-            <div style={{ textAlign: "center" }}>
-              <div
-                style={{
-                  fontSize: "1rem",
-                  marginBottom: "1rem",
-                  opacity: 0.8,
-                }}
-              >
-                Loading your career path...
-              </div>
-              <div
-                style={{
-                  width: "30px",
-                  height: "30px",
-                  border: "2px solid #4A5FC1",
-                  borderTop: "2px solid transparent",
-                  borderRadius: "50%",
-                  animation: "spin 0.8s linear infinite",
-                  margin: "0 auto",
-                }}
-              />
-              <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-            </div>
-          </div>
-        )}
+        renderContent={renderLoadingState}
       />
     );
   }
 
-  if (!selectedTrack && !isLoadingTracks) {
+  if (!selectedTrack) {
     return (
       <JourneyTree
         current={1}
@@ -314,15 +309,14 @@ export default function JourneyCrosspathsPage() {
     );
   }
 
-  const nextPhase = maxReached < 5
-    ? maxReached + 1
-    : maxReached;  
+  const nextPhase = maxReached < 5 ? maxReached + 1 : maxReached;
+  const activeError = dataError || trackError;
 
   return (
     <JourneyTree
       current={1}
       maxReached={nextPhase}
-      resolvePhasePath={(phase) => buildJourneyPhaseHref(phase, selectedTrack?.id)}
+      resolvePhasePath={(phase) => buildJourneyPhaseHref(phase, selectedTrack.id)}
       renderContent={() => (
         <div
           style={{
@@ -351,12 +345,12 @@ export default function JourneyCrosspathsPage() {
           >
             <div>
               <h1 style={{ fontSize: "1.5rem", marginBottom: "0.5rem" }}>
-                {selectedTrack?.title || "Career Track"}
+                {selectedTrack.title || "Career Track"}
               </h1>
               <p style={{ color: "lightgrey", margin: 0 }}>
-                {selectedTrack?.description || "Track details are loading..."}
+                {selectedTrack.description || "Track details are loading..."}
               </p>
-              {selectedTrack?.score !== null && selectedTrack?.score !== undefined ? (
+              {selectedTrack.score !== null && selectedTrack.score !== undefined ? (
                 <p style={{ color: "var(--light-green)", marginTop: "0.5rem", marginBottom: 0 }}>
                   Match score: {Math.round(selectedTrack.score)}%
                 </p>
@@ -371,7 +365,7 @@ export default function JourneyCrosspathsPage() {
                 gap: "1rem",
               }}
             >
-              {skills.map((skill) => (
+              {displaySkills.map((skill) => (
                 <RectangularCard
                   key={skill}
                   style={{ width: "100%" }}
@@ -386,7 +380,7 @@ export default function JourneyCrosspathsPage() {
                 Key Responsibilities
               </h1>
 
-              {isLoadingData ? (
+              {isLoadingData && !careerDetails ? (
                 <p style={{ color: "lightgrey" }}>Loading track responsibilities...</p>
               ) : (
                 <div
@@ -397,10 +391,10 @@ export default function JourneyCrosspathsPage() {
                     gap: "1rem",
                   }}
                 >
-                  {currentLevelData.responsibilities.length ? (
-                    currentLevelData.responsibilities.map((responsibility, index) => (
+                  {displayResponsibilities.length ? (
+                    displayResponsibilities.map((responsibility, index) => (
                       <p key={`${responsibility}-${index}`} style={{ color: "lightgrey", margin: 0 }}>
-                        • {responsibility}
+                        {"\u2022"} {responsibility}
                       </p>
                     ))
                   ) : (
@@ -484,7 +478,7 @@ export default function JourneyCrosspathsPage() {
                 This Would Fit You If
               </h1>
 
-              {(isLoadingTracks || isLoadingData) && !currentLevelData.fit.length ? (
+              {isLoadingData && !careerDetails ? (
                 <p style={{ color: "lightgrey" }}>Loading fit profile...</p>
               ) : (
                 <div
@@ -495,18 +489,18 @@ export default function JourneyCrosspathsPage() {
                     gap: "1rem",
                   }}
                 >
-                  {currentLevelData.fit.map((fitReason, index) => (
+                  {displayFitReasons.map((fitReason, index) => (
                     <p key={`${fitReason}-${index}`} style={{ color: "lightgrey", margin: 0 }}>
-                      • {fitReason}
+                      {"\u2022"} {fitReason}
                     </p>
                   ))}
                 </div>
               )}
             </div>
 
-            {trackError ? (
+            {activeError ? (
               <p style={{ margin: 0, color: "#FFD3D3" }}>
-                {trackError}
+                {activeError}
               </p>
             ) : null}
           </div>

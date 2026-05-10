@@ -558,9 +558,11 @@ export default function CareerQuestionsPage() {
 <div style={{ 
   display: "flex", 
   justifyContent: "space-between", 
-  width: "100%", 
+  width: "50%", 
   gap: "1.2vh",
-  marginTop: "2vh" 
+  marginTop: "2vh",
+  position:"relative",
+  left:"31vw"
 }}>
   
   {/* Previous Button */}
@@ -598,7 +600,7 @@ export default function CareerQuestionsPage() {
       fontSize: "2.2vh",
       fontWeight: 800,
       height: "auto",
-      minWidth: "15vw",
+      minWidth: "5vw",
       opacity: isLoadingQuestions || isSubmitting || !currentGroup ? 0.6 : 1,
     }}
   >
@@ -710,7 +712,7 @@ export default function CareerQuestionsPage() {
               style={{ textDecoration: "none" }}
             >
               <Button
-              variant="primary-inverted"
+              variant="secondary"
                 style={{
                   color: "#000000",
                   padding: "2vh 2vw",
@@ -734,7 +736,7 @@ export default function CareerQuestionsPage() {
 
       <div style={{ display: "flex", gap: "2vw", flexWrap: "wrap", justifyContent: "center" }}>
         <Button
-        variant="primary-inverted"
+        variant="secondary"
           onClick={() => {
             if (sessionId) {
               router.push(`/quiz-features/hobbies?sessionId=${encodeURIComponent(sessionId)}`);

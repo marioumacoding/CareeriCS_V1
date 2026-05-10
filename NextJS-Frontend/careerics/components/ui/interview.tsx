@@ -41,7 +41,7 @@ export default function SidebarLogicOnly({
           border: "none", 
           height: "1px", 
           backgroundColor: "var(--dark-blue)" 
-        }}
+        }}/>
 
         <div style={{ flex: 1, overflowY: "auto", scrollbarWidth: "none" }}>
           <style>{`.no-scrollbar::-webkit-scrollbar { display: none; }`}</style>

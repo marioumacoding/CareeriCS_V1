@@ -497,6 +497,7 @@ export default function RoadmapPage() {
         }}
       >
         <CustomDropdown
+        maxwidth="22vw"
           value={selectedRoadmapId}
           options={options}
           placeholder="select a path to view roadmap"

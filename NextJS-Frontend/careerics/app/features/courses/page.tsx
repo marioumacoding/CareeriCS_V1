@@ -249,7 +249,7 @@ export default function CoursesPage() {
       )}
 
       <CardsContainer
-        Title="More courses to discover"
+        Title="More fields to discover"
         Columns={3}
         variant="vertical"
         style={{ gridArea: "3 / 1 / 7 / 4", backgroundColor: "var(--dark-blue)" }}

@@ -147,7 +147,7 @@ export default function Login() {
             onClick={handleGoogleLogin}
             style={{  whiteSpace: "nowrap" }}
           >
-            <img src="/auth/Google.svg" alt="Google" style={{ height: "4vh" }} />
+            <img src="/auth/google.svg" alt="Google" style={{ height: "3vh" }} />
             Continue with Google
           </Button>
         </div>

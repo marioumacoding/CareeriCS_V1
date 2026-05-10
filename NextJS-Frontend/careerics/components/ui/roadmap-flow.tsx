@@ -171,7 +171,7 @@ export const StepFlow: React.FC<StepFlowProps> = ({
                   ? "var(--light-green)"
                   : DEFAULT_BORDER_COLOR
                   }`,
-                borderRadius: "99px",
+                borderRadius: "3.5vh",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -231,7 +231,7 @@ export const StepFlow: React.FC<StepFlowProps> = ({
                 }}
               >
                 <img
-                  src="/roadmap/connector.svg"
+                  src={variant==="light"?"/roadmap/connector.svg":"/roadmap/connector-blue.svg"}
                   alt=""
                   style={{
                     width: "100%",
@@ -241,7 +241,6 @@ export const StepFlow: React.FC<StepFlowProps> = ({
                       horizontalCount++ % 2 === 1
                         ? "scaleX(-1)"
                         : "scaleX(1)",
-                    filter:variant==="dark"?"brightness(0.3)":"none",
                   }}
                 />
               </div>
@@ -262,7 +261,7 @@ export const StepFlow: React.FC<StepFlowProps> = ({
                 }}
               >
                 <img
-                  src="/roadmap/connector-vertical.svg"
+                  src={variant==="light"?"/roadmap/connector-vertical.svg":"/roadmap/connector-vertical-blue.svg"}
                   alt=""
                   style={{
                     width: "100%",
@@ -272,7 +271,6 @@ export const StepFlow: React.FC<StepFlowProps> = ({
                       verticalCount++ % 2 === 1
                         ? "scaleY(-1)"
                         : "scaleY(1)",
-                    filter:variant==="dark"?"brightness(0.3)":"none",
                   }}
                 />
               </div>

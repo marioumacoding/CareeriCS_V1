@@ -971,14 +971,22 @@ export default function SkillAssessment() {
 
 
   const nextTestCode = useMemo(() => {
-  const submitted = sessions.filter(
-    (s) => s.status === "submitted"
+    const submitted = sessions.filter(
+      (s) => s.status === "submitted"
+    );
+
+    const count = submitted.length + 1;
+
+    return `Test_${String(count).padStart(3, "0")}`;
+  }, [sessions]);
+
+  const [search, setSearch] = useState("");
+
+  const filteredMoreSkills = moreSkills.filter((skill) =>
+    skill.toLowerCase().includes(search.toLowerCase())
   );
 
-  const count = submitted.length + 1;
 
-  return `Test_${String(count).padStart(3, "0")}`;
-}, [sessions]);
 
   return (
     <div
@@ -1000,20 +1008,7 @@ export default function SkillAssessment() {
           padding: "40px",
         }}
       >
-        <div
-          style={{
-            gridArea: "1/ 1 / 3 / 3",
-            backgroundColor: "var(--medium-blue)",
-            borderRadius: "4vh",
-            padding: "3vh 2vw",
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "center",
-            alignSelf: "stretch",
-            boxSizing: "border-box",
-          }}
-        >
-          <SkillFilters
+        <SkillFilters
             tracks={trackOptions}
             selectedTrackId={selectedTrackId}
             onTrackChange={handleTrackChange}
@@ -1022,9 +1017,11 @@ export default function SkillAssessment() {
             disabled={isLoading}
             disableSkillTypeToggle={isGeneralSkillsMode}
             trackHelperText={trackHelperText}
-          />
-        </div>
-
+            style={{
+            gridArea: "1/ 1 / 3 / 3",  
+          }}
+        />
+         
 
         <CardsContainer
           Title="Skill you are currently learning"
@@ -1064,12 +1061,15 @@ export default function SkillAssessment() {
           Title="More Skills to test"
           variant="vertical"
           Columns={3}
+          searchBar
+          searchValue={search}
+          onSearchChange={setSearch}
           style={{
             gridArea: "3 / 1 / 7 / 4",
             backgroundColor: "var(--dark-blue)",
           }}
         >
-          {moreSkills.map((skill) => {
+          {filteredMoreSkills.map((skill) => {
             const isSelected = selectedMoreName === skill;
 
             return (

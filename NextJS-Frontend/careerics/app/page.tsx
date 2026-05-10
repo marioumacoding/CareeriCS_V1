@@ -42,7 +42,7 @@ export default function LandingPage() {
 
   const getLinkColor = (id: string) => {
     if (active === id) return "var(--primary-green)";
-    if (hovered === id) return "#717171";
+    if (hovered === id) return "var(--light-green)";
     return "#fff";
   };
 
@@ -226,11 +226,11 @@ export default function LandingPage() {
             Not sure where to go or how to start? Just graduated and you feel lost? Careeri CS got your back.
           </p>
           <Button
-            onClick={() => router.push("/auth/login")}
+            onClick={() => router.push("/auth/register")}
             variant="primary"
             style={{ width: "100%" }}
           >
-            login
+            Create Account
           </Button>
         </div>
 
@@ -405,7 +405,7 @@ export default function LandingPage() {
         <Button
           onClick={() => router.push("/auth/login")}
           variant="primary"
-          style={{ marginLeft: "auto", position: "relative", marginRight:"10%",marginTop: "-10vh" }}
+          style={{ marginLeft: "auto", position: "relative", marginRight:"10%",marginTop: "-10vh",paddingBlock:"0.8rem" }}
         >
           Start Your Journey
         </Button>

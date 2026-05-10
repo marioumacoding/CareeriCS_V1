@@ -42,12 +42,12 @@ const variantStyles: Record<ButtonVariant, { default: CSSProperties; hover: CSSP
     hover: { backgroundColor: "var(--light-blue)" }
   },
   outline: {
-    default: { backgroundColor: "transparent", border: "0.7vh solid white", color: "white" },
-    hover: { backgroundColor: "#f4f4f5", color: "black" }
+    default: { backgroundColor: "transparent", border: "0.3vh solid white", color: "white" },
+    hover: { backgroundColor: "white", color: "black" }
   },
   ghost: {
     default: { backgroundColor: "transparent", color: "#18181b" },
-    hover: { backgroundColor: "#f4f4f5" }
+    hover: { backgroundColor: "white" }
   },
   danger: {
     default: { backgroundColor: "#dc2626", color: "white" },

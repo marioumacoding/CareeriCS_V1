@@ -19,6 +19,7 @@ import {
   loadCourseProgress,
 } from "@/lib/course-progress";
 import { UNIFIED_BOOKMARKS_UPDATED_EVENT } from "@/lib/unified-bookmarks";
+import { removeTrackBookmarksFromUnifiedList } from "@/lib/unified-bookmark-actions";
 import {
   CAREER_FEATURE_ROUTE,
   buildCareerQuizResultsHref,
@@ -31,6 +32,7 @@ import {
   JOURNEY_PHASES,
   type JourneyTrackCard,
   buildJourneyPhaseHref,
+  invalidateJourneyTrackCardsCache,
   loadJourneyTrackCards,
   persistSelectedJourneyTrackId,
   readJourneyPhaseState,
@@ -58,6 +60,7 @@ const RECENT_ACTIVITY_PLACEHOLDER: RecentActivityItem[] = [
     timestamp: 0,
   },
 ];
+const RECENT_ACTIVITY_LIMIT = 5;
 
 function formatActivityDate(value: string, prefix: string): string {
   const parsed = new Date(value);
@@ -119,6 +122,7 @@ export default function HomePage() {
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
   const [isStartingCareerQuiz, setIsStartingCareerQuiz] = useState(false);
   const [careerQuizError, setCareerQuizError] = useState<string | null>(null);
+  const [bookmarkActionError, setBookmarkActionError] = useState<string | null>(null);
   const [activityRefreshNonce, setActivityRefreshNonce] = useState(0);
   const [bookmarkRefreshNonce, setBookmarkRefreshNonce] = useState(0);
   const [, setPhaseStateRefreshNonce] = useState(0);
@@ -161,6 +165,7 @@ export default function HomePage() {
 
     const handleBookmarksUpdated = () => {
       if (!isAuthLoading) {
+        invalidateJourneyTrackCardsCache(userId);
         setBookmarkRefreshNonce((previous) => previous + 1);
       }
     };
@@ -183,7 +188,7 @@ export default function HomePage() {
       );
       window.removeEventListener("storage", handleBookmarksUpdated);
     };
-  }, [isAuthLoading]);
+  }, [isAuthLoading, userId]);
 
   useEffect(() => {
     const handleCourseProgressUpdated = () => {
@@ -228,7 +233,10 @@ export default function HomePage() {
           skillAssessmentService.getUserSessions(userId),
           interviewService.getUserSessions(userId),
           careerService.getUserSessions(userId),
-          jobService.getAllUserApplications(userId),
+          jobService.getUserApplications(userId, {
+            limit: RECENT_ACTIVITY_LIMIT,
+            sort: "date",
+          }),
         ]);
 
         const careerSessions = (careerSessionsResponse.success
@@ -242,11 +250,12 @@ export default function HomePage() {
               toTimestamp(left.submitted_at ?? left.started_at),
           );
 
+        const recentCareerSessions = careerSessions.slice(0, RECENT_ACTIVITY_LIMIT);
         const careerResultsResponses = await Promise.all(
-          careerSessions.map((session) => careerService.getCareerResults(session.id)),
+          recentCareerSessions.map((session) => careerService.getCareerResults(session.id)),
         );
 
-        const careerActivities = careerSessions.map((session, index) => {
+        const careerActivities = recentCareerSessions.map((session, index) => {
           const activityDate = session.submitted_at ?? session.started_at ?? "";
           const resultsResponse = careerResultsResponses[index];
           const topTrack =
@@ -274,6 +283,12 @@ export default function HomePage() {
           assessmentSessionsResponse.success ? assessmentSessionsResponse.data ?? [] : []
         )
           .filter((session) => session.status === "submitted")
+          .sort(
+            (left, right) =>
+              toTimestamp(right.submitted_at ?? right.started_at) -
+              toTimestamp(left.submitted_at ?? left.started_at),
+          )
+          .slice(0, RECENT_ACTIVITY_LIMIT)
           .map((session) => {
             const activityDate = session.submitted_at ?? session.started_at;
             const activityScore =
@@ -296,6 +311,12 @@ export default function HomePage() {
           interviewSessionsResponse.success ? interviewSessionsResponse.data ?? [] : []
         )
           .filter((session) => session.status?.toLowerCase() === "completed")
+          .sort(
+            (left, right) =>
+              toTimestamp(right.created_at) -
+              toTimestamp(left.created_at),
+          )
+          .slice(0, RECENT_ACTIVITY_LIMIT)
           .map((session) => ({
             key: `interview:${session.id}`,
             id: `Interview: ${session.name}`,
@@ -321,7 +342,9 @@ export default function HomePage() {
         });
 
         const jobActivities = (
-          jobApplicationsResponse.success ? (jobApplicationsResponse.data ?? []).map(mapApiJobToUiModel) : []
+          jobApplicationsResponse.success
+            ? (jobApplicationsResponse.data?.jobs ?? []).map(mapApiJobToUiModel)
+            : []
         )
           .filter((job) => Boolean(job.appliedAt))
           .map((job) => ({
@@ -339,7 +362,7 @@ export default function HomePage() {
           ...interviewActivities,
           ...courseActivities,
           ...jobActivities,
-        ]).slice(0, 5);
+        ]).slice(0, RECENT_ACTIVITY_LIMIT);
 
         if (!isCancelled) {
           setProjectActivities(merged);
@@ -385,17 +408,16 @@ export default function HomePage() {
         }
 
         setJourneyTracks(tracks);
+        const bookmarkedTracks = tracks.filter((track) => track.source === "bookmark");
 
         const persistedTrackId = readSelectedJourneyTrackId(userId);
         const selectedFromStorage = persistedTrackId
-          ? tracks.find((track) => track.id === persistedTrackId) || null
+          ? bookmarkedTracks.find((track) => track.id === persistedTrackId) || null
           : null;
-        const fallbackTrack = selectedFromStorage || tracks[0] || null;
+        const fallbackTrack = selectedFromStorage || bookmarkedTracks[0] || null;
 
         setSelectedTrackId(fallbackTrack?.id || null);
-        if (fallbackTrack?.id) {
-          persistSelectedJourneyTrackId(fallbackTrack.id, userId);
-        }
+        persistSelectedJourneyTrackId(fallbackTrack?.id || null, userId);
 
         setIsLoadingJourneyTracks(false);
       } catch {
@@ -425,20 +447,24 @@ export default function HomePage() {
     return projectActivities;
   }, [projectActivities]);
 
+  const bookmarkedJourneyTracks = useMemo(() => {
+    return journeyTracks.filter((track) => track.source === "bookmark");
+  }, [journeyTracks]);
+
   const activeTrack = useMemo(() => {
-    if (!journeyTracks.length) {
+    if (!bookmarkedJourneyTracks.length) {
       return null;
     }
 
     if (selectedTrackId) {
-      const matched = journeyTracks.find((track) => track.id === selectedTrackId);
+      const matched = bookmarkedJourneyTracks.find((track) => track.id === selectedTrackId);
       if (matched) {
         return matched;
       }
     }
 
-    return journeyTracks[0];
-  }, [journeyTracks, selectedTrackId]);
+    return bookmarkedJourneyTracks[0];
+  }, [bookmarkedJourneyTracks, selectedTrackId]);
 
   const activePhaseState = activeTrack?.id
     ? readJourneyPhaseState(activeTrack.id, userId)
@@ -472,11 +498,13 @@ export default function HomePage() {
   }, [activePhaseState.maxReached, activeTrack, recentActivities]);
 
   const handleSelectTrack = (trackId: string) => {
+    setBookmarkActionError(null);
     setSelectedTrackId(trackId);
     persistSelectedJourneyTrackId(trackId, userId);
   };
 
   const openTrackJourney = (track: JourneyTrackCard) => {
+    setBookmarkActionError(null);
     persistSelectedJourneyTrackId(track.id, userId);
     setSelectedTrackId(track.id);
 
@@ -484,7 +512,42 @@ export default function HomePage() {
     router.push(buildJourneyPhaseHref(targetPhase, track.id));
   };
 
-  const showJourneyPlaceholder = !isLoadingJourneyTracks && !journeyTracks.length;
+  const handleRemoveTrack = async (track: JourneyTrackCard) => {
+    if (!userId) {
+      setBookmarkActionError("Please sign in first to manage your saved careers.");
+      return;
+    }
+
+    setBookmarkActionError(null);
+
+    const removal = await removeTrackBookmarksFromUnifiedList({
+      trackId: track.id,
+      roadmapId: track.roadmapId,
+      userId,
+    });
+
+    if (!removal.success) {
+      setBookmarkActionError(removal.message || "Unable to remove this career right now.");
+      return;
+    }
+
+    invalidateJourneyTrackCardsCache(userId);
+
+    const currentTracks = bookmarkedJourneyTracks;
+    const currentIndex = currentTracks.findIndex((item) => item.id === track.id);
+    const remainingTracks = currentTracks.filter((item) => item.id !== track.id);
+    const fallbackTrack = remainingTracks[currentIndex] || remainingTracks[currentIndex - 1] || remainingTracks[0] || null;
+
+    setJourneyTracks((previous) => previous.filter((item) => item.id !== track.id));
+
+    if (selectedTrackId === track.id) {
+      setSelectedTrackId(fallbackTrack?.id || null);
+      persistSelectedJourneyTrackId(fallbackTrack?.id || null, userId);
+    }
+  };
+
+  const showJourneyPlaceholder = !isLoadingJourneyTracks && !bookmarkedJourneyTracks.length;
+  const showSavedCareerPlaceholder = showJourneyPlaceholder && journeyTracks.length > 0;
 
   return (
     <div
@@ -517,6 +580,19 @@ export default function HomePage() {
           </p>
         ) : null}
 
+        {bookmarkActionError ? (
+          <p
+            style={{
+              margin: "0 0 1rem 0",
+              color: "#FFD3D3",
+              fontFamily: "var(--font-jura)",
+              fontSize: "0.9rem",
+            }}
+          >
+            {bookmarkActionError}
+          </p>
+        ) : null}
+
         {journeyError ? (
           <p
             style={{
@@ -542,7 +618,7 @@ export default function HomePage() {
           />
         ) : null}
 
-        {journeyTracks.map((track) => (
+        {bookmarkedJourneyTracks.map((track) => (
           <ChoiceCard
             key={track.id}
             isSelected={activeTrack?.id === track.id}
@@ -552,18 +628,36 @@ export default function HomePage() {
             buttonLabel="Continue"
             onClick={() => handleSelectTrack(track.id)}
             onAction={() => openTrackJourney(track)}
+            onRemove={() => {
+              void handleRemoveTrack(track);
+            }}
           />
         ))}
 
         {showJourneyPlaceholder ? (
           <ChoiceCard
             key="journey-empty-state"
-            title="No Journey Started Yet"
-            description="Take the career quiz to get track recommendations, then continue your 5-phase journey."
-            buttonLabel={isStartingCareerQuiz ? "Starting..." : "Take Quiz"}
+            title={showSavedCareerPlaceholder ? "No Saved Careers Yet" : "No Journey Started Yet"}
+            description={
+              showSavedCareerPlaceholder
+                ? "Bookmark a career roadmap to keep it here and continue your journey."
+                : "Take the career quiz to get track recommendations, then continue your 5-phase journey."
+            }
+            buttonLabel={
+              showSavedCareerPlaceholder
+                ? "Explore Roadmaps"
+                : isStartingCareerQuiz
+                  ? "Starting..."
+                  : "Take Quiz"
+            }
             type="bookmark"
-            disabled={isStartingCareerQuiz || isAuthLoading}
+            disabled={showSavedCareerPlaceholder ? false : isStartingCareerQuiz || isAuthLoading}
             onAction={() => {
+              if (showSavedCareerPlaceholder) {
+                router.push("/features/roadmap");
+                return;
+              }
+
               void handleStartCareerQuiz();
             }}
           />

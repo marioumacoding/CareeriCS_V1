@@ -56,8 +56,9 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
       break;
 
     case "/auth/callback":
-      CardTitle = "Callback";
+      CardTitle = "Logging You In";
       showDiv = false;
+      BackPath = "/auth/login";
       break;
 
     default:

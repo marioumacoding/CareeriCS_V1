@@ -1,5 +1,6 @@
 # service/session_report_service.py
 import io
+import re
 from uuid import UUID
 from pathlib import Path
 
@@ -10,15 +11,58 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak, Image
 from fastapi import HTTPException
 
-from utils.util import extract_session_data
 from db.models import ReportTypeEnum, Session as InterviewSession
-from services.reports.report_service import save_report
+from services.reports.report_service import find_user_report_by_filename, save_report
 from fastapi.responses import StreamingResponse
+from utils.interview.session_ai_analysis import extract_session_data
 
 
 def _cover_image_path() -> Path:
     repo_root = Path(__file__).resolve().parents[4]
     return repo_root / "NextJS-Frontend" / "careerics" / "public" / "interview" / "Tech Interview Icon.svg"
+
+
+def _sanitize_filename_fragment(value: str | None) -> str:
+    safe_value = re.sub(r"[^A-Za-z0-9._-]+", "_", (value or "").strip())
+    safe_value = safe_value.strip("._")
+    return safe_value or "interview_session"
+
+
+def build_session_report_filename(session_obj: InterviewSession) -> str:
+    safe_name = _sanitize_filename_fragment(session_obj.name)
+    return f"{safe_name}_{session_obj.id}_report.pdf"
+
+
+def _stream_saved_report(report):
+    return StreamingResponse(
+        io.BytesIO(report.file_data),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename={report.filename}"},
+    )
+
+
+def _get_session_or_404(db: Session, session_id: UUID) -> InterviewSession:
+    session_obj = db.get(InterviewSession, session_id)
+    if not session_obj:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return session_obj
+
+
+def _ensure_session_has_answers(session_obj: InterviewSession) -> None:
+    if not session_obj.answers:
+        raise HTTPException(
+            status_code=409,
+            detail="Interview report is not ready because this session has no submitted answers yet.",
+        )
+
+
+def get_existing_session_report(db: Session, session_obj: InterviewSession):
+    return find_user_report_by_filename(
+        db=db,
+        user_id=session_obj.user_id,
+        filename=build_session_report_filename(session_obj),
+        report_type=ReportTypeEnum.INTERVIEW_SESSION,
+    )
 
 
 def _add_cover_page(elements, report_data, title_style, body_style):
@@ -43,16 +87,32 @@ def _add_cover_page(elements, report_data, title_style, body_style):
     elements.append(PageBreak())
 
 
-def build_session_report_pdf(db: Session, session_id: UUID, user_id: UUID | None = None):
+def get_or_create_session_report(
+    db: Session,
+    session_id: UUID,
+    user_id: UUID | None = None,
+    *,
+    allow_incomplete: bool = False,
+):
+    session_obj = _get_session_or_404(db, session_id)
+    _ensure_session_has_answers(session_obj)
+
     if user_id is None:
-        session_obj = db.get(InterviewSession, session_id)
-        if not session_obj:
-            raise HTTPException(status_code=404, detail="Session not found")
         user_id = session_obj.user_id
+
+    session_status = (session_obj.status or "").strip().lower()
+    if not allow_incomplete and session_status != "completed":
+        raise HTTPException(
+            status_code=409,
+            detail="Interview report is not ready until the session is completed.",
+        )
+
+    existing_report = get_existing_session_report(db, session_obj)
+    if existing_report:
+        return existing_report
 
     data = extract_session_data(db, session_id)
     report_data = data.get("session_report", {})
-    session_name = report_data.get("session_name", "session")
 
     summaries = report_data.get("structured_interview_summaries", [])
     num_questions = len(summaries)
@@ -158,18 +218,22 @@ def build_session_report_pdf(db: Session, session_id: UUID, user_id: UUID | None
     buffer.seek(0)
 
     # --- Save PDF to Reports Table ---
-    filename = f"{session_name}_report.pdf"
+    filename = build_session_report_filename(session_obj)
     report_bytes = buffer.getvalue()
-    report = save_report(
+    return save_report(
         db=db,
         user_id=user_id,
         file_bytes=report_bytes,
         filename=filename,
-        report_type=ReportTypeEnum.INTERVIEW_SESSION
+        report_type=ReportTypeEnum.INTERVIEW_SESSION,
     )
 
-    return StreamingResponse(
-        io.BytesIO(report.file_data),
-        media_type="application/pdf",
-        headers={"Content-Disposition": f"attachment; filename={report.filename}"}
+
+def build_session_report_pdf(db: Session, session_id: UUID, user_id: UUID | None = None):
+    report = get_or_create_session_report(
+        db=db,
+        session_id=session_id,
+        user_id=user_id,
+        allow_incomplete=False,
     )
+    return _stream_saved_report(report)

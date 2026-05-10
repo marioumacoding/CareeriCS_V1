@@ -75,6 +75,24 @@ def get_questions_service(db: DBSession) -> List[models.Question]:
 
 
 # -----------------------------
+# List Distinct Question Types
+# -----------------------------
+def list_question_types_service(db: DBSession) -> List[str]:
+    # PostgreSQL requires ORDER BY expressions to appear in the SELECT list when
+    # using DISTINCT. Select distinct values in a subquery first, then order
+    # case-insensitively in the outer query to remain Postgres-safe.
+    subq = (
+        db.query(models.Question.type.label("type"))
+        .distinct()
+        .subquery()
+    )
+
+    rows = db.query(subq.c.type).order_by(func.lower(subq.c.type).asc()).all()
+
+    return [row[0] for row in rows if row[0]]
+
+
+# -----------------------------
 # Get Questions By Type
 # -----------------------------
 def get_questions_by_type_service(

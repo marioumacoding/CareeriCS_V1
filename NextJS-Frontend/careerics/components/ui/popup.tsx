@@ -1,172 +1,216 @@
 "use client";
-import React, { useState } from "react";
+
+import React, { useEffect, useMemo, useState } from "react";
+
+import { Button } from "@/components/ui/button";
 
 interface CustomizeInterviewPopupProps {
   onClose: () => void;
-  onStart?: (settings: { sessionName: string; questions: number; role: string }) => void;
+  onStart: (selectedType: string) => void;
+  options: string[];
+  title?: string;
+  isSubmitting?: boolean;
+  isLoadingOptions?: boolean;
+  errorMessage?: string | null;
+  initialValue?: string;
 }
 
-export default function CustomizeInterviewPopup({ 
-  onClose, 
-  onStart 
+export default function CustomizeInterviewPopup({
+  onClose,
+  onStart,
+  options,
+  title = "Choose Your Technical Interview Type",
+  isSubmitting = false,
+  isLoadingOptions = false,
+  errorMessage = null,
+  initialValue = "",
 }: CustomizeInterviewPopupProps) {
-  const [numQuestions, setNumQuestions] = useState(7);
-  const [selectedRole, setSelectedRole] = useState("");
+  const [selectedRole, setSelectedRole] = useState(initialValue);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-  const roles = ["Frontend Developer", "Backend Developer", "Fullstack Engineer", "UI/UX Designer"];
+  useEffect(() => {
+    setSelectedRole(initialValue);
+  }, [initialValue]);
 
-  const handleSelectRole = (role: string) => {
-    setSelectedRole(role);
-    setIsDropdownOpen(false);
-    
-    if (onStart) {
-      onStart({ sessionName: "Tech-001", questions: numQuestions, role });
+  const sortedOptions = useMemo(() => [...options].sort((left, right) => left.localeCompare(right)), [options]);
+
+  const handleStart = () => {
+    if (!selectedRole || isSubmitting) {
+      return;
     }
+
+    onStart(selectedRole);
   };
 
   return (
-    <div style={{
-      position: "fixed",
-      top: 0,
-      left: 0,
-      width: "100vw",
-      height: "100vh",
-      backgroundColor: "rgba(0, 0, 0, 0.7)",
-      display: "flex",
-      justifyContent: "center",
-      alignItems: "center",
-      zIndex: 1000
-    }} onClick={onClose}>
-      
-      <div style={{
-        backgroundColor: "var(--light-green)",
-        width: "550px",
-        padding: "40px",
-        borderRadius: "40px",
-        position: "relative",
+    <div
+      aria-modal="true"
+      role="dialog"
+      style={{
+        position: "fixed",
+        inset: 0,
+        width: "100vw",
+        height: "100vh",
+        backgroundColor: "rgba(0, 0, 0, 0.7)",
         display: "flex",
-        flexDirection: "column",
-        gap: "25px",
-        fontFamily: "var(--font-nova-square)"
-      }} onClick={(e) => e.stopPropagation()}>
-        
-        <button onClick={onClose} style={{
-          position: "absolute",
-          top: "25px",
-          right: "25px",
-          background: "none",
-          border: "none",
-          fontSize: "24px",
-          cursor: "pointer",
-          color: "#000"
-        }}>✕</button>
+        justifyContent: "center",
+        alignItems: "center",
+        zIndex: 1000,
+        padding: "20px",
+      }}
+      onClick={onClose}
+    >
+      <div
+        style={{
+          backgroundColor: "var(--light-green)",
+          width: "min(560px, 100%)",
+          padding: "40px",
+          borderRadius: "40px",
+          position: "relative",
+          display: "flex",
+          flexDirection: "column",
+          gap: "25px",
+          fontFamily: "var(--font-nova-square)",
+          boxSizing: "border-box",
+        }}
+        onClick={(event) => event.stopPropagation()}
+      >
+        <button
+          type="button"
+          onClick={onClose}
+          style={{
+            position: "absolute",
+            top: "25px",
+            right: "25px",
+            background: "none",
+            border: "none",
+            fontSize: "24px",
+            cursor: "pointer",
+            color: "#000",
+          }}
+          aria-label="Close popup"
+        >
+          x
+        </button>
 
-        <h2 style={{ fontSize: "32px", margin: 0, color: "#000" }}>Customize your interview</h2>
-        
+        <h2 style={{ fontSize: "32px", margin: 0, color: "#000" }}>{title}</h2>
+
         <hr style={{ border: "none", borderTop: "2px solid rgb(0, 0, 0)", margin: 0 }} />
 
-        {/* 1. Static Session Name */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span style={{ fontSize: "20px", fontWeight: 500 }}>Session's Name:</span>
-          <div style={{ 
-            backgroundColor: "#8E8E8E", 
-            color: "white", 
-            padding: "12px 20px", 
-            borderRadius: "14px", 
-            width: "240px", // Standard Width
-            fontSize: "16px",
-            boxSizing: "border-box" 
-          }}>Tech-001</div>
-        </div>
-
-        {/* 2. Editable Number of Questions */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span style={{ fontSize: "20px", fontWeight: 500 }}>No. of Questions:</span>
-          <input 
-            type="number"
-            min={2}
-            value={numQuestions}
-            onChange={(e) => setNumQuestions(parseInt(e.target.value) || 0)}
-            onBlur={() => numQuestions < 2 && setNumQuestions(2)}
-            style={{ 
-              backgroundColor: "white", 
-              border: "none",
-              padding: "12px 20px", 
-              borderRadius: "14px", 
-              width: "240px", // Standard Width
-              fontSize: "16px",
-              outline: "none",
-              fontFamily: "inherit",
-              boxSizing: "border-box"
-            }}
-          />
-        </div>
-
-        {/* 3. Dropdown Role Selector (Matching size) */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span style={{ fontSize: "20px", fontWeight: 500 }}>Desired Role:</span>
-          <div style={{ position: "relative", width: "240px" }}> {/* Control container width */}
-            <div 
-              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-              style={{ 
-                backgroundColor: "white", 
-                padding: "12px 20px", 
-                borderRadius: "14px", 
-                display: "flex", 
-                justifyContent: "space-between", 
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "18px" }}>
+          <span style={{ fontSize: "20px", fontWeight: 500, paddingTop: "10px" }}>Career / Role:</span>
+          <div style={{ position: "relative", width: "260px" }}>
+            <div
+              onClick={() => setIsDropdownOpen((open) => !open)}
+              style={{
+                backgroundColor: "white",
+                padding: "12px 20px",
+                borderRadius: "14px",
+                display: "flex",
+                justifyContent: "space-between",
                 alignItems: "center",
                 cursor: "pointer",
                 fontSize: "16px",
-                width: "100%", // Fill the 240px container
-                boxSizing: "border-box" 
+                width: "100%",
+                boxSizing: "border-box",
+                minHeight: "52px",
               }}
             >
-              <span style={{ 
-                color: selectedRole ? "#000" : "#8E8E8E",
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis" 
-              }}>
-                {selectedRole || "click to choose"}
+              <span
+                style={{
+                  color: selectedRole ? "#000" : "#8E8E8E",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                {selectedRole || "Click to choose"}
               </span>
-              <span style={{ transition: "0.2s", transform: isDropdownOpen ? "rotate(180deg)" : "rotate(0deg)" }}>▼</span>
+              <span
+                style={{
+                  transition: "0.2s",
+                  transform: isDropdownOpen ? "rotate(180deg)" : "rotate(0deg)",
+                }}
+              >
+                v
+              </span>
             </div>
 
             {isDropdownOpen && (
-              <div style={{
-                position: "absolute",
-                top: "110%",
-                left: 0,
-                width: "100%", // Matches the 240px trigger
-                backgroundColor: "white",
-                borderRadius: "14px",
-                boxShadow: "0 10px 20px rgba(0,0,0,0.1)",
-                overflow: "hidden",
-                zIndex: 10
-              }}>
-                {roles.map((role) => (
-                  <div 
+              <div
+                style={{
+                  position: "absolute",
+                  top: "110%",
+                  left: 0,
+                  width: "100%",
+                  backgroundColor: "white",
+                  borderRadius: "14px",
+                  boxShadow: "0 10px 20px rgba(0,0,0,0.1)",
+                  overflow: "hidden",
+                  zIndex: 10,
+                  maxHeight: "230px",
+                  overflowY: "auto",
+                }}
+              >
+                {sortedOptions.map((role) => (
+                  <button
                     key={role}
-                    onClick={() => handleSelectRole(role)}
-                    style={{ 
-                      padding: "12px 20px", 
-                      cursor: "pointer", 
-                      borderBottom: "1px solid #f0f0f0", 
-                      color: "#333",
-                      fontSize: "14px"
+                    type="button"
+                    onClick={() => {
+                      setSelectedRole(role);
+                      setIsDropdownOpen(false);
                     }}
-                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = "#f9f9f9"}
-                    onMouseOut={(e) => e.currentTarget.style.backgroundColor = "transparent"}
+                    style={{
+                      width: "100%",
+                      padding: "12px 20px",
+                      cursor: "pointer",
+                      border: "none",
+                      borderBottom: "1px solid #f0f0f0",
+                      color: "#333",
+                      fontSize: "14px",
+                      textAlign: "left",
+                      backgroundColor: selectedRole === role ? "#eef6d0" : "white",
+                      fontFamily: "inherit",
+                    }}
                   >
                     {role}
-                  </div>
+                  </button>
                 ))}
               </div>
             )}
           </div>
         </div>
 
+        <p style={{ margin: 0, color: "#111827", fontSize: "15px", lineHeight: 1.5 }}>
+          {isLoadingOptions
+            ? "Loading the available technical interview careers..."
+            : "We'll load the technical question bank for the exact career you choose here."}
+        </p>
+
+        {errorMessage ? (
+          <p style={{ margin: 0, color: "#7f1d1d", fontSize: "14px" }}>{errorMessage}</p>
+        ) : null}
+
+        <div style={{ display: "flex", gap: "16px", marginTop: "8px" }}>
+          <Button
+            type="button"
+            variant="popup-inverted"
+            onClick={onClose}
+            disabled={isSubmitting}
+            style={{ minHeight: "56px", fontSize: "18px" }}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            variant="popup"
+            onClick={handleStart}
+            disabled={!selectedRole || isSubmitting || isLoadingOptions}
+            style={{ minHeight: "56px", fontSize: "18px" }}
+          >
+            {isSubmitting ? "Starting..." : isLoadingOptions ? "Loading..." : "Start Interview"}
+          </Button>
+        </div>
       </div>
     </div>
   );

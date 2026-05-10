@@ -1,42 +1,27 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import JourneyTree from "@/components/ui/journey-tree";
 import ChoiceCard from "@/components/ui/choice-card";
 import TipCard from "@/components/ui/3ateyat";
+import CustomizeInterviewPopup from "@/components/ui/popup";
 import { CardsContainer } from "@/components/ui/cards-container";
 import { ActivityCard } from "@/components/ui/activity-card";
 import { useJourneyPhase } from "@/hooks/use-journey-phase";
 import { buildJourneyPhaseHref } from "@/lib/journey";
+import {
+  buildInterviewRecordingRoute,
+  buildInterviewSessionName,
+  formatInterviewArchiveDate,
+  getTechnicalInterviewTypes,
+  normalizeInterviewType,
+} from "@/lib/interview";
 import { interviewService } from "@/services/interview.service";
+import { reportsService } from "@/services/reports.service";
 import { useAuth } from "@/providers/auth-provider";
-
-// TODO: Keep "hr" until backend ships a dedicated technical question bank.
-const INTERVIEW_TYPE = "hr";
-
-function buildRecordingRoute(sessionId: string | null): string {
-  const params = new URLSearchParams({
-    type: INTERVIEW_TYPE,
-    q: "1",
-  });
-
-  if (sessionId) {
-    params.set("sessionId", sessionId);
-  }
-
-  return `/interview-feature/recording?${params.toString()}`;
-}
-
-function formatSessionDate(value?: string | null): string {
-  const parsed = new Date(value || "");
-  if (Number.isNaN(parsed.getTime())) {
-    return "Unknown";
-  }
-
-  return parsed.toLocaleDateString();
-}
+import type { APIInterviewArchiveItem } from "@/types";
 
 export default function JourneyTrialRoundPage() {
   const router = useRouter();
@@ -48,60 +33,16 @@ export default function JourneyTrialRoundPage() {
     trackError,
   } = useJourneyPhase(4);
 
-  const [preparedSessionId, setPreparedSessionId] = useState("");
-  const [isPreparingSession, setIsPreparingSession] = useState(false);
   const [isStartingInterview, setIsStartingInterview] = useState(false);
-  const [archiveItems, setArchiveItems] = useState<Array<{ id: string; title: string; date: string; type: string }>>([]);
+  const [archiveItems, setArchiveItems] = useState<APIInterviewArchiveItem[]>([]);
+  const [isArchiveLoading, setIsArchiveLoading] = useState(false);
   const [archiveError, setArchiveError] = useState<string | null>(null);
-
-  const pendingSessionCreationRef = useRef<Promise<string | null> | null>(null);
-  const hasAutoPreparedRef = useRef(false);
-
- 
-
-  const createInterviewSession = useCallback(async (sessionName: string): Promise<string | null> => {
-    if (!user?.id) {
-      return null;
-    }
-
-    if (pendingSessionCreationRef.current) {
-      return pendingSessionCreationRef.current;
-    }
-
-    const request = (async () => {
-      setIsPreparingSession(true);
-
-      const response = await interviewService.createSession({
-        name: `${sessionName} Mock Interview`,
-        type: INTERVIEW_TYPE,
-        status: "in_progress",
-        user_id: user.id,
-      });
-
-      if (!response.success || !response.data?.id) {
-        return null;
-      }
-
-      setPreparedSessionId(response.data.id);
-      return response.data.id;
-    })()
-      .finally(() => {
-        pendingSessionCreationRef.current = null;
-        setIsPreparingSession(false);
-      });
-
-    pendingSessionCreationRef.current = request;
-    return request;
-  }, [user?.id]);
-
-  useEffect(() => {
-    if (hasAutoPreparedRef.current || isLoading || !user?.id || preparedSessionId) {
-      return;
-    }
-
-    hasAutoPreparedRef.current = true;
-    void createInterviewSession("HR");
-  }, [createInterviewSession, isLoading, preparedSessionId, user?.id]);
+  const [technicalTypes, setTechnicalTypes] = useState<string[]>([]);
+  const [isLoadingTechnicalTypes, setIsLoadingTechnicalTypes] = useState(false);
+  const [technicalPopupError, setTechnicalPopupError] = useState<string | null>(null);
+  const [isTechnicalPopupOpen, setIsTechnicalPopupOpen] = useState(false);
+  const [selectedTechnicalType, setSelectedTechnicalType] = useState("");
+  const [startError, setStartError] = useState<string | null>(null);
 
   useEffect(() => {
     if (isLoading) {
@@ -114,35 +55,27 @@ export default function JourneyTrialRoundPage() {
       if (!user?.id) {
         setArchiveItems([]);
         setArchiveError(null);
+        setIsArchiveLoading(false);
         return;
       }
 
-      const response = await interviewService.getUserSessions(user.id);
+      setIsArchiveLoading(true);
+
+      const response = await interviewService.getUserArchive(user.id);
       if (!alive) {
         return;
       }
 
       if (!response.success) {
         setArchiveItems([]);
-        setArchiveError(response.message || "Unable to load interview archive.");
+        setArchiveError(response.message || "Unable to load completed interview reports.");
+        setIsArchiveLoading(false);
         return;
       }
 
-      const sessions = (response.data ?? [])
-        .filter((session) => session.status?.toLowerCase() === "completed")
-        .sort((left, right) => {
-          return new Date(right.created_at || "").getTime() - new Date(left.created_at || "").getTime();
-        })
-        .slice(0, 12)
-        .map((session) => ({
-          id: session.id,
-          title: session.name || "Interview Session",
-          date: formatSessionDate(session.created_at),
-          type: session.type || "hr",
-        }));
-
-      setArchiveItems(sessions);
+      setArchiveItems(response.data ?? []);
       setArchiveError(null);
+      setIsArchiveLoading(false);
     };
 
     void loadArchive();
@@ -152,43 +85,112 @@ export default function JourneyTrialRoundPage() {
     };
   }, [isLoading, user?.id]);
 
-  const handleStartInterview = useCallback(async (sessionName: string) => {
-    if (isStartingInterview) {
+  const loadTechnicalTypes = useCallback(async () => {
+    if (technicalTypes.length || isLoadingTechnicalTypes) {
       return;
     }
 
+    setIsLoadingTechnicalTypes(true);
+    setTechnicalPopupError(null);
+
+    const response = await interviewService.listQuestionTypes();
+    if (!response.success) {
+      setTechnicalPopupError(response.message || "Unable to load technical interview types.");
+      setIsLoadingTechnicalTypes(false);
+      return;
+    }
+
+    const availableTypes = getTechnicalInterviewTypes(response.data ?? []);
+    setTechnicalTypes(availableTypes);
+    if (!availableTypes.length) {
+      setTechnicalPopupError("No technical interview types are available yet.");
+    }
+    setIsLoadingTechnicalTypes(false);
+  }, [isLoadingTechnicalTypes, technicalTypes.length]);
+
+  const handleStartInterview = useCallback(async (interviewType: string) => {
+    if (isStartingInterview) {
+      return false;
+    }
+
     setIsStartingInterview(true);
+    setTechnicalPopupError(null);
+    setStartError(null);
 
     try {
       if (!isLoading && !user?.id) {
         router.push("/auth/login");
-        return;
+        return false;
       }
 
-      let sessionId = preparedSessionId || null;
-      if (!sessionId) {
-        sessionId = await createInterviewSession(sessionName);
+      if (!user?.id) {
+        return false;
       }
 
-      router.push(buildRecordingRoute(sessionId));
+      const normalizedType = normalizeInterviewType(interviewType);
+      const response = await interviewService.createSession({
+        name: buildInterviewSessionName(normalizedType),
+        type: normalizedType,
+        status: "in_progress",
+        user_id: user.id,
+      });
+
+      if (!response.success || !response.data?.id) {
+        const message = response.message || "Failed to start interview session.";
+        setTechnicalPopupError(message);
+        setStartError(message);
+        return false;
+      }
+
+      router.push(buildInterviewRecordingRoute(normalizedType, response.data.id));
+      return true;
     } finally {
       setIsStartingInterview(false);
     }
-  }, [createInterviewSession, isLoading, isStartingInterview, preparedSessionId, router, user?.id]);
+  }, [isLoading, isStartingInterview, router, user?.id]);
 
   const startButtonLabel = useMemo(() => {
     if (isStartingInterview) {
       return "Starting...";
     }
 
-    if (isLoading || (isPreparingSession && !preparedSessionId)) {
-      return "Preparing...";
+    if (isLoading) {
+      return "Loading...";
     }
 
     return "Start";
-  }, [isLoading, isPreparingSession, isStartingInterview, preparedSessionId]);
+  }, [isLoading, isStartingInterview]);
 
-  const isStartDisabled = isLoading || isStartingInterview || (isPreparingSession && !preparedSessionId);
+  const isStartDisabled = isLoading || isStartingInterview;
+
+  const handleOpenTechnicalPopup = useCallback(() => {
+    if (!isLoading && !user?.id) {
+      router.push("/auth/login");
+      return;
+    }
+
+    setIsTechnicalPopupOpen(true);
+    void loadTechnicalTypes();
+  }, [isLoading, loadTechnicalTypes, router, user?.id]);
+
+  const handleStartTechnical = useCallback(async (technicalType: string) => {
+    setSelectedTechnicalType(technicalType);
+    const started = await handleStartInterview(technicalType);
+    if (started) {
+      setIsTechnicalPopupOpen(false);
+    }
+  }, [handleStartInterview]);
+
+  const handleDownloadArchiveItem = useCallback((item: APIInterviewArchiveItem) => {
+    const downloadUrl = reportsService.getReportDownloadUrl(item.report_id);
+    const link = document.createElement("a");
+    link.href = downloadUrl;
+    link.download = item.report_filename;
+    link.rel = "noopener noreferrer";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  }, []);
 
   // Delay render until all data is ready
   const isInitializing = isLoadingTracks || isLoading;
@@ -309,7 +311,7 @@ export default function JourneyTrialRoundPage() {
             description="Practice common interview questions and improve how you present your skills and experience."
             buttonVariant="primary-inverted"
             onClick={() => {
-              void handleStartInterview("Behavioral");
+              void handleStartInterview("HR");
             }}
             disabled={isStartDisabled}
             buttonLabel={startButtonLabel}
@@ -319,11 +321,9 @@ export default function JourneyTrialRoundPage() {
 
           <ChoiceCard
             title="Technical Mock Interview"
-            description="This route currently uses the same HR question bank to stay aligned with the current backend setup."
+            description="Choose the technical career you want to practice, then we will load the matching technical question bank."
             buttonVariant="primary-inverted"
-            onClick={() => {
-              void handleStartInterview("Technical");
-            }}
+            onClick={handleOpenTechnicalPopup}
             disabled={isStartDisabled}
             buttonLabel={startButtonLabel}
             icon="/interview/tech.svg"
@@ -340,17 +340,11 @@ export default function JourneyTrialRoundPage() {
             {archiveItems.length ? (
               archiveItems.map((item) => (
                 <ActivityCard
-                  key={item.id}
-                  title={item.title}
-                  date={item.date}
+                  key={item.report_id}
+                  title={item.session_name}
+                  date={formatInterviewArchiveDate(item.report_created_at || item.session_created_at)}
                   variant="download"
-                  onClick={() =>
-                    router.push(
-                      `/interview-feature/last-analysis?type=${encodeURIComponent(
-                        item.type,
-                      )}&sessionId=${encodeURIComponent(item.id)}&q=1`,
-                    )
-                  }
+                  onClick={() => handleDownloadArchiveItem(item)}
                 />
               ))
             ) : (
@@ -362,7 +356,9 @@ export default function JourneyTrialRoundPage() {
                   paddingInline: "10px",
                 }}
               >
-                {archiveError || "No completed interview sessions yet."}
+                {isArchiveLoading
+                  ? "Loading completed interview reports..."
+                  : archiveError || "No completed interview reports yet."}
               </div>
             )}
           </CardsContainer>
@@ -378,6 +374,41 @@ export default function JourneyTrialRoundPage() {
             <p style={{ margin: 0, color: "#FFD3D3", gridArea: "3 / 1 / 4 / 4", alignSelf: "end" }}>
               {trackError}
             </p>
+          ) : null}
+
+          {startError ? (
+            <p
+              style={{
+                margin: 0,
+                color: "#FFD3D3",
+                gridArea: "3 / 1 / 4 / 4",
+                alignSelf: "end",
+                justifySelf: "center",
+                fontFamily: "var(--font-jura)",
+              }}
+            >
+              {startError}
+            </p>
+          ) : null}
+
+          {isTechnicalPopupOpen ? (
+            <CustomizeInterviewPopup
+              onClose={() => {
+                if (isStartingInterview) {
+                  return;
+                }
+
+                setIsTechnicalPopupOpen(false);
+              }}
+              onStart={(technicalType) => {
+                void handleStartTechnical(technicalType);
+              }}
+              options={technicalTypes}
+              isSubmitting={isStartingInterview}
+              isLoadingOptions={isLoadingTechnicalTypes}
+              errorMessage={technicalPopupError}
+              initialValue={selectedTechnicalType}
+            />
           ) : null}
         </div>
       )}

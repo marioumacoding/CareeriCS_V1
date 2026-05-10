@@ -1,195 +1,288 @@
 "use client";
 
-import { Activity, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import RootLayout from "@/app/features/layout";
-import ArchiveCard from "@/components/ui/archive-card";
+
 import ChoiceCard from "@/components/ui/choice-card";
 import TipCard from "@/components/ui/3ateyat";
-import { interviewService } from "@/services/interview.service";
-import { useAuth } from "@/providers/auth-provider";
+import CustomizeInterviewPopup from "@/components/ui/popup";
 import { CardsContainer } from "@/components/ui/cards-container";
 import { ActivityCard } from "@/components/ui/activity-card";
-
-const INTERVIEW_TYPE = "hr";
-
-function buildRecordingRoute(sessionId: string | null): string {
-  const params = new URLSearchParams({
-    type: INTERVIEW_TYPE,
-    q: "1",
-  });
-
-  if (sessionId) {
-    params.set("sessionId", sessionId);
-  }
-
-  return `/interview-feature/recording?${params.toString()}`;
-}
+import { normalizeInterviewType, buildInterviewRecordingRoute, buildInterviewSessionName, formatInterviewArchiveDate, getTechnicalInterviewTypes } from "@/lib/interview";
+import { useAuth } from "@/providers/auth-provider";
+import { interviewService } from "@/services/interview.service";
+import { reportsService } from "@/services/reports.service";
+import type { APIInterviewArchiveItem } from "@/types";
 
 export default function Interview() {
   const router = useRouter();
   const { user, isLoading } = useAuth();
 
-  const [preparedSessionId, setPreparedSessionId] = useState("");
-  const [isPreparingSession, setIsPreparingSession] = useState(false);
   const [isStartingInterview, setIsStartingInterview] = useState(false);
+  const [archiveItems, setArchiveItems] = useState<APIInterviewArchiveItem[]>([]);
+  const [isArchiveLoading, setIsArchiveLoading] = useState(false);
+  const [archiveError, setArchiveError] = useState<string | null>(null);
+  const [technicalTypes, setTechnicalTypes] = useState<string[]>([]);
+  const [isLoadingTechnicalTypes, setIsLoadingTechnicalTypes] = useState(false);
+  const [technicalPopupError, setTechnicalPopupError] = useState<string | null>(null);
+  const [isTechnicalPopupOpen, setIsTechnicalPopupOpen] = useState(false);
+  const [selectedTechnicalType, setSelectedTechnicalType] = useState("");
+  const [startError, setStartError] = useState<string | null>(null);
 
-  const pendingSessionCreationRef = useRef<Promise<string | null> | null>(null);
-  const hasAutoPreparedRef = useRef(false);
-
-  const createInterviewSession = useCallback(async (sessionName: string): Promise<string | null> => {
+  const loadArchive = useCallback(async () => {
     if (!user?.id) {
-      return null;
+      setArchiveItems([]);
+      setArchiveError(null);
+      setIsArchiveLoading(false);
+      return;
     }
 
-    if (pendingSessionCreationRef.current) {
-      return pendingSessionCreationRef.current;
+    setIsArchiveLoading(true);
+    setArchiveError(null);
+
+    const response = await interviewService.getUserArchive(user.id);
+    if (!response.success) {
+      setArchiveItems([]);
+      setArchiveError(response.message || "Unable to load completed interview reports.");
+      setIsArchiveLoading(false);
+      return;
     }
 
-    const request = (async () => {
-      setIsPreparingSession(true);
-
-      const response = await interviewService.createSession({
-        name: `${sessionName} Mock Interview`,
-        type: INTERVIEW_TYPE,
-        status: "in_progress",
-        user_id: user.id,
-      });
-
-      if (!response.success || !response.data?.id) {
-        return null;
-      }
-
-      setPreparedSessionId(response.data.id);
-      return response.data.id;
-    })()
-      .finally(() => {
-        pendingSessionCreationRef.current = null;
-        setIsPreparingSession(false);
-      });
-
-    pendingSessionCreationRef.current = request;
-    return request;
+    setArchiveItems(response.data ?? []);
+    setArchiveError(null);
+    setIsArchiveLoading(false);
   }, [user?.id]);
 
   useEffect(() => {
-    if (hasAutoPreparedRef.current || isLoading || !user?.id || preparedSessionId) {
+    void loadArchive();
+  }, [loadArchive]);
+
+  const loadTechnicalTypes = useCallback(async () => {
+    if (technicalTypes.length || isLoadingTechnicalTypes) {
       return;
     }
 
-    hasAutoPreparedRef.current = true;
-    void createInterviewSession("HR");
-  }, [createInterviewSession, isLoading, preparedSessionId, user?.id]);
+    setIsLoadingTechnicalTypes(true);
+    setTechnicalPopupError(null);
 
-  const handleStartInterview = useCallback(async (sessionName: string) => {
-    if (isStartingInterview) {
+    const response = await interviewService.listQuestionTypes();
+    if (!response.success) {
+      setTechnicalPopupError(response.message || "Unable to load technical interview types.");
+      setIsLoadingTechnicalTypes(false);
       return;
     }
 
-    setIsStartingInterview(true);
-
-    try {
-      if (!isLoading && !user?.id) {
-        router.push("/auth/login");
-        return;
-      }
-
-      let sessionId = preparedSessionId || null;
-      if (!sessionId) {
-        sessionId = await createInterviewSession(sessionName);
-      }
-
-      router.push(buildRecordingRoute(sessionId));
-    } finally {
-      setIsStartingInterview(false);
+    const availableTypes = getTechnicalInterviewTypes(response.data ?? []);
+    setTechnicalTypes(availableTypes);
+    if (!availableTypes.length) {
+      setTechnicalPopupError("No technical interview types are available yet.");
     }
-  }, [createInterviewSession, isLoading, isStartingInterview, preparedSessionId, router, user?.id]);
+    setIsLoadingTechnicalTypes(false);
+  }, [isLoadingTechnicalTypes, technicalTypes.length]);
+
+  const startInterview = useCallback(
+    async (interviewType: string) => {
+      if (isStartingInterview) {
+        return false;
+      }
+
+      setIsStartingInterview(true);
+      setTechnicalPopupError(null);
+      setStartError(null);
+
+      try {
+        if (!isLoading && !user?.id) {
+          router.push("/auth/login");
+          return false;
+        }
+
+        if (!user?.id) {
+          return false;
+        }
+
+        const normalizedType = normalizeInterviewType(interviewType);
+        const response = await interviewService.createSession({
+          name: buildInterviewSessionName(normalizedType),
+          type: normalizedType,
+          status: "in_progress",
+          user_id: user.id,
+        });
+
+        if (!response.success || !response.data?.id) {
+          const message = response.message || "Failed to start interview session.";
+          setTechnicalPopupError(message);
+          setStartError(message);
+          return false;
+        }
+
+        router.push(buildInterviewRecordingRoute(normalizedType, response.data.id));
+        return true;
+      } finally {
+        setIsStartingInterview(false);
+      }
+    },
+    [isLoading, isStartingInterview, router, user?.id],
+  );
+
+  const handleStartBehavioral = useCallback(() => {
+    void startInterview("HR");
+  }, [startInterview]);
+
+  const handleOpenTechnicalPopup = useCallback(() => {
+    if (!isLoading && !user?.id) {
+      router.push("/auth/login");
+      return;
+    }
+
+    setIsTechnicalPopupOpen(true);
+    void loadTechnicalTypes();
+  }, [isLoading, loadTechnicalTypes, router, user?.id]);
+
+  const handleStartTechnical = useCallback(
+    async (technicalType: string) => {
+      setSelectedTechnicalType(technicalType);
+      const started = await startInterview(technicalType);
+      if (started) {
+        setIsTechnicalPopupOpen(false);
+      }
+    },
+    [startInterview],
+  );
+
+  const handleDownloadArchiveItem = useCallback((item: APIInterviewArchiveItem) => {
+    const downloadUrl = reportsService.getReportDownloadUrl(item.report_id);
+    const link = document.createElement("a");
+    link.href = downloadUrl;
+    link.download = item.report_filename;
+    link.rel = "noopener noreferrer";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  }, []);
 
   const startButtonLabel = useMemo(() => {
     if (isStartingInterview) {
       return "Starting...";
     }
 
-    if (isLoading || (isPreparingSession && !preparedSessionId)) {
-      return "Preparing...";
+    if (isLoading) {
+      return "Loading...";
     }
 
     return "Start";
-  }, [isLoading, isPreparingSession, isStartingInterview, preparedSessionId]);
-
-  const isStartDisabled = isLoading || isStartingInterview || (isPreparingSession && !preparedSessionId);
-
-  const archive = [
-    { id: "Tech-001", date: "5/3/2026" },
-    { id: "Tech-002", date: "5/3/2026" },
-    { id: "Tech-003", date: "5/3/2026" },
-    { id: "Tech-004", date: "5/3/2026" },
-    { id: "Tech-005", date: "5/3/2026" },
-    { id: "Tech-006", date: "5/3/2026" },
-  ];
+  }, [isLoading, isStartingInterview]);
 
   return (
-    <div
-      style={{
-        display:"grid",
-        gridTemplateColumns: "repeat(3, 1fr)",
-        gridTemplateRows: "repeat(3, 1fr)",
-        gridColumnGap: "25px",
-        gridRowGap: "20px",
-        width:"100%",
-        height:"100%",
-        padding:"40px",
-      }}
-    >
-      <ChoiceCard
-        title="Behavioral Mock Interview"
-        description="Practice answering the most common interview questions and improve how you present yourself and your skills."
-        buttonVariant="primary-inverted"
-        onClick={() => {
-          void handleStartInterview("Behavioral");
+    <>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(3, 1fr)",
+          gridTemplateRows: "repeat(3, 1fr)",
+          gridColumnGap: "25px",
+          gridRowGap: "20px",
+          width: "100%",
+          height: "100%",
+          padding: "40px",
         }}
-        disabled={isStartDisabled}
-        buttonLabel={startButtonLabel}
-        icon="/interview/hr.svg"
-        style={{ gridArea: "1 / 1 / 3 / 2" }}
-      />
-
-      <ChoiceCard
-        title="Technical Mock Interview"
-        description="This route currently uses the same HR question bank to keep frontend and backend fully aligned."
-        buttonVariant="primary-inverted"
-        onClick={() => {
-          void handleStartInterview("Technical");
-        }}
-        disabled={isStartDisabled}
-        buttonLabel={startButtonLabel}
-        icon="/interview/tech.svg"
-        style={{ gridArea: "1 / 2 / 3 / 3" }}
-      />
-
-      <CardsContainer
-        Title="Interviews Archive"
-        variant="vertical"
-        Columns={1}
-        centerTitle
-        style={{ gridArea: "1 / 3 / 3 / 4" }}
       >
-        {archive.map((item) => (
-          <ActivityCard
-            key={item.id}
-            title={item.id}
-            date={item.date}
-            variant="download"
-          />
-        ))}
-      </CardsContainer>
+        <ChoiceCard
+          title="Behavioral Mock Interview"
+          description="Practice answering the most common interview questions and improve how you present yourself and your skills."
+          buttonVariant="primary-inverted"
+          onClick={handleStartBehavioral}
+          disabled={isLoading || isStartingInterview}
+          buttonLabel={startButtonLabel}
+          icon="/interview/hr.svg"
+          style={{ gridArea: "1 / 1 / 3 / 2" }}
+        />
 
-      <TipCard
-        title="Tip of the day"
-        description="Research the company and interviewers before your interview so you understand the company's goals and show how you fit."
-        icon="/global/tip.svg"
-        style={{ gridArea: "3 / 1 / 4 / 4" }}
-      />
-    </div>
+        <ChoiceCard
+          title="Technical Mock Interview"
+          description="Choose the technical career you want to practice, then we will load the matching technical question bank."
+          buttonVariant="primary-inverted"
+          onClick={handleOpenTechnicalPopup}
+          disabled={isLoading || isStartingInterview}
+          buttonLabel={startButtonLabel}
+          icon="/interview/tech.svg"
+          style={{ gridArea: "1 / 2 / 3 / 3" }}
+        />
+
+        <CardsContainer
+          Title="Interviews Archive"
+          variant="vertical"
+          Columns={1}
+          centerTitle
+          style={{ gridArea: "1 / 3 / 3 / 4" }}
+        >
+          {archiveItems.length ? (
+            archiveItems.map((item) => (
+              <ActivityCard
+                key={item.report_id}
+                title={item.session_name}
+                date={formatInterviewArchiveDate(item.report_created_at || item.session_created_at)}
+                variant="download"
+                onClick={() => handleDownloadArchiveItem(item)}
+              />
+            ))
+          ) : (
+            <div
+              style={{
+                color: archiveError ? "#FFD3D3" : "#D7E3FF",
+                fontFamily: "var(--font-jura)",
+                textAlign: "center",
+                paddingInline: "20px",
+              }}
+            >
+              {isArchiveLoading
+                ? "Loading completed interview reports..."
+                : archiveError || "No completed interview reports yet."}
+            </div>
+          )}
+        </CardsContainer>
+
+        <TipCard
+          title="Tip of the day"
+          description="Research the company and interviewers before your interview so you understand the company's goals and show how you fit."
+          icon="/global/tip.svg"
+          style={{ gridArea: "3 / 1 / 4 / 4" }}
+        />
+
+        {startError ? (
+          <p
+            style={{
+              margin: 0,
+              color: "#FFD3D3",
+              gridArea: "3 / 1 / 4 / 4",
+              alignSelf: "end",
+              justifySelf: "center",
+              fontFamily: "var(--font-jura)",
+            }}
+          >
+            {startError}
+          </p>
+        ) : null}
+      </div>
+
+      {isTechnicalPopupOpen ? (
+        <CustomizeInterviewPopup
+          onClose={() => {
+            if (isStartingInterview) {
+              return;
+            }
+
+            setIsTechnicalPopupOpen(false);
+          }}
+          onStart={(technicalType) => {
+            void handleStartTechnical(technicalType);
+          }}
+          options={technicalTypes}
+          isSubmitting={isStartingInterview}
+          isLoadingOptions={isLoadingTechnicalTypes}
+          errorMessage={technicalPopupError}
+          initialValue={selectedTechnicalType}
+        />
+      ) : null}
+    </>
   );
 }

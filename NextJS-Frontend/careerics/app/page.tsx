@@ -41,8 +41,8 @@ export default function LandingPage() {
   }, []);
 
   const getLinkColor = (id: string) => {
-    if (active === id) return "#B8EF46";
-    if (hovered === id) return "#717171";
+    if (active === id) return "var(--primary-green)";
+    if (hovered === id) return "var(--light-green)";
     return "#fff";
   };
 
@@ -166,7 +166,7 @@ export default function LandingPage() {
             width: "50vw",
             height: "100vh",
             background:
-              "radial-gradient(circle at center, var(--bg-effect-color) -10%, rgba(0,0,0,0) 65%)",
+              "radial-gradient(circle at center, var(--phase5-color) -10%, rgba(0,0,0,0) 65%)",
             zIndex: 1,
             pointerEvents: "none",
           }}
@@ -205,7 +205,7 @@ export default function LandingPage() {
           }}
         >
           <img
-            src="/landing/robot.svg"
+            src="/landing/Robot.svg"
             alt="Our Robot"
             style={{ width: "100%", display: "block" }}
           />
@@ -230,7 +230,7 @@ export default function LandingPage() {
             variant="primary"
             style={{ width: "100%" }}
           >
-            Register
+            Create Account
           </Button>
         </div>
 
@@ -292,7 +292,7 @@ export default function LandingPage() {
               title="Career Quiz"
               description={<>Career confusion? We don’t know her.<br /> Discover where you’ll thrive with our 5-minute Quiz.</>}
               color="var(--phase1-color)"
-              link="/features/career"
+              link="/auth/login?redirect=/features/career"
             />
           </div>
 
@@ -302,7 +302,7 @@ export default function LandingPage() {
               title={<>CV<br />Builder</>}
               description={<>Never had a CV before and you got no idea how to start?<br />  Our Ai model will build you an ATS- friendly CV. <br /> No guesswork Just results. </>}
               color="var(--phase3-color)"
-              link="/features/cv"
+              link="/auth/login?redirect=/cv-feature/builder"
             />
           </div>
 
@@ -312,7 +312,7 @@ export default function LandingPage() {
               title={<>CV Enhancer</>}
               description={<>Already have a CV but it’s not getting you anywhere?<br />  We’ll optimize it to get you recruiters attention.</>}
               color="var(--phase3-color)"
-              link="/features/cv"
+              link="/auth/login?redirect=/cv-feature/enhancer"
             />
           </div>
 
@@ -322,7 +322,7 @@ export default function LandingPage() {
               title={<>Roadmap<br />Generation</>}
               description={<>Unsure about your next steps?<br />Get a clear map towards your dream role.<br /> We’ll tell you exactly what to learn and how.</>}
               color="var(--phase2-color)"
-              link="/features/roadmap"
+              link="/auth/login?redirect=/features/roadmap"
             />
           </div>
 
@@ -332,7 +332,7 @@ export default function LandingPage() {
               title={<>Courses</>}
               description={<>Learn actual skills that match market demands.</>}
               color="var(--phase2-color)"
-              link="/features/courses"
+              link="/auth/login?redirect=/features/courses"
             />
           </div>
 
@@ -342,7 +342,7 @@ export default function LandingPage() {
               title={<>HR Interview</>}
               description={<>Practice the impossible questions.</>}
               color="var(--phase4-color)"
-              link="/features/interview"
+              link="/auth/login?redirect=/features/interview"
             />
           </div>
 
@@ -352,7 +352,7 @@ export default function LandingPage() {
               title={<>Job<br />Applicator</>}
               description={<>Job hunting shouldn’t feel like a full time job. <br /> Careeri CS will look for you, and  only give you the best matches - Saving you the hustle.</>}
               color="var(--phase5-color)"
-              link="/features/job"
+              link="/auth/login?redirect=/features/job"
             />
           </div>
 
@@ -362,7 +362,7 @@ export default function LandingPage() {
               title={<>Skill Assessment</>}
               description={<>Find out where you truly stand. Identify strengths, uncover gaps, and know what to improve.</>}
               color="var(--phase2-color)"
-              link="features/skill"
+              link="/auth/login?redirect=/features/skill"
             />
           </div>
 
@@ -372,7 +372,7 @@ export default function LandingPage() {
               title={<>Tech Interview</>}
               description={<>Explain your mind clearly under pressure.</>}
               color="var(--phase4-color)"
-              link="/features/interview"
+              link="/auth/login?redirect=/features/interview"
             />
           </div>
 
@@ -397,15 +397,15 @@ export default function LandingPage() {
 
         <div style={{ maxWidth: "100%", marginTop: "1.2%", marginRight: "0 auto", marginLeft: "0 auto" }}>
           <img
-            src="/landing/journey.svg"
+            src="/landing/Journey.svg"
             alt="Career Journey Roadmap"
             style={{ width: "100%", height: "auto" }}
           />
         </div>
         <Button
-          onClick={() => router.push("/auth/register")}
+          onClick={() => router.push("/auth/login")}
           variant="primary"
-          style={{ marginLeft: "auto", position: "relative", marginRight:"10%",marginTop: "-10vh" }}
+          style={{ marginLeft: "auto", position: "relative", marginRight:"10%",marginTop: "-10vh",paddingBlock:"0.8rem" }}
         >
           Start Your Journey
         </Button>

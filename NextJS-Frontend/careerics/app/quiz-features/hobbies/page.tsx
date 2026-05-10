@@ -5,6 +5,9 @@ import { Button } from "@/components/ui/button";
 import { careerService } from "@/services";
 import type { APICareerCardRead, APICareerCardSelectionItem } from "@/types";
 
+const MIN_CARDS_PER_STEP = 3;
+const MAX_CARDS_PER_STEP = 5;
+
 export default function HobbiesGrid() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -65,29 +68,54 @@ export default function HobbiesGrid() {
 
   const currentCards = step === 0 ? hobbyCards : technicalCards;
   const currentTitle = step === 0
-    ? "Choose Your Favorite Intrests"
-    : "Choose Your Favorite Technical Skills";
+    ? "Choose Your Favorite interests"
+    : "Choose Your Favorite strengths";
   const currentSubtitle = step === 0
-    ? "Step 1 of 2: Choose 3-5 cards"
-    : "Step 2 of 2: Choose 3-5 cards";
-
+    ? "Step 1 of 2: Select between 3 and 5 interests"
+    : "Step 2 of 2: Select between 3 and 5 strengths";
   const currentSelectionIds = step === 0 ? selectedHobbyIds : selectedTechnicalIds;
 
   const selectedSummary = useMemo(() => {
-    return `${selectedHobbyIds.length} hobbies • ${selectedTechnicalIds.length} technical skills selected`;
-  }, [selectedHobbyIds.length, selectedTechnicalIds.length]);
+    if (step === 0) {
+      return `${selectedHobbyIds.length} interests selected`;
+    }
+
+    return `${selectedTechnicalIds.length} strengths selected`;
+  }, [selectedHobbyIds.length, selectedTechnicalIds.length, step]);
 
   const toggleCard = (cardId: string) => {
     if (step === 0) {
-      setSelectedHobbyIds((prev) =>
-        prev.includes(cardId) ? prev.filter((id) => id !== cardId) : [...prev, cardId],
-      );
+      setSelectedHobbyIds((prev) => {
+        if (prev.includes(cardId)) {
+          setError(null);
+          return prev.filter((id) => id !== cardId);
+        }
+
+        if (prev.length >= MAX_CARDS_PER_STEP) {
+          setError(`You can select up to ${MAX_CARDS_PER_STEP} interests.`);
+          return prev;
+        }
+
+        setError(null);
+        return [...prev, cardId];
+      });
       return;
     }
 
-    setSelectedTechnicalIds((prev) =>
-      prev.includes(cardId) ? prev.filter((id) => id !== cardId) : [...prev, cardId],
-    );
+    setSelectedTechnicalIds((prev) => {
+      if (prev.includes(cardId)) {
+        setError(null);
+        return prev.filter((id) => id !== cardId);
+      }
+
+      if (prev.length >= MAX_CARDS_PER_STEP) {
+        setError(`You can select up to ${MAX_CARDS_PER_STEP} strengths.`);
+        return prev;
+      }
+
+      setError(null);
+      return [...prev, cardId];
+    });
   };
 
   const handleBack = () => {
@@ -104,8 +132,13 @@ export default function HobbiesGrid() {
       return;
     }
 
-    if (!selectedHobbyIds.length || !selectedTechnicalIds.length) {
-      setError("Please select at least one hobby and at least one technical skill.");
+    if (selectedHobbyIds.length < MIN_CARDS_PER_STEP) {
+      setError("Choose at least 3 interests to continue.");
+      return;
+    }
+
+    if (selectedTechnicalIds.length < MIN_CARDS_PER_STEP) {
+      setError("Choose at least 3 strengths to continue.");
       return;
     }
 
@@ -130,8 +163,8 @@ export default function HobbiesGrid() {
 
   const handleNext = () => {
     if (step === 0) {
-      if (!selectedHobbyIds.length) {
-        setError("Choose at least one hobby to continue.");
+      if (selectedHobbyIds.length < MIN_CARDS_PER_STEP) {
+        setError("Choose at least 3 interests to continue.");
         return;
       }
       setError(null);
@@ -190,7 +223,7 @@ const isCurrentStepValid = currentSelectionIds.length >= 3 ;
             style={{
               background: "rgba(184, 239, 70, 0.15)",
               border: "1px solid rgba(184, 239, 70, 0.35)",
-              color: "#E6FFB2",
+              color: "var(--light-green)",
               borderRadius: "999px",
               padding: "0.5rem 0.9rem",
               fontSize: "0.9rem",
@@ -328,7 +361,7 @@ const isCurrentStepValid = currentSelectionIds.length >= 3 ;
               opacity: isLoadingCards || !isCurrentStepValid || isSubmitting ? 0.55 : 1,
             }}
           >
-            {step === 0 ? "Continue to Technical" : isSubmitting ? "Saving..." : "Start Questions"}
+            {step === 0 ? "Continue to Strengths" : isSubmitting ? "Saving..." : "Start Questions"}
           </Button>
         </div>
       </div>

@@ -4,7 +4,7 @@ export const JourneyProgressCard = ({ percentage = 10, style }: any) => {
   return (
     <div
       style={{
-        backgroundColor: "#142143",
+        backgroundColor: "var(--dark-blue)",
         borderRadius: " 3vh",
         paddingTop: "3vh",
         color: "white",

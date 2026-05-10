@@ -19,8 +19,6 @@ export default function Alert({ message, type = "error" }: AlertProps) {
     borderRadius: "8px",
     padding: "1vh",
     marginBottom: "2vh",
-    marginLeft: "5vh",
-    marginRight: "5vh",
     color: colors[type].text,
     fontSize: "2vh",
   };

@@ -50,6 +50,15 @@ def toggle_user_roadmap_bookmark_service(
         db.commit()
         return UserRoadmapBookmarkToggleSchema(roadmap_id=roadmap_id, bookmarked=False)
 
+    # Enforce max 3 unified bookmarks limit (roadmap + job bookmarks combined)
+    roadmap_bookmark_count = (
+        db.query(UserRoadmapBookmark)
+        .filter(UserRoadmapBookmark.user_id == user_id)
+        .count()
+    )
+    if roadmap_bookmark_count >= 3:
+        raise ValueError("Maximum 3 bookmarks allowed across all types")
+
     db.add(UserRoadmapBookmark(id=uuid4(), user_id=user_id, roadmap_id=roadmap_id))
     db.commit()
     return UserRoadmapBookmarkToggleSchema(roadmap_id=roadmap_id, bookmarked=True)

@@ -52,8 +52,8 @@ export default function ChoiceCard({
         alignItems: "flex-start", 
         justifyContent: "space-between", 
         padding: "1.2rem", 
-        flex: 1,
-        minHeight: 0,
+        width:"100%",
+        maxHeight:"100%",
         ...style
       }}
     >

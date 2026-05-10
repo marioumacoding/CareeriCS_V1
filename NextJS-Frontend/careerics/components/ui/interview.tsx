@@ -40,8 +40,8 @@ export default function SidebarLogicOnly({
           marginBottom: "2vh", 
           border: "none", 
           height: "1px", 
-          backgroundColor: "#142143" 
-        }} />
+          backgroundColor: "var(--dark-blue)" 
+        }}
 
         <div style={{ flex: 1, overflowY: "auto", scrollbarWidth: "none" }}>
           <style>{`.no-scrollbar::-webkit-scrollbar { display: none; }`}</style>

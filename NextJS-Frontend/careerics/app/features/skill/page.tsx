@@ -32,6 +32,7 @@ import { ActivityCard } from "@/components/ui/activity-card";
 type AssessmentTarget = {
   id: string;
   label: string;
+  subLabel?: string;
   sessionType: APIAssessmentSessionType;
   sectionId?: string;
   isCurrent?: boolean;
@@ -604,11 +605,13 @@ export default function SkillAssessment() {
           if (current?.step_id) {
             const roadmapTitle = current.roadmap_title || fallbackRoadmapTitle;
             const stepTitle = current.step_title?.trim();
-            const displayLabel = stepTitle ? `${roadmapTitle}: ${stepTitle}` : roadmapTitle;
+            const displayLabel = stepTitle ? `${stepTitle}` : roadmapTitle;
+            const displaySubLabel = stepTitle ? `${roadmapTitle}` : roadmapTitle;
 
             return {
               id: current.step_id,
               label: displayLabel,
+              subLabel: displaySubLabel,
               sessionType: "step" as const,
               sectionId: current.section_id || undefined,
               isCurrent: true,
@@ -643,7 +646,8 @@ export default function SkillAssessment() {
 
           return {
             id: firstStep.id,
-            label: `${roadmap.title || fallbackRoadmapTitle}: ${firstStep.title}`,
+            label: `${firstStep.title || fallbackRoadmapTitle}`,
+            subLabel: `${roadmap.title}:`,
             sessionType: "step" as const,
             sectionId: firstSection.id,
             isCurrent: false,
@@ -798,6 +802,7 @@ export default function SkillAssessment() {
     () => learningTargets.map((target) => ({
       id: target.id,
       label: target.label,
+      subLabel: target.subLabel,
       isCurrent: target.isCurrent,
     })),
     [learningTargets],
@@ -884,25 +889,40 @@ export default function SkillAssessment() {
   const pendingTargetName = pendingTarget?.label || "";
 
   const allPastTests = useMemo(
-    () => sessions
-      .filter((session) => session.status === "submitted")
-      .sort((a, b) => {
-        const aSubmittedAt = new Date(a.submitted_at || a.started_at).getTime() || 0;
-        const bSubmittedAt = new Date(b.submitted_at || b.started_at).getTime() || 0;
-        return bSubmittedAt - aSubmittedAt;
-      })
-      .slice(0, 20)
-      .map((session, index) => {
-        const sessionTitle = resolveSessionTitle(session, skillById, sessionTitleLookup).trim();
-        const sessionTitleKey = sessionTitle ? sessionTitle.replace(/\s+/g, "_") : "assessment";
+    () =>
+      sessions
+        .filter((session) => session.status === "submitted")
+        .sort((a, b) => {
+          const aSubmittedAt =
+            new Date(a.submitted_at || a.started_at).getTime() || 0;
+          const bSubmittedAt =
+            new Date(b.submitted_at || b.started_at).getTime() || 0;
+          return bSubmittedAt - aSubmittedAt;
+        })
+        .slice(0, 20)
+        .map((session, index, arr) => {
+          const sessionTitle = resolveSessionTitle(
+            session,
+            skillById,
+            sessionTitleLookup
+          ).trim();
 
-        return {
-          id: String(index + 1),
-          title: `${sessionTitleKey}_${index + 1}`,
-          score: session.score,
-        };
-      }),
-    [sessions, sessionTitleLookup, skillById],
+          const sessionTitleKey = sessionTitle
+            ? sessionTitle.replace(/\s+/g, "_")
+            : "assessment";
+
+          const reversedIndex = arr.length - index;
+
+          const formattedIndex = String(reversedIndex).padStart(3, "0");
+
+          return {
+            id: formattedIndex,
+            title: `Test_${formattedIndex}`,
+            skill: sessionTitleKey,
+            score: session.score,
+          };
+        }),
+    [sessions, sessionTitleLookup, skillById]
   );
 
   const openConfirmForTarget = (target: AssessmentTarget) => {
@@ -915,7 +935,8 @@ export default function SkillAssessment() {
     setIsConfirmOpen(true);
   };
 
-  const handleStartAssessment = (target: AssessmentTarget) => {
+  const handleStartAssessment = (target: AssessmentTarget,
+    questions: number) => {
     if (!user?.id || !target.id) {
       return;
     }
@@ -926,7 +947,7 @@ export default function SkillAssessment() {
       targetId: target.id,
       targetName: target.label,
       sessionType: target.sessionType,
-      numQuestions: "7",
+      numQuestions: String(questions),
     });
 
     if (target.sessionType === "skills") {
@@ -948,6 +969,25 @@ export default function SkillAssessment() {
     setIsStarting(false);
   };
 
+
+  const nextTestCode = useMemo(() => {
+    const submitted = sessions.filter(
+      (s) => s.status === "submitted"
+    );
+
+    const count = submitted.length + 1;
+
+    return `Test_${String(count).padStart(3, "0")}`;
+  }, [sessions]);
+
+  const [search, setSearch] = useState("");
+
+  const filteredMoreSkills = moreSkills.filter((skill) =>
+    skill.toLowerCase().includes(search.toLowerCase())
+  );
+
+
+
   return (
     <div
       style={{
@@ -968,20 +1008,7 @@ export default function SkillAssessment() {
           padding: "40px",
         }}
       >
-        <div
-          style={{
-            gridArea: "1/ 1 / 3 / 3",
-            backgroundColor: "#1C427B",
-            borderRadius: "4vh",
-            padding: "3vh 2vw",
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "center",
-            alignSelf: "stretch",
-            boxSizing: "border-box",
-          }}
-        >
-          <SkillFilters
+        <SkillFilters
             tracks={trackOptions}
             selectedTrackId={selectedTrackId}
             onTrackChange={handleTrackChange}
@@ -990,15 +1017,17 @@ export default function SkillAssessment() {
             disabled={isLoading}
             disableSkillTypeToggle={isGeneralSkillsMode}
             trackHelperText={trackHelperText}
-          />
-        </div>
-
+            style={{
+            gridArea: "1/ 1 / 3 / 3",  
+          }}
+        />
+         
 
         <CardsContainer
           Title="Skill you are currently learning"
           variant="horizontal"
           style={{
-            backgroundColor: "#142143",
+            backgroundColor: "var(--dark-blue)",
             width: "100%",
             gridArea: "1 / 3 / 3 / 5",
           }}
@@ -1006,7 +1035,9 @@ export default function SkillAssessment() {
           {learningItems.map((item) => (
             <RectangularCard
               key={item.id}
-              Title={item.label}
+              Title={item.subLabel}
+              isSubtextVisible
+              subtext={item.label}
               theme="light"
               selectable
               selected={selectedLearningTargetId === item.id}
@@ -1020,7 +1051,7 @@ export default function SkillAssessment() {
                 }
               }}
               style={{
-                height:"fit-content",
+                height: "fit-content",
               }}
             />
           ))}
@@ -1030,12 +1061,15 @@ export default function SkillAssessment() {
           Title="More Skills to test"
           variant="vertical"
           Columns={3}
+          searchBar
+          searchValue={search}
+          onSearchChange={setSearch}
           style={{
             gridArea: "3 / 1 / 7 / 4",
-            backgroundColor: "#142143",
+            backgroundColor: "var(--dark-blue)",
           }}
         >
-          {moreSkills.map((skill) => {
+          {filteredMoreSkills.map((skill) => {
             const isSelected = selectedMoreName === skill;
 
             return (
@@ -1076,7 +1110,7 @@ export default function SkillAssessment() {
           centerTitle
           style={{
             gridArea: "3 / 4 / 7 / 5",
-            backgroundColor: "#142143",
+            backgroundColor: "var(--dark-blue)",
           }}
         >
           {allPastTests.map((test) => (
@@ -1084,50 +1118,54 @@ export default function SkillAssessment() {
               key={test.id}
               title={test.title}
               score={test.score}
+              skill={test.skill}
               variant="progress"
             />
           ))}
         </CardsContainer>
 
-    </div>
+      </div>
 
       {
-    error ? (
-      <div
-        style={{
-          position: "fixed",
-          bottom: "20px",
-          left: "50%",
-          transform: "translateX(-50%)",
-          backgroundColor: "rgba(127, 29, 29, 0.92)",
-          color: "#fee2e2",
-          padding: "10px 16px",
-          borderRadius: "12px",
-          zIndex: 1001,
-          fontSize: "13px",
-          maxWidth: "70vw",
-        }}
-      >
-        {error}
-      </div>
-    ) : null
-  }
+        error ? (
+          <div
+            style={{
+              position: "fixed",
+              bottom: "20px",
+              left: "50%",
+              transform: "translateX(-50%)",
+              backgroundColor: "rgba(127, 29, 29, 0.92)",
+              color: "#fee2e2",
+              padding: "10px 16px",
+              borderRadius: "12px",
+              zIndex: 1001,
+              fontSize: "13px",
+              maxWidth: "70vw",
+            }}
+          >
+            {error}
+          </div>
+        ) : null
+      }
 
-  {
-    isConfirmOpen && pendingTarget && (
-      <SkillConfirmPopup
-        skillName={pendingTargetName}
-        isLoading={isStarting}
-        onCancel={() => {
-          if (!isStarting) {
-            setIsConfirmOpen(false);
-            setPendingTarget(null);
-          }
-        }}
-        onConfirm={() => handleStartAssessment(pendingTarget)}
-      />
-    )
-  }
+      {
+        isConfirmOpen && pendingTarget && (
+          <SkillConfirmPopup
+            skillName={pendingTargetName}
+            isLoading={isStarting}
+            testCode={nextTestCode}
+            onCancel={() => {
+              if (!isStarting) {
+                setIsConfirmOpen(false);
+                setPendingTarget(null);
+              }
+            }}
+            onConfirm={(questions) =>
+              handleStartAssessment(pendingTarget, questions)
+            }
+          />
+        )
+      }
     </div >
   );
 }

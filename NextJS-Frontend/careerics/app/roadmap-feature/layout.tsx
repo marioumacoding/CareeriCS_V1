@@ -19,7 +19,7 @@ export default function JourneyLayout({
         >
             <div
                 style={{
-                    background: "linear-gradient(180deg, #142143 0%, #000000 100%)",
+                    background: "linear-gradient(180deg, var(--dark-blue) 0%, #000000 100%)",
                     borderRadius: "5vh",
                     width: "100%",
                     height: "100%",

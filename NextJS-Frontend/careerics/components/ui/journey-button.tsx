@@ -1,87 +1,93 @@
 "use client";
 import React from "react";
 
+type JourneyButtonProps = {
+  course?: string;
+  organization?: string;
+  onClick?: () => void;
+  variant?: "sA" | "courses";
+  style?: React.CSSProperties;
+};
+
 export default function JourneyButton({
   course = "Title",
   organization = "Org name",
-  icon = "/sidebar/CV.svg",
   onClick = () => { },
   variant = "sA",
+  style = {} as React.CSSProperties,
 }) {
   const isSA = variant === "sA";
+  const icon = isSA ? "/sidebar/Skill.svg" : "/courses/course-icon.svg";
 
   return (
     <button
       onClick={onClick}
       style={{
-        backgroundColor: isSA ? "#1C427B" : "#C1CBE6",
+        backgroundColor: isSA ? "var(--medium-blue)" : "#C1CBE6",
         borderRadius: "4vh",
         border: "none",
         height: "100%",
-        display: "grid",
-        alignContent: "center",
-        justifyContent: "left",
+        width: "fit-content",
         cursor: "pointer",
-        padding: "20px",
-        width: "100%"
+        padding: "1rem",
+        justifyContent: "space-around",
+        display: "flex",
+        alignItems: "center",
+        gap: "1rem",
+        ...style,
       }}
     >
+
+      {/* Icon */}
+      <img
+        src={icon}
+        alt={course}
+        style={{
+          height: "2rem",
+          objectFit: "contain",
+          filter:isSA?"none":"brightness(0)"
+        }}
+      />
+
+      {/* Divider */}
       <div
         style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "2vh",
+          width: "0.1rem",
+          height: "100%",
+          backgroundColor: isSA ? "white" : "black",
+          borderRadius: "999px",
         }}
-      >
-        {/* Icon */}
-        <img
-          src={icon}
-          alt={course}
-          style={{
-            height: "10vh",
-            objectFit: "contain",
-          }}
-        />
+      />
 
-        {/* Divider */}
-        <div
+      {/* Text */}
+      <div>
+        <h1
           style={{
-            width: "3px",
-            height: "100%",
-            backgroundColor: isSA ? "white" : "black",
-            borderRadius: "2px",
+            color: isSA ? "white" : "#000000",
+            margin: 0,
+            fontSize: "1rem",
+            lineHeight: "1.2",
+            textAlign: "left",
+            maxWidth: isSA?"min-content":"max-content"
           }}
-        />
-
-        {/* Text */}
-        <div>
-          <h1
+        >
+          {course}
+        </h1>
+        {!isSA && (
+          <p
             style={{
-              color: isSA ? "white" : "#000000",
+              color: "#000000",
               margin: 0,
-              fontSize: "18px",
               lineHeight: "1.2",
               textAlign: "left",
-              maxWidth: "10ch"
+              minWidth: "fit-content",
+              whiteSpace:"nowrap",
+
             }}
           >
-            {course}
-          </h1>
-          {!isSA && (
-            <p
-              style={{
-                color: "#000000",
-                margin: 0,
-                lineHeight: "1.2",
-                textAlign: "left",
-                maxWidth: "15ch",
-              }}
-            >
-              By: {organization}
-            </p>
-          )}
-        </div>
-
+            By: {organization}
+          </p>
+        )}
       </div>
     </button>
   );

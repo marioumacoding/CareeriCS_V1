@@ -44,7 +44,7 @@ export default function BookmarkReplacePopup({
         style={{
           width: "min(92vw, 560px)",
           borderRadius: "24px",
-          backgroundColor: "#E6FFB2",
+          backgroundColor: "var(--light-green)",
           padding: "24px 20px",
           display: "flex",
           flexDirection: "column",

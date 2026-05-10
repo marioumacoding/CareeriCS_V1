@@ -8,7 +8,7 @@ interface JobCardData {
   title: string;
   company: string;
   location: string;
-  salary: string;
+  salary?: string | null;
   tags: string[];
   description: string;
   responsibilities?: string;
@@ -104,7 +104,9 @@ const JobCard: React.FC<JobProps> = ({
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <span style={{ fontSize: "1.1rem", fontWeight: "100", color: "#000" }}>{job.salary}</span>
+          {job.salary ? (
+            <span style={{ fontSize: "1.1rem", fontWeight: "100", color: "#000" }}>{job.salary}</span>
+          ) : null}
           <div
             onClick={handleBookmark}
             style={{

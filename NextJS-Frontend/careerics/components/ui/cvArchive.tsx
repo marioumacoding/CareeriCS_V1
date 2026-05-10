@@ -112,8 +112,8 @@ export const LearningSkillsCard = ({
               onClick={() => onSelect(item.id)}
               style={{
                 padding: "15px 30px", borderRadius: "10px", border: "none", flexShrink: 0,
-                backgroundColor: isSelected ? "#E6FFB2" : isCurrent ? "#fff6bf" : "#c1cbe6",
-                boxShadow: isCurrent ? "0 0 0 2px #E6FFB2 inset" : "none",
+                backgroundColor: isSelected ? "var(--light-green)" : isCurrent ? "#fff6bf" : "#c1cbe6",
+                boxShadow: isCurrent ? "0 0 0 2px var(--light-green) inset" : "none",
                 color: "black", fontWeight: "bold", cursor: "pointer", fontSize: "13px",
                 transition: "transform 0.2s",
                 display: "flex",
@@ -144,7 +144,7 @@ export const PastTestsCard = ({ tests, style }: any) => {
 
   return (
     <div style={{ 
-      backgroundColor: "#1C427B", borderRadius: "25px", padding: "15px", color: "white",
+      backgroundColor: "var(--medium-blue)", borderRadius: "25px", padding: "15px", color: "white",
       display: "flex", flexDirection: "column", gap: "5px", position: "relative", ...style 
     }}>
       <h3 style={{ fontSize: "22px", textAlign: "center", marginBottom: "10px", fontFamily: 'var(--font-nova-square)' }}>Past Tests</h3>
@@ -196,7 +196,7 @@ export const MoreSkillsCard = ({ skills, selected, onSelect, style }: any) => {
             onClick={() => onSelect(skill)}
             style={{
               padding: "15px 5px", borderRadius: "15px", border: "none",
-              backgroundColor: selected === skill ? "#E6FFB2" : "#1C427B",
+              backgroundColor: selected === skill ? "var(--light-green)" : "var(--medium-blue)",
               color: selected === skill ? "black" : "white", 
               fontSize: "11px", fontWeight: "500", cursor: "pointer",
               transition: "all 0.2s ease"
@@ -207,7 +207,7 @@ export const MoreSkillsCard = ({ skills, selected, onSelect, style }: any) => {
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.transform = "scale(1)";
-              if (selected !== skill) e.currentTarget.style.backgroundColor = "#1C427B";
+              if (selected !== skill) e.currentTarget.style.backgroundColor = "var(--medium-blue)";
             }}
           >
             {skill}

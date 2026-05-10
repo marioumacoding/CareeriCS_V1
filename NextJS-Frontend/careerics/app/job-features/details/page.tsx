@@ -3,5 +3,5 @@
 import JobBrowserPage from "@/app/job-features/_components/job-browser-page";
 
 export default function JobDetailsPage() {
-  return <JobBrowserPage mode="all" />;
+  return <JobBrowserPage mode="all" syncSelectionToUrl />;
 }

@@ -27,14 +27,14 @@ const Sidebar = () => {
     : user?.displayName?.trim() || "Guest";
 
   const navItems = [
-    { text: "Home", image: "/sidebar/home.svg", path: "/features/home" },
-    { text: "Career Exploration", image: "/sidebar/career.svg", path: "/features/career" },
-    { text: "Roadmaps", image: "/sidebar/roadmap.svg", path: "/features/roadmap" },
-    { text: "Courses Hub", image: "/sidebar/courses.svg", path: "/features/courses" },
-    { text: "Skill Assessment", image: "/sidebar/skill.svg", path: "/features/skill" },
-    { text: "CV Crafting", image: "/sidebar/cv.svg", path: "/features/cv" },
-    { text: "Interview Preparation", image: "/sidebar/interview.svg", path: "/features/interview" },
-    { text: "Job Search", image: "/sidebar/job.svg", path: "/features/job" },
+    { text: "Home", image: "/sidebar/Home.svg", selectedImage: "/sidebar/home-selected.svg", path: "/features/home" },
+    { text: "Career Exploration", image: "/sidebar/Career.svg", selectedImage: "/sidebar/career-selected.svg", path: "/features/career" },
+    { text: "Roadmaps", image: "/sidebar/Roadmap.svg", selectedImage: "/sidebar/roadmap-selected.svg", path: "/features/roadmap" },
+    { text: "Courses Hub", image: "/sidebar/Courses.svg", selectedImage: "/sidebar/courses-selected.svg", path: "/features/courses" },
+    { text: "Skill Assessment", image: "/sidebar/Skill.svg", selectedImage: "/sidebar/skill-selected.svg", path: "/features/skill" },
+    { text: "CV Crafting", image: "/sidebar/CV.svg", selectedImage: "/sidebar/cv-selected.svg", path: "/features/cv" },
+    { text: "Interview Preparation", image: "/sidebar/Interview.svg", selectedImage: "/sidebar/interview-selected.svg", path: "/features/interview" },
+    { text: "Job Search", image: "/sidebar/Job.svg", selectedImage: "/sidebar/job-selected.svg", path: "/features/job" },
   ];
 
   return (
@@ -74,13 +74,11 @@ const Sidebar = () => {
           if (isActive) {
             backgroundColor = "var(--primary-green)"; // Color for active page
           } else if (isHovered) {
-            backgroundColor = "var(--hover-green)"; // Soft highlight for hover
+            backgroundColor = "var(--light-green)"; // Soft highlight for hover
           }
 
           // Icon logic: Use selected icon for active OR hovered
-          const currentImage = (isActive || isHovered)
-            ? item.image.replace(".svg", "-selected.svg")
-            : item.image;
+          const currentImage = isActive || isHovered ? item.selectedImage : item.image;
 
           return (
             <Link key={i} href={item.path} style={{ textDecoration: "none" }}>
@@ -133,7 +131,7 @@ const Sidebar = () => {
         }}
       >
         <img
-          src="/sidebar/Profile.svg"
+          src="/sidebar/profile.svg"
           alt="User Account"
           style={{
             width: "auto",

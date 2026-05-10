@@ -1,7 +1,8 @@
+from datetime import datetime, timezone
 from typing import Any
 from sqlalchemy.orm import Session
 from uuid import UUID, uuid4
-from db.models import CareerAnswer
+from db.models import CareerAnswer, CareerSession
 
 
 def _extract_answer_field(answer: Any, field_name: str):
@@ -13,6 +14,9 @@ def _extract_answer_field(answer: Any, field_name: str):
 # Submit answers for a session
 def submitAnswers(db: Session, session_id: str, answers: list[Any]):
     session_uuid = UUID(str(session_id))
+    session = db.query(CareerSession).filter(CareerSession.id == session_uuid).first()
+    if not session:
+        raise ValueError("Career session not found")
 
     # Keep one answer set per session to support resubmission safely.
     db.query(CareerAnswer).filter(CareerAnswer.session_id == session_uuid).delete()
@@ -37,6 +41,9 @@ def submitAnswers(db: Session, session_id: str, answers: list[Any]):
         )
         db.add(answer)
         submitted_answers.append(answer)
+
+    session.status = "submitted"
+    session.submitted_at = datetime.now(timezone.utc)
     db.commit()
     for ans in submitted_answers:
         db.refresh(ans)

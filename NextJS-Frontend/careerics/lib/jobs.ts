@@ -1,13 +1,10 @@
 import type {
   APIJobPost,
   JobFilterOption,
-  JobFilters,
-  JobSortOption,
   JobUiModel,
 } from "@/types";
 
 const SELECTED_JOB_STORAGE_KEY = "careerics:selected-job-id";
-const DEFAULT_SALARY_LABEL = "Not specified";
 
 function getPrimaryLocation(location: string | null | undefined): string {
   if (!location) {
@@ -18,17 +15,43 @@ function getPrimaryLocation(location: string | null | undefined): string {
   return primarySegment.trim() || location.trim();
 }
 
-function parseSortableDate(value: string | null | undefined): number {
-  if (!value) {
-    return 0;
-  }
-
-  const parsed = Date.parse(value);
-  return Number.isNaN(parsed) ? 0 : parsed;
+function normalizeOptionalText(value: string | null | undefined): string | null {
+  const cleaned = value?.trim();
+  return cleaned ? cleaned : null;
 }
 
 export function buildJobDetailsHref(jobId: string): string {
   return `/job-features/details?jobId=${encodeURIComponent(jobId)}`;
+}
+
+export function readSelectedJobIdFromUrl(): string | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  return new URLSearchParams(window.location.search).get("jobId");
+}
+
+export function replaceSelectedJobIdInUrl(jobId: string | null): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  const url = new URL(window.location.href);
+  const currentJobId = url.searchParams.get("jobId");
+
+  if ((jobId && currentJobId === jobId) || (!jobId && !currentJobId)) {
+    return;
+  }
+
+  if (jobId) {
+    url.searchParams.set("jobId", jobId);
+  } else {
+    url.searchParams.delete("jobId");
+  }
+
+  const nextUrl = `${url.pathname}${url.search}${url.hash}`;
+  window.history.replaceState(window.history.state, "", nextUrl);
 }
 
 export function persistSelectedJobId(jobId: string): void {
@@ -71,8 +94,10 @@ export function mapApiJobToUiModel(job: APIJobPost): JobUiModel {
     title: job.job_title,
     company: job.company_name?.trim() || "Company not specified",
     location: job.location?.trim() || "Location not specified",
-    locationFilterValue: getPrimaryLocation(job.location),
-    salary: DEFAULT_SALARY_LABEL,
+    country: job.location_country?.trim() || null,
+    city: job.location_city?.trim() || null,
+    locationFilterValue: job.location_city?.trim() || job.location_country?.trim() || getPrimaryLocation(job.location),
+    salary: normalizeOptionalText(job.salary),
     tags,
     description: job.description_about_role?.trim() || "No role description provided yet.",
     responsibilities: job.description_key_responsibilities?.trim() || undefined,
@@ -97,86 +122,46 @@ export function mapApiJobToUiModel(job: APIJobPost): JobUiModel {
   };
 }
 
-export function buildFilterOptions(
-  values: Array<string | null | undefined>,
-  title: string,
+export function mergeSelectedFilterOptions(
+  options: JobFilterOption[],
+  selectedValues: string[],
 ): JobFilterOption[] {
-  const uniqueValues = Array.from(
-    new Set(
-      values
-        .map((value) => value?.trim())
-        .filter((value): value is string => Boolean(value)),
-    ),
-  ).sort((left, right) => left.localeCompare(right));
+  const mergedOptions = new Map(options.map((option) => [option.id, option]));
 
-  return [
-    { id: "all", title },
-    ...uniqueValues.map((value) => ({ id: value, title: value })),
-  ];
-}
+  for (const selectedValue of selectedValues) {
+    if (!mergedOptions.has(selectedValue)) {
+      mergedOptions.set(selectedValue, {
+        id: selectedValue,
+        title: selectedValue,
+        count: 0,
+      });
+    }
+  }
 
-export function filterJobs(jobs: JobUiModel[], filters: JobFilters): JobUiModel[] {
-  const normalizedQuery = filters.searchQuery.trim().toLowerCase();
+  return Array.from(mergedOptions.values()).sort((left, right) => {
+    const leftCount = left.count ?? 0;
+    const rightCount = right.count ?? 0;
+    if (rightCount !== leftCount) {
+      return rightCount - leftCount;
+    }
 
-  return jobs.filter((job) => {
-    const matchesSearch = !normalizedQuery
-      || job.title.toLowerCase().includes(normalizedQuery)
-      || job.company.toLowerCase().includes(normalizedQuery)
-      || job.location.toLowerCase().includes(normalizedQuery)
-      || job.skillList.some((skill) => skill.toLowerCase().includes(normalizedQuery));
-
-    const matchesLocation = filters.location === "all"
-      || job.locationFilterValue === filters.location;
-
-    const matchesType = filters.jobType === "all"
-      || job.employmentType === filters.jobType;
-
-    const matchesLevel = filters.level === "all"
-      || job.careerLevel === filters.level;
-
-    return matchesSearch && matchesLocation && matchesType && matchesLevel;
+    return left.title.localeCompare(right.title);
   });
 }
 
-export function sortJobs(jobs: JobUiModel[], sortOption: JobSortOption): JobUiModel[] {
-  const nextJobs = [...jobs];
-
-  if (sortOption === "date") {
-    return nextJobs.sort((left, right) => {
-      const rightDate = parseSortableDate(right.postedDate) || parseSortableDate(right.appliedAt);
-      const leftDate = parseSortableDate(left.postedDate) || parseSortableDate(left.appliedAt);
-      return rightDate - leftDate;
-    });
+export function formatFilterTriggerLabel(
+  placeholder: string,
+  selectedValues: string[],
+  options: JobFilterOption[],
+): string {
+  if (!selectedValues.length) {
+    return placeholder;
   }
 
-  if (sortOption === "match") {
-    return nextJobs.sort((left, right) => {
-      const rightMatch = right.matchPercentage ?? -1;
-      const leftMatch = left.matchPercentage ?? -1;
-      if (rightMatch !== leftMatch) {
-        return rightMatch - leftMatch;
-      }
-
-      const rightDate = parseSortableDate(right.postedDate);
-      const leftDate = parseSortableDate(left.postedDate);
-      return rightDate - leftDate;
-    });
+  if (selectedValues.length === 1) {
+    const selectedValue = selectedValues[0];
+    return options.find((option) => option.id === selectedValue)?.title ?? selectedValue;
   }
 
-  return nextJobs;
-}
-
-export function getApplicationButtonLabel(job: JobUiModel): string {
-  switch (job.applicationStatus) {
-    case "applied":
-      return "Applied";
-    case "interview":
-      return "Interview Stage";
-    case "offer":
-      return "Offer Received";
-    case "rejected":
-      return "Rejected";
-    default:
-      return "Apply";
-  }
+  return `${placeholder} (${selectedValues.length})`;
 }

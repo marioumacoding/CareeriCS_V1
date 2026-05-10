@@ -2,6 +2,15 @@
 
 import React, { useRef } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
+
+type ActivityItem = {
+  id: string;
+  date: string;
+  score?: number;
+  href?: string | null;
+  downloadUrl?: string | null;
+};
 
 const CircleScoreSVG = ({
   score,
@@ -69,7 +78,14 @@ const CircleScoreSVG = ({
   );
 };
 
-export const RecentActivityCard = ({ activities, style }: any) => {
+export const RecentActivityCard = ({
+  activities,
+  style,
+}: {
+  activities: ActivityItem[];
+  style?: React.CSSProperties;
+}) => {
+  const router = useRouter();
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const scrollDown = () => {
@@ -90,10 +106,20 @@ export const RecentActivityCard = ({ activities, style }: any) => {
     }
   };
 
+  const handleDownload = (downloadUrl?: string | null) => {
+    if (!downloadUrl) {
+      return;
+    }
+
+    const link = document.createElement("a");
+    link.href = downloadUrl;
+    link.click();
+  };
+
   return (
     <div
       style={{
-        backgroundColor: "#142143",
+        backgroundColor: "var(--dark-blue)",
         borderRadius: "3vh",
         color: "white",
         display: "flex",
@@ -128,9 +154,14 @@ export const RecentActivityCard = ({ activities, style }: any) => {
           scrollBehavior: "smooth",
         }}
       >
-        {activities.map((act: any, i: number) => (
+        {activities.map((act, i) => (
           <div
             key={i}
+            onClick={() => {
+              if (act.href) {
+                router.push(act.href);
+              }
+            }}
             style={{
               backgroundColor: "#c1cbe6",
               borderRadius: "12px",
@@ -140,6 +171,7 @@ export const RecentActivityCard = ({ activities, style }: any) => {
               justifyContent: "space-between",
               alignItems: "center",
               flexShrink: 0,
+              cursor: act.href ? "pointer" : "default",
             }}
           >
             <div>
@@ -147,19 +179,27 @@ export const RecentActivityCard = ({ activities, style }: any) => {
                 {act.id}
               </div>
               <div style={{ fontSize: "10px" }}>
-                {act.date || `On ${act.topic}`}
+                {act.date || `On ${act.id}`}
               </div>
             </div>
 
             {act.score !== undefined ? (
               <CircleScoreSVG score={act.score} size={30} />
-            ) : (
-              <div
+            ) : act.downloadUrl ? (
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  handleDownload(act.downloadUrl);
+                }}
                 style={{
                   position: "relative",
                   width: "20px",
                   height: "20px",
                   cursor: "pointer",
+                  background: "transparent",
+                  border: "none",
+                  padding: 0,
                 }}
               >
                 <Image
@@ -168,8 +208,23 @@ export const RecentActivityCard = ({ activities, style }: any) => {
                   fill
                   style={{ objectFit: "contain" }}
                 />
+              </button>
+            ) : act.href ? (
+              <div
+                style={{
+                  position: "relative",
+                  width: "20px",
+                  height: "20px",
+                }}
+              >
+                <Image
+                  src="/global/next.svg"
+                  alt="Open"
+                  fill
+                  style={{ objectFit: "contain" }}
+                />
               </div>
-            )}
+            ) : null}
           </div>
         ))}
       </div>
@@ -180,8 +235,8 @@ export const RecentActivityCard = ({ activities, style }: any) => {
           width: "fit-content",
           marginLeft: "auto",
           marginTop: "auto",
-        }} >
-
+        }}
+      >
         <div
           onClick={scrollUp}
           style={{

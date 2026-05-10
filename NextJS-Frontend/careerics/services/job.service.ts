@@ -8,25 +8,56 @@ import type {
   JobApplicationStatus,
 } from "@/types";
 
+const DEFAULT_BROWSE_PAGE_SIZE = 20;
 const JOB_PAGE_SIZE = 100;
 const jobListCache = new Map<string, APIJobPost[]>();
 const jobListPromiseCache = new Map<string, Promise<ApiResponse<APIJobPost[]>>>();
+
+type JobBrowseParams = {
+  skip?: number;
+  limit?: number;
+  userId?: string | null;
+  query?: string;
+  countries?: string[];
+  cities?: string[];
+  jobTypes?: string[];
+  workTypes?: string[];
+  careerLevels?: string[];
+  sort?: "relevance" | "date" | "match";
+};
 
 function getJobCacheKey(userId?: string | null): string {
   return userId ?? "guest";
 }
 
+function serializeMultiSelectParam(values?: string[]): string | undefined {
+  if (!values?.length) {
+    return undefined;
+  }
+
+  return values.join(",");
+}
+
+function buildJobBrowseQueryParams(params: JobBrowseParams = {}) {
+  return {
+    skip: params.skip ?? 0,
+    limit: params.limit ?? DEFAULT_BROWSE_PAGE_SIZE,
+    query: params.query?.trim() || undefined,
+    countries: serializeMultiSelectParam(params.countries),
+    cities: serializeMultiSelectParam(params.cities),
+    job_types: serializeMultiSelectParam(params.jobTypes),
+    work_types: serializeMultiSelectParam(params.workTypes),
+    career_levels: serializeMultiSelectParam(params.careerLevels),
+    sort: params.sort ?? "relevance",
+    user_id: params.userId ?? undefined,
+  };
+}
+
 function listJobsPage(
-  skip: number,
-  limit: number,
-  userId?: string | null,
+  params: JobBrowseParams = {},
 ): Promise<ApiResponse<APIJobListResponse>> {
   return fastapiApi.get<APIJobListResponse>("/jobs/", {
-    params: {
-      skip,
-      limit,
-      user_id: userId ?? undefined,
-    },
+    params: buildJobBrowseQueryParams(params),
   });
 }
 
@@ -45,14 +76,10 @@ function listSavedJobsPage(
 
 function listUserApplicationsPage(
   userId: string,
-  skip: number,
-  limit: number,
+  params: Omit<JobBrowseParams, "userId"> = {},
 ): Promise<ApiResponse<APIJobListResponse>> {
   return fastapiApi.get<APIJobListResponse>(`/jobs/user/${userId}/applications`, {
-    params: {
-      skip,
-      limit,
-    },
+    params: buildJobBrowseQueryParams(params),
   });
 }
 
@@ -95,13 +122,8 @@ async function collectAllJobs(
 }
 
 export const jobService = {
-  listJobs(params: {
-    skip?: number;
-    limit?: number;
-    userId?: string | null;
-  } = {}): Promise<ApiResponse<APIJobListResponse>> {
-    const { skip = 0, limit = JOB_PAGE_SIZE, userId } = params;
-    return listJobsPage(skip, limit, userId);
+  listJobs(params: JobBrowseParams = {}): Promise<ApiResponse<APIJobListResponse>> {
+    return listJobsPage(params);
   },
 
   searchJobs(params: {
@@ -109,13 +131,36 @@ export const jobService = {
     skip?: number;
     limit?: number;
     userId?: string | null;
+    countries?: string[];
+    cities?: string[];
+    jobTypes?: string[];
+    workTypes?: string[];
+    careerLevels?: string[];
+    sort?: "relevance" | "date" | "match";
   }): Promise<ApiResponse<APIJobListResponse>> {
-    const { query, skip = 0, limit = JOB_PAGE_SIZE, userId } = params;
+    const {
+      query,
+      skip = 0,
+      limit = DEFAULT_BROWSE_PAGE_SIZE,
+      userId,
+      countries,
+      cities,
+      jobTypes,
+      workTypes,
+      careerLevels,
+      sort = "relevance",
+    } = params;
     return fastapiApi.get<APIJobListResponse>("/jobs/search/query", {
       params: {
         query,
         skip,
         limit,
+        countries: serializeMultiSelectParam(countries),
+        cities: serializeMultiSelectParam(cities),
+        job_types: serializeMultiSelectParam(jobTypes),
+        work_types: serializeMultiSelectParam(workTypes),
+        career_levels: serializeMultiSelectParam(careerLevels),
+        sort,
         user_id: userId ?? undefined,
       },
     });
@@ -134,7 +179,7 @@ export const jobService = {
       return jobListPromiseCache.get(cacheKey)!;
     }
 
-    const pendingRequest = collectAllJobs((skip, limit) => listJobsPage(skip, limit, userId)).then((response) => {
+    const pendingRequest = collectAllJobs((skip, limit) => listJobsPage({ skip, limit, userId })).then((response) => {
       if (response.success) {
         jobListCache.set(cacheKey, response.data);
       }
@@ -227,14 +272,41 @@ export const jobService = {
     params: {
       skip?: number;
       limit?: number;
+      query?: string;
+      countries?: string[];
+      cities?: string[];
+      jobTypes?: string[];
+      workTypes?: string[];
+      careerLevels?: string[];
+      sort?: "relevance" | "date" | "match";
     } = {},
   ): Promise<ApiResponse<APIJobListResponse>> {
-    const { skip = 0, limit = JOB_PAGE_SIZE } = params;
-    return listUserApplicationsPage(userId, skip, limit);
+    const {
+      skip = 0,
+      limit = DEFAULT_BROWSE_PAGE_SIZE,
+      query,
+      countries,
+      cities,
+      jobTypes,
+      workTypes,
+      careerLevels,
+      sort = "relevance",
+    } = params;
+    return listUserApplicationsPage(userId, {
+      skip,
+      limit,
+      query,
+      countries,
+      cities,
+      jobTypes,
+      workTypes,
+      careerLevels,
+      sort,
+    });
   },
 
   getAllUserApplications(userId: string): Promise<ApiResponse<APIJobPost[]>> {
-    return collectAllJobs((skip, limit) => listUserApplicationsPage(userId, skip, limit));
+    return collectAllJobs((skip, limit) => listUserApplicationsPage(userId, { skip, limit }));
   },
 
   invalidateJobList(userId?: string | null): void {

@@ -2,16 +2,18 @@
  * Auth service — wraps Supabase Auth SDK calls.
  *
  * Supabase handles sign-up, login, logout, password reset, and
- * email verification entirely client-side. After auth, the JWT
- * (access_token) is sent to the .NET API as a Bearer token.
- *
- * The `me()` call still hits the .NET backend to sync the user
- * profile (the backend creates the profile row if missing).
+ * email verification entirely client-side. The `me()` call returns
+ * the current authenticated Supabase user mapped to the app's User shape.
  */
 
 import { supabase } from "@/lib/supabase";
-import { dotnetApi } from "@/lib/api";
+import {
+  DEFAULT_POST_AUTH_PATH,
+  getSafePostAuthPath,
+  rememberPendingPostAuthPath,
+} from "@/lib/auth/post-auth-redirect";
 import type { ApiResponse, User } from "@/types";
+import type { User as SupabaseAuthUser } from "@supabase/supabase-js";
 
 // ── Payload types ───────────────────────────────────────────────
 export interface LoginPayload {
@@ -53,14 +55,22 @@ function buildSafeUsername(email: string): string {
   return `${base}_${suffix}`;
 }
 
-const DEFAULT_POST_AUTH_PATH = "/features/home";
-
-function getSafeInternalCallbackPath(callbackUrl?: string): string | null {
-  if (!callbackUrl) return null;
-  if (!callbackUrl.startsWith("/")) return null;
-  if (callbackUrl.startsWith("/auth/")) return null;
-  return callbackUrl;
+function mapSupabaseUserToAppUser(user: SupabaseAuthUser): User {
+  return {
+    id: user.id,
+    email: user.email ?? "",
+    displayName:
+      user.user_metadata?.display_name ??
+      user.user_metadata?.full_name ??
+      user.email ??
+      "",
+    role: (user.app_metadata?.role as User["role"]) ?? "user",
+    avatarUrl: user.user_metadata?.avatar_url ?? undefined,
+    createdAt: user.created_at ?? new Date().toISOString(),
+    updatedAt: user.updated_at ?? new Date().toISOString(),
+  };
 }
+
 
 // ── Service ─────────────────────────────────────────────────────
 export const authService: AuthService = {
@@ -153,7 +163,9 @@ export const authService: AuthService = {
    */
   async signInWithGoogle(callbackUrl?: string) {
     const callbackPath =
-      getSafeInternalCallbackPath(callbackUrl) ?? DEFAULT_POST_AUTH_PATH;
+      getSafePostAuthPath(callbackUrl) ?? DEFAULT_POST_AUTH_PATH;
+    rememberPendingPostAuthPath(callbackPath);
+
     const redirectUrl = new URL(`${window.location.origin}/auth/callback`);
     if (callbackPath !== DEFAULT_POST_AUTH_PATH) {
       redirectUrl.searchParams.set("callbackUrl", callbackPath);
@@ -169,11 +181,35 @@ export const authService: AuthService = {
   },
 
   /**
-   * Call the .NET API's /api/users/me endpoint.
-   * The backend validates the Supabase JWT, creates the user
-   * profile in the DB if it doesn't exist, and returns it.
+   * Read the current authenticated user directly from Supabase.
    */
-  me(): Promise<ApiResponse<User>> {
-    return dotnetApi.get<User>("/users/me");
+  async me(): Promise<ApiResponse<User>> {
+    const {
+      data: { session },
+      error,
+    } = await supabase.auth.getSession();
+
+    if (error) {
+      return {
+        data: null as unknown as User,
+        success: false,
+        message: error.message,
+        errors: [{ code: "AUTH_SESSION_ERROR", message: error.message }],
+      };
+    }
+
+    if (!session?.user) {
+      return {
+        data: null as unknown as User,
+        success: false,
+        message: "No authenticated user found.",
+        errors: [{ code: "AUTH_USER_MISSING", message: "No authenticated user found." }],
+      };
+    }
+
+    return {
+      data: mapSupabaseUserToAppUser(session.user),
+      success: true,
+    };
   },
 };

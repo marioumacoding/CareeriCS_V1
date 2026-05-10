@@ -4,9 +4,12 @@ interface roadmapProgressProps {
     text?: string | null;
     done?: string | "0";
     total?: string | "0";
+    isTotal?: boolean;
+    color?: string;
+    isScore?: boolean;
 }
 
-export default function roadmapProgress({ text, done = "0", total = "0" }: roadmapProgressProps) {
+export default function roadmapProgress({ text, done = "0", total = "0", isTotal=true, isScore=true, color = "var(--light-green)" }: roadmapProgressProps) {
     return (<div
         style={{
             display: "flex",
@@ -17,7 +20,7 @@ export default function roadmapProgress({ text, done = "0", total = "0" }: roadm
             style={{
                 maxHeight: "100%",
                 width: "0.5rem",
-                backgroundColor: "var(--hover-green)",
+                backgroundColor: color,
                 borderRadius: "99px",
                 marginRight: "1rem",
             }}
@@ -30,26 +33,30 @@ export default function roadmapProgress({ text, done = "0", total = "0" }: roadm
                 color: "white",
             }}
         >
+            {isScore &&
+            <>
             <h2
                 style={{
                     fontSize: "1.25rem",
                     whiteSpace: "nowrap",
                 }}
-            >
+                >
                 <span
                     style={{
-                        color: "var(--hover-green)",
+                        color: color,
                     }}
                 >
                     {done}
                 </span>
-
-                {" / "}
-
-                <span>
-                    {total}
-                </span>
+                {isTotal && (
+                    <>
+                        {" / "}
+                        <span>{total}</span>
+                    </>
+                )}
             </h2>
+            </>
+}
 
             <p
                 style={{
@@ -62,6 +69,6 @@ export default function roadmapProgress({ text, done = "0", total = "0" }: roadm
 
         </div>
 
-    </div>
+    </div >
     );
 }

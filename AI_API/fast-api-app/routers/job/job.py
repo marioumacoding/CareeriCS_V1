@@ -15,6 +15,7 @@ from schemas import (
 )
 from services.job.job_service import (
     bulk_insert_jobs,
+    browse_job_posts,
     fetch_jobs_paginated,
     fetch_job_post_by_id,
     search_jobs,
@@ -23,10 +24,10 @@ from services.job.job_service import (
     upsert_job_application,
     fetch_user_saved_jobs,
     fetch_user_recently_viewed_jobs,
-    fetch_user_applied_jobs,
     enrich_job_posts,
     enrich_job_post_with_skills,
 )
+from services.job.normalization import compute_page_number, compute_total_pages
 
 router = APIRouter(prefix="/jobs", tags=["Jobs"])
 
@@ -36,6 +37,17 @@ def _parse_user_uuid(user_id: str) -> UUID:
         return UUID(user_id)
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid user ID format")
+
+
+def _parse_csv_query_param(value: str | None) -> list[str]:
+    if not value:
+        return []
+
+    return [
+        item.strip()
+        for item in value.split(",")
+        if item and item.strip()
+    ]
 
 
 @router.post("/bulk-import", status_code=status.HTTP_201_CREATED)
@@ -85,6 +97,13 @@ def bulk_import_jobs(
 def list_jobs(
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
+    query: str | None = Query(None, min_length=1),
+    countries: str | None = Query(None, description="Comma-separated normalized country filters"),
+    cities: str | None = Query(None, description="Comma-separated normalized city filters"),
+    job_types: str | None = Query(None, description="Comma-separated job type filters"),
+    work_types: str | None = Query(None, description="Comma-separated work type filters"),
+    career_levels: str | None = Query(None, description="Comma-separated career level filters"),
+    sort: str = Query("relevance", description="Sort mode: relevance, date, or match"),
     user_id: str = Query(None, description="Optional user ID for match scoring"),
     db: Session = Depends(get_db)
 ):
@@ -97,19 +116,36 @@ def list_jobs(
     - user_id: Optional user ID to calculate skill match percentage
     """
     try:
-        jobs, total_count = fetch_jobs_paginated(db, skip=skip, limit=limit)
         user_uuid = None
         if user_id:
             try:
                 user_uuid = UUID(user_id)
             except ValueError:
                 raise HTTPException(status_code=400, detail="Invalid user ID format")
-        
+
+        jobs, total_count, filter_options = fetch_jobs_paginated(
+            db,
+            skip=skip,
+            limit=limit,
+            user_id=user_uuid,
+            query=query,
+            countries=_parse_csv_query_param(countries),
+            cities=_parse_csv_query_param(cities),
+            job_types=_parse_csv_query_param(job_types),
+            work_types=_parse_csv_query_param(work_types),
+            career_levels=_parse_csv_query_param(career_levels),
+            sort=sort,
+        )
+
         enriched_jobs = enrich_job_posts(db, jobs, user_uuid)
         return {
+            "query": query,
             "total": total_count,
             "skip": skip,
             "limit": limit,
+            "page": compute_page_number(skip, limit),
+            "total_pages": compute_total_pages(total_count, limit),
+            "filters": filter_options,
             "jobs": enriched_jobs
         }
     except HTTPException:
@@ -124,6 +160,12 @@ def search_jobs_endpoint(
     title: str | None = Query(None, min_length=1, description="Alias for query when searching by title"),
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
+    countries: str | None = Query(None, description="Comma-separated normalized country filters"),
+    cities: str | None = Query(None, description="Comma-separated normalized city filters"),
+    job_types: str | None = Query(None, description="Comma-separated job type filters"),
+    work_types: str | None = Query(None, description="Comma-separated work type filters"),
+    career_levels: str | None = Query(None, description="Comma-separated career level filters"),
+    sort: str = Query("relevance", description="Sort mode: relevance, date, or match"),
     user_id: str = Query(None, description="Optional user ID for match scoring"),
     db: Session = Depends(get_db)
 ):
@@ -141,20 +183,36 @@ def search_jobs_endpoint(
         if not search_term:
             raise HTTPException(status_code=400, detail="Either 'query' or 'title' is required")
 
-        jobs, total_count = search_jobs(db, query=search_term, skip=skip, limit=limit)
         user_uuid = None
         if user_id:
             try:
                 user_uuid = UUID(user_id)
             except ValueError:
                 raise HTTPException(status_code=400, detail="Invalid user ID format")
-        
+
+        jobs, total_count, filter_options = search_jobs(
+            db,
+            query=search_term,
+            skip=skip,
+            limit=limit,
+            user_id=user_uuid,
+            countries=_parse_csv_query_param(countries),
+            cities=_parse_csv_query_param(cities),
+            job_types=_parse_csv_query_param(job_types),
+            work_types=_parse_csv_query_param(work_types),
+            career_levels=_parse_csv_query_param(career_levels),
+            sort=sort,
+        )
+
         enriched_jobs = enrich_job_posts(db, jobs, user_uuid)
         return {
             "query": search_term,
             "total": total_count,
             "skip": skip,
             "limit": limit,
+            "page": compute_page_number(skip, limit),
+            "total_pages": compute_total_pages(total_count, limit),
+            "filters": filter_options,
             "jobs": enriched_jobs
         }
     except HTTPException:
@@ -265,6 +323,15 @@ def list_user_saved_jobs(
             "total": total_count,
             "skip": skip,
             "limit": limit,
+            "page": compute_page_number(skip, limit),
+            "total_pages": compute_total_pages(total_count, limit),
+            "filters": {
+                "countries": [],
+                "cities": [],
+                "job_types": [],
+                "work_types": [],
+                "career_levels": [],
+            },
             "jobs": enriched_jobs,
         }
     except ValueError as e:
@@ -290,6 +357,15 @@ def list_user_recently_viewed_jobs(
             "total": total_count,
             "skip": skip,
             "limit": limit,
+            "page": compute_page_number(skip, limit),
+            "total_pages": compute_total_pages(total_count, limit),
+            "filters": {
+                "countries": [],
+                "cities": [],
+                "job_types": [],
+                "work_types": [],
+                "career_levels": [],
+            },
             "jobs": enriched_jobs,
         }
     except ValueError as e:
@@ -303,18 +379,42 @@ def list_user_applied_jobs(
     user_id: UUID,
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
+    query: str | None = Query(None, min_length=1),
+    countries: str | None = Query(None, description="Comma-separated normalized country filters"),
+    cities: str | None = Query(None, description="Comma-separated normalized city filters"),
+    job_types: str | None = Query(None, description="Comma-separated job type filters"),
+    work_types: str | None = Query(None, description="Comma-separated work type filters"),
+    career_levels: str | None = Query(None, description="Comma-separated career level filters"),
+    sort: str = Query("relevance", description="Sort mode: relevance, date, or match"),
     db: Session = Depends(get_db)
 ):
     """
     List jobs that the user has already applied to.
     """
     try:
-        jobs, total_count = fetch_user_applied_jobs(db, user_id=user_id, skip=skip, limit=limit)
+        jobs, total_count, filter_options = browse_job_posts(
+            db,
+            scope="applications",
+            skip=skip,
+            limit=limit,
+            user_id=user_id,
+            query=query,
+            countries=_parse_csv_query_param(countries),
+            cities=_parse_csv_query_param(cities),
+            job_types=_parse_csv_query_param(job_types),
+            work_types=_parse_csv_query_param(work_types),
+            career_levels=_parse_csv_query_param(career_levels),
+            sort=sort,
+        )
+
         enriched_jobs = enrich_job_posts(db, jobs, user_id)
         return {
             "total": total_count,
             "skip": skip,
             "limit": limit,
+            "page": compute_page_number(skip, limit),
+            "total_pages": compute_total_pages(total_count, limit),
+            "filters": filter_options,
             "jobs": enriched_jobs,
         }
     except ValueError as e:

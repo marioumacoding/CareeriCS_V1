@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 export const runtime = "nodejs";
 
 const DEFAULT_HEADERS_TIMEOUT_MS = 180_000;
+const TOKEN_COOKIE = "careerics_token";
 
 function parseMs(value: string | undefined, fallback: number): number {
   if (!value) {
@@ -114,6 +115,17 @@ function buildForwardHeaders(req: NextRequest): Headers {
 
   for (const header of HOP_BY_HOP_HEADERS) {
     headers.delete(header);
+  }
+
+  // FastAPI authenticates with Authorization, not browser cookies. Dropping
+  // cookies here keeps forwarded headers small and avoids upstream 431s.
+  headers.delete("cookie");
+
+  if (!headers.has("authorization")) {
+    const token = req.cookies.get(TOKEN_COOKIE)?.value;
+    if (token) {
+      headers.set("authorization", `Bearer ${token}`);
+    }
   }
 
   return headers;

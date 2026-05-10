@@ -9,11 +9,19 @@ import BookmarkReplacePopup from "@/components/ui/bookmarkReplacePopup";
 import Interview from "@/components/ui/interview";
 import { useAuth } from "@/providers/auth-provider";
 import {
+  buildCareerQuizSelectionHref,
+  buildCareerTrackDetailsHref,
+} from "@/lib/career-quiz";
+import { createRoadmapUnifiedBookmark } from "@/lib/bookmark-targets";
+import {
+  normalizeRoadmapListPayload,
+  syncBackendRoadmapBookmarksToUnifiedList,
+} from "@/lib/roadmap-bookmark-sync";
+import { removeBookmarkEntryFromUnifiedList } from "@/lib/unified-bookmark-actions";
+import {
   addOrMoveUnifiedBookmark,
   getUnifiedBookmarks,
   MAX_UNIFIED_BOOKMARKS,
-  removeUnifiedBookmark,
-  replaceUnifiedBookmark,
   UNIFIED_BOOKMARKS_UPDATED_EVENT,
 } from "@/lib/unified-bookmarks";
 import { careerService, roadmapService } from "@/services";
@@ -92,7 +100,10 @@ export default function CareerQuestionsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const sessionId = searchParams.get("sessionId") || "";
+  const requestedTrackId = searchParams.get("trackId") || "";
+  const isResultsView = searchParams.get("view") === "results";
   const { user, isLoading: isAuthLoading } = useAuth();
+  const userId = user?.id ?? null;
 
   const [questionGroups, setQuestionGroups] = useState<QuestionGroup[]>([]);
   const [currentStepId, setCurrentStepId] = useState(1);
@@ -102,7 +113,6 @@ export default function CareerQuestionsPage() {
   const [isLoadingQuestions, setIsLoadingQuestions] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isFinished, setIsFinished] = useState(false);
-  const [unifiedBookmarks, setUnifiedBookmarks] = useState<UnifiedBookmarkEntry[]>([]);
   const [bookmarkedTrackIds, setBookmarkedTrackIds] = useState<string[]>([]);
   const [replaceCandidates, setReplaceCandidates] = useState<UnifiedBookmarkEntry[]>([]);
   const [pendingCareerBookmark, setPendingCareerBookmark] = useState<UnifiedBookmarkDraft | null>(null);
@@ -110,10 +120,53 @@ export default function CareerQuestionsPage() {
   const [bookmarkError, setBookmarkError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const applyUnifiedBookmarks = useCallback((bookmarks: UnifiedBookmarkEntry[]) => {
+    setBookmarkedTrackIds(
+      bookmarks.flatMap((bookmark) => {
+        if (bookmark.kind === "career") {
+          return [bookmark.entity_id];
+        }
+
+        if (bookmark.kind === "roadmap") {
+          return [bookmark.entity_id, bookmark.metadata?.track_id].filter(
+            (value): value is string => Boolean(value),
+          );
+        }
+
+        return [];
+      }),
+    );
+  }, []);
+
+  const getLatestUnifiedBookmarks = useCallback(async (): Promise<UnifiedBookmarkEntry[]> => {
+    if (!userId) {
+      return getUnifiedBookmarks(userId);
+    }
+
+    const [roadmapBookmarksResponse, roadmapListResponse] = await Promise.all([
+      roadmapService.getUserRoadmapBookmarks(userId),
+      roadmapService.listRoadmaps(),
+    ]);
+
+    if (
+      !roadmapBookmarksResponse.success ||
+      !roadmapBookmarksResponse.data?.bookmarks ||
+      !roadmapListResponse.success
+    ) {
+      return getUnifiedBookmarks(userId);
+    }
+
+    return syncBackendRoadmapBookmarksToUnifiedList({
+      userId,
+      backendBookmarks: roadmapBookmarksResponse.data.bookmarks,
+      roadmaps: normalizeRoadmapListPayload(roadmapListResponse.data),
+    });
+  }, [userId]);
+
   useEffect(() => {
     let cancelled = false;
 
-    const loadQuestions = async () => {
+    const loadSession = async () => {
       if (!sessionId) {
         setError("Missing sessionId. Restart the quiz from the career page.");
         setIsLoadingQuestions(false);
@@ -122,6 +175,43 @@ export default function CareerQuestionsPage() {
 
       setIsLoadingQuestions(true);
       setError(null);
+      setBookmarkError(null);
+      setPendingCareerBookmark(null);
+      setReplaceCandidates([]);
+      setIsReplacingBookmark(false);
+
+      if (isResultsView) {
+        const resultsResponse = await careerService.getCareerResults(sessionId);
+
+        if (cancelled) {
+          return;
+        }
+
+        if (!resultsResponse.success || !resultsResponse.data) {
+          setError(resultsResponse.message || "Unable to load your saved career results.");
+          setResults(null);
+          setIsFinished(false);
+          setIsLoadingQuestions(false);
+          return;
+        }
+
+        setResults(resultsResponse.data);
+        setQuestionGroups([]);
+        setRatings({});
+        setCurrentStepId(1);
+        setUnlockedStepId(1);
+        setIsFinished(true);
+        if (!isAuthLoading && userId) {
+          const nextBookmarks = await getLatestUnifiedBookmarks();
+          if (cancelled) {
+            return;
+          }
+
+          applyUnifiedBookmarks(nextBookmarks);
+        }
+        setIsLoadingQuestions(false);
+        return;
+      }
 
       const [questionsResponse, selectedCardsResponse] = await Promise.all([
         careerService.getQuestionsForSession(sessionId),
@@ -157,12 +247,12 @@ export default function CareerQuestionsPage() {
       setIsLoadingQuestions(false);
     };
 
-    void loadQuestions();
+    void loadSession();
 
     return () => {
       cancelled = true;
     };
-  }, [sessionId]);
+  }, [applyUnifiedBookmarks, getLatestUnifiedBookmarks, isAuthLoading, isResultsView, sessionId, userId]);
 
   const sidebarSteps = useMemo(() => {
     return questionGroups.map((group, index) => ({
@@ -178,27 +268,26 @@ export default function CareerQuestionsPage() {
 
   const currentGroup = questionGroups[currentStepId - 1] || null;
   const allAnswered = allQuestions.length > 0 && allQuestions.every((question) => Boolean(ratings[question.id]));
-
-  const applyUnifiedBookmarks = useCallback((bookmarks: UnifiedBookmarkEntry[]) => {
-    setUnifiedBookmarks(bookmarks);
-    setBookmarkedTrackIds(
-      bookmarks
-        .filter((bookmark) => bookmark.kind === "career")
-        .map((bookmark) => bookmark.entity_id),
-    );
-  }, []);
+  const displayedTrackScores = results?.track_scores ? [...results.track_scores] : [];
+  if (requestedTrackId) {
+    displayedTrackScores.sort((left, right) => {
+      if (left.track_id === requestedTrackId) {
+        return -1;
+      }
+      if (right.track_id === requestedTrackId) {
+        return 1;
+      }
+      return 0;
+    });
+  }
 
   const refreshUnifiedBookmarks = useCallback(() => {
-    if (isAuthLoading || !isFinished) {
+    if (isAuthLoading || !isFinished || !userId) {
       return;
     }
 
-    applyUnifiedBookmarks(getUnifiedBookmarks(user?.id));
-  }, [applyUnifiedBookmarks, isAuthLoading, isFinished, user?.id]);
-
-  useEffect(() => {
-    refreshUnifiedBookmarks();
-  }, [refreshUnifiedBookmarks]);
+    applyUnifiedBookmarks(getUnifiedBookmarks(userId));
+  }, [applyUnifiedBookmarks, isAuthLoading, isFinished, userId]);
 
   useEffect(() => {
     if (!isFinished) {
@@ -320,39 +409,69 @@ export default function CareerQuestionsPage() {
     setReplaceCandidates([]);
   }, [isReplacingBookmark]);
 
-  const handleToggleBookmark = (trackId: string) => {
+  const handleToggleBookmark = async (trackId: string) => {
     const selectedTrack = results?.track_scores.find((item) => item.track_id === trackId);
     if (!selectedTrack) {
       return;
     }
 
-    setBookmarkError(null);
+    if (isAuthLoading || !userId) {
+      setBookmarkError("Please wait a moment while we load your bookmark list.");
+      return;
+    }
 
-    const currentlyBookmarked = unifiedBookmarks.some((bookmark) => {
-      return bookmark.kind === "career" && bookmark.entity_id === trackId;
+    setBookmarkError(null);
+    const latestBookmarks = await getLatestUnifiedBookmarks();
+
+    const existingBookmark = latestBookmarks.find((bookmark) => {
+      if (bookmark.kind === "career") {
+        return bookmark.entity_id === trackId;
+      }
+
+      return (
+        bookmark.kind === "roadmap" &&
+        (bookmark.entity_id === selectedTrack.roadmap_id || bookmark.metadata?.track_id === trackId)
+      );
     });
 
-    if (currentlyBookmarked) {
-      const next = removeUnifiedBookmark("career", trackId, user?.id);
-      applyUnifiedBookmarks(next);
+    if (existingBookmark) {
+      const removal = await removeBookmarkEntryFromUnifiedList(existingBookmark, userId);
+      if (!removal.success) {
+        setBookmarkError(removal.message || "Unable to remove bookmark right now. Please try again.");
+        return;
+      }
+
+      applyUnifiedBookmarks(removal.bookmarks);
       return;
     }
 
-    const candidate: UnifiedBookmarkDraft = {
-      kind: "career",
-      entity_id: selectedTrack.track_id,
+    if (!selectedTrack.roadmap_id) {
+      setBookmarkError("Unable to resolve a roadmap for this result right now.");
+      return;
+    }
+
+    const candidate: UnifiedBookmarkDraft = createRoadmapUnifiedBookmark({
+      roadmapId: selectedTrack.roadmap_id,
       title: selectedTrack.track_name,
       description: selectedTrack.track_description ?? null,
-      score: selectedTrack.score,
-    };
+      savedAt: new Date().toISOString(),
+      trackId: selectedTrack.track_id,
+      trackName: selectedTrack.track_name,
+    });
 
-    if (unifiedBookmarks.length >= MAX_UNIFIED_BOOKMARKS) {
+    if (latestBookmarks.length >= MAX_UNIFIED_BOOKMARKS) {
       setPendingCareerBookmark(candidate);
-      setReplaceCandidates(unifiedBookmarks);
+      setReplaceCandidates(latestBookmarks);
       return;
     }
 
-    const next = addOrMoveUnifiedBookmark(candidate, user?.id);
+    const addResponse = await roadmapService.toggleRoadmapBookmark(selectedTrack.roadmap_id, userId);
+    if (!addResponse.success || !addResponse.data?.bookmarked) {
+      setBookmarkError(addResponse.message || "Unable to save your bookmark right now.");
+      return;
+    }
+
+    const next = addOrMoveUnifiedBookmark(candidate, userId);
     applyUnifiedBookmarks(next);
   };
 
@@ -365,57 +484,39 @@ export default function CareerQuestionsPage() {
       setBookmarkError(null);
       setIsReplacingBookmark(true);
 
-      if (bookmarkToReplace.kind === "roadmap") {
-        if (!user?.id) {
-          setBookmarkError("Please sign in before replacing a roadmap bookmark.");
-          setIsReplacingBookmark(false);
-          return;
-        }
+      const removal = await removeBookmarkEntryFromUnifiedList(bookmarkToReplace, userId);
+      if (!removal.success) {
+        setBookmarkError(removal.message || "Unable to replace bookmark right now. Please try again.");
+        setIsReplacingBookmark(false);
+        return;
+      }
 
-        const listResponse = await roadmapService.getUserRoadmapBookmarks(user.id);
-        if (!listResponse.success) {
-          setBookmarkError("Unable to validate roadmap bookmark. Please try again.");
-          setIsReplacingBookmark(false);
-          return;
-        }
-
-        const exists = listResponse.data.bookmarks.some(
-          (bookmark) => bookmark.roadmap_id === bookmarkToReplace.entity_id,
+      if (userId) {
+        const addResponse = await roadmapService.toggleRoadmapBookmark(
+          pendingCareerBookmark.entity_id,
+          userId,
         );
 
-        if (exists) {
-          const toggleResponse = await roadmapService.toggleRoadmapBookmark(
-            bookmarkToReplace.entity_id,
-            user.id,
-          );
-
-          if (!toggleResponse.success || toggleResponse.data.bookmarked) {
-            setBookmarkError("Unable to replace bookmark right now. Please try again.");
-            setIsReplacingBookmark(false);
-            return;
+        if (!addResponse.success || !addResponse.data?.bookmarked) {
+          if (bookmarkToReplace.kind === "roadmap") {
+            await roadmapService.toggleRoadmapBookmark(bookmarkToReplace.entity_id, userId);
           }
+
+          addOrMoveUnifiedBookmark(bookmarkToReplace, userId);
+          setBookmarkError(addResponse.message || "Unable to save the new bookmark right now.");
+          setIsReplacingBookmark(false);
+          return;
         }
       }
 
-      const next = replaceUnifiedBookmark(bookmarkToReplace, pendingCareerBookmark, user?.id);
+      const next = addOrMoveUnifiedBookmark(pendingCareerBookmark, userId);
       applyUnifiedBookmarks(next);
       setPendingCareerBookmark(null);
       setReplaceCandidates([]);
       setIsReplacingBookmark(false);
     },
-    [applyUnifiedBookmarks, pendingCareerBookmark, user?.id],
+    [applyUnifiedBookmarks, pendingCareerBookmark, userId],
   );
-
-  useEffect(() => {
-    if (isFinished) {
-      return;
-    }
-
-    setPendingCareerBookmark(null);
-    setReplaceCandidates([]);
-    setIsReplacingBookmark(false);
-    setBookmarkError(null);
-  }, [isFinished]);
 
   if (!isFinished) {
     return (
@@ -646,12 +747,12 @@ export default function CareerQuestionsPage() {
           maxWidth: "1200px",
         }}
       >
-        {(results?.track_scores || []).map((track) => (
+        {displayedTrackScores.map((track) => (
           <div
             key={track.track_id}
             style={{
               width: "min(320px, 90vw)",
-              backgroundColor: "#1C427B",
+              backgroundColor: "var(--medium-blue)",
               borderRadius: "3vh",
               padding: "4vh 1.3rem 3.2vh 1.3rem",
               display: "flex",
@@ -662,9 +763,16 @@ export default function CareerQuestionsPage() {
           >
             <button
               type="button"
-              onClick={() => handleToggleBookmark(track.track_id)}
-              disabled={isReplacingBookmark}
-              aria-label={bookmarkedTrackIds.includes(track.track_id) ? "Remove bookmark" : "Bookmark track"}
+              onClick={() => {
+                void handleToggleBookmark(track.track_id);
+              }}
+              disabled={isReplacingBookmark || isAuthLoading || !userId}
+              aria-label={
+                bookmarkedTrackIds.includes(track.track_id) ||
+                (track.roadmap_id ? bookmarkedTrackIds.includes(track.roadmap_id) : false)
+                  ? "Remove bookmark"
+                  : "Bookmark track"
+              }
               style={{
                 position: "absolute",
                 top: "2.5vh",
@@ -676,21 +784,31 @@ export default function CareerQuestionsPage() {
                 justifyContent: "center",
                 background: "transparent",
                 border: "none",
-                cursor: isReplacingBookmark ? "not-allowed" : "pointer",
-                color: bookmarkedTrackIds.includes(track.track_id) ? "#D4EF9F" : "#EAF1FF",
+                cursor:
+                  isReplacingBookmark || isAuthLoading || !userId ? "not-allowed" : "pointer",
+                color:
+                  bookmarkedTrackIds.includes(track.track_id) ||
+                  (track.roadmap_id ? bookmarkedTrackIds.includes(track.roadmap_id) : false)
+                    ? "#D4EF9F"
+                    : "#EAF1FF",
                 padding: 0,
-                opacity: isReplacingBookmark ? 0.65 : 1,
+                opacity: isReplacingBookmark || isAuthLoading || !userId ? 0.65 : 1,
               }}
             >
               <Bookmark
                 size={20}
                 strokeWidth={2.1}
-                className={bookmarkedTrackIds.includes(track.track_id) ? "fill-current" : undefined}
+                className={
+                  bookmarkedTrackIds.includes(track.track_id) ||
+                  (track.roadmap_id ? bookmarkedTrackIds.includes(track.roadmap_id) : false)
+                    ? "fill-current"
+                    : undefined
+                }
               />
             </button>
 
             <img
-              src="/Landing/Rectangle.svg"
+              src="/landing/Rectangle.svg"
               alt={track.track_name}
               style={{ width: "15vh", height: "auto", alignSelf: "flex-start" }}
             />
@@ -699,7 +817,7 @@ export default function CareerQuestionsPage() {
               {track.track_name}
             </h2>
 
-            <p style={{ margin: 0, color: "#E6FFB2", fontWeight: 700, fontSize: "2vh" }}>
+            <p style={{ margin: 0, color: "var(--light-green)", fontWeight: 700, fontSize: "2vh" }}>
               Match Score: {track.score}%
             </p>
 
@@ -708,7 +826,7 @@ export default function CareerQuestionsPage() {
             </p>
 
             <Link
-              href={`/quiz-features/blog?jobTitle=${encodeURIComponent(track.track_name)}`}
+              href={buildCareerTrackDetailsHref(track.track_name, track.track_id)}
               style={{ textDecoration: "none" }}
             >
               <Button
@@ -739,7 +857,7 @@ export default function CareerQuestionsPage() {
         variant="secondary"
           onClick={() => {
             if (sessionId) {
-              router.push(`/quiz-features/hobbies?sessionId=${encodeURIComponent(sessionId)}`);
+              router.push(buildCareerQuizSelectionHref(sessionId));
             } else {
               router.push("/features/career");
             }
@@ -755,7 +873,7 @@ export default function CareerQuestionsPage() {
           Redo Quiz
         </Button>
 
-        <Link href="/features/career" style={{ textDecoration: "none" }}>
+        <Link href="/features/home" style={{ textDecoration: "none" }}>
           <Button
           variant="primary"
             style={{

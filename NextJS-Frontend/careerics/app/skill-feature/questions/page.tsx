@@ -341,7 +341,7 @@ export default function AssessmentPage() {
                   {percentage}%
                 </div>
               </div>
-              <button onClick={handleViewDetails} style={{ marginTop: "60px", width: "100%", maxWidth: "250px", backgroundColor: "#B8EF46", border: "none", padding: "12px", borderRadius: "12px", fontWeight: "bold", fontSize: "16px", cursor: "pointer", color: "#111827" }}>
+              <button onClick={handleViewDetails} style={{ marginTop: "60px", width: "100%", maxWidth: "250px", backgroundColor: "var(--primary-green)", border: "none", padding: "12px", borderRadius: "12px", fontWeight: "bold", fontSize: "16px", cursor: "pointer", color: "#111827" }}>
                 View Details
               </button>
             </div>

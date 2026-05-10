@@ -1,77 +1,89 @@
-import React from 'react';
+"use client";
+
+import React from "react";
 import { Button } from "@/components/ui/button";
 
-const LevelCard: React.FC = () => {
+type LevelCardProps = {
+  title?: string;
+  iconSrc?: string;
+  onClick?: () => void;
+  style?: React.CSSProperties; // ✅ only this
+};
+
+const LevelCard: React.FC<LevelCardProps> = ({
+  title = "Check Your Level",
+  iconSrc = "/job/check.svg",
+  onClick,
+  style,
+}) => {
   return (
-    <div style={{ 
-      backgroundColor: "#142143", 
-      borderRadius: "20px", // Zawedna el radius sghayar 3ashan yeb2a smoother
-      padding: "1rem", // Zawedna el padding 3ashan el content yakhod ra7to
-      height: "100%", 
-      display: "flex", 
-      flexDirection: "column", // El main container lissa column 3ashan el button ta7t
-      justifyContent: "space-between", // Bey-bu3ed el row fo2 3an el button ta7t
-      gap: "5px",
-      aspectRatio: "1/1",
-      boxSizing: "border-box"
-    }}>
-      
-      {/* 1. El Row elly feeha el Icon wel Kalam (Top Section) */}
-      <div style={{ 
-        display: "flex", 
-        flexDirection: "row", // Ufuqi
-        alignItems: "center", // M7azah vertical f nos ba3d
-        justifyContent: "space-between", 
-        flexGrow: 1, // Bey-akhod el masafeh el fadya fo2
-        paddingInline:"0.5rem"
-      }}>
-        
-        {/* El Icon ka SVG (Left) */}
-        <img 
-          src="/job/check.svg" // Et-aked enn dah el icon el sa7
-          alt="Check Level Icon"
-          style={{ width: "60px", height: "60px", flexShrink: 0 }} // Zawedna el size sghayar
+    <div
+      style={{
+        backgroundColor: "var(--dark-blue)",
+        borderRadius: "4vh",
+        padding: "1rem",
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "space-between",
+        gap: "5px",
+        aspectRatio: "1/1",
+        boxSizing: "border-box",
+
+        ...style,
+      }}
+    >
+      {/* Top Section */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexGrow: 1,
+          paddingInline: "0.5rem",
+        }}
+      >
+        <img
+          src={iconSrc}
+          alt="Level Icon"
+          style={{ width: "60px", height: "60px", flexShrink: 0 }}
         />
 
-        {/* 2. El Vertical Line (Middle) */}
-        <div style={{ 
-          width: "1.7px", // 3ard el khat
-          height: "80px", // Toul el khat (nafs toul el icon)
-          backgroundColor: "rgb(255, 255, 255)", // Lon abyad shafaf
-          flexShrink: 0
-        }} />
+        <div
+          style={{
+            width: "1.7px",
+            height: "80px",
+            backgroundColor: "#fff",
+            flexShrink: 0,
+          }}
+        />
 
-        {/* 3. El Kalam (Right) */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "1px" }}>
-          <h3 style={{ 
-            color: "white", 
-            margin: 0, 
-            textAlign: "left", // Kalam 3al shemal
-            fontFamily: 'Nova Square', 
+        <h3
+          style={{
+            color: "white",
+            margin: 0,
+            fontFamily: "Nova Square",
             fontWeight: "400",
-            fontSize: "1.2rem", // Zawedna el size 3ashan yeb2a wad7
-            lineHeight: "1.5", // Masafeh ben el stour sghayara
-            maxWidth: "min-content", // Bey-egber el kalam yenzel row gadeed
-            textTransform: "capitalize" // Bey-khally awel 7arf Capital
-          }}>
-            Check Your Level
-          </h3>
-        </div>
+            fontSize: "1.2rem",
+            lineHeight: "1.5",
+            maxWidth: "min-content",
+            textTransform: "capitalize",
+          }}
+        >
+          {title}
+        </h3>
       </div>
 
-      {/* 4. El Button (Bottom Section) */}
-      <Button 
-        variant="secondary" 
-        style={{ 
-          color: "black",
-          borderRadius: "5px", // Radius Smooth
-          fontFamily: 'Nova Square',
-          width: "100%",    
-          paddingBlock:"0.5rem",
-          
-          
+      {/* Button */}
+      <Button
+        variant="primary-inverted"
+        style={{
+          width: "100%",
+          paddingBlock: "1.2rem",
+          borderRadius:"2vh",
+          flex:0,
         }}
-        onClick={() => console.log('Start Test')}
+        onClick={onClick}
       >
         Start Test
       </Button>

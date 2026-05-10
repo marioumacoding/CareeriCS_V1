@@ -20,7 +20,8 @@ export const CareerCardsContainer = ({
                 backgroundColor: "var(--medium-blue)",
                 borderRadius: "4vh",
                 paddingBlock: "3vh",
-                paddingInline: isScrollable ? "1rem" : "1.5rem",
+                paddingInline: isScrollable ? "0": "1.5rem",
+                paddingLeft:isScrollable ? "2rem" :"none",
                 color: "white",
                 height: "100%",
                 width: "100%",
@@ -83,13 +84,13 @@ export const CareerCardsContainer = ({
                                 {
                                     display: "flex",
                                     flexDirection: "column",
-                                    paddingLeft: "0.5rem",
                                     userSelect: "none",
-                                    width: "fit-content",
+                                    width: "2.5rem",
                                     marginLeft: "auto",
                                     height: "100%",
                                     justifyContent: "center",
                                     gap: "0.5rem",
+                                    alignItems:"center",
                                 }
                             }
                         >

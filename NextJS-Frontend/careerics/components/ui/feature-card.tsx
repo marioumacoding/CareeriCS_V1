@@ -34,7 +34,7 @@ const layouts = {
     titleWidth: "100%",
     descTop: "55%",
     left: "9%",
-    descWidth: "80%",
+    descWidth: "20ch",
   },
 
   vertical: {
@@ -46,7 +46,7 @@ const layouts = {
     titleWidth: "65%",
     descTop: "43%",
     left: "10%",
-    descWidth: "80%",
+    descWidth: "20ch",
   },
 };
 
@@ -144,7 +144,7 @@ export default function FeatureCard({
           fontFamily: "var(--font-jura)",
           position: "absolute",
           color: "var(--text-grey)",
-          fontSize: "0.83rem",
+          fontSize: "0.79rem",
           fontWeight: "400",
           top: layout.descTop,
           left: layout.left,

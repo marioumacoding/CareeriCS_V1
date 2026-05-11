@@ -58,7 +58,7 @@ export default function ChoiceCard({
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        padding: "3vh",
+        padding: "1rem",
         boxSizing: "border-box",
         overflow: "hidden",
         gap: "0vh",
@@ -78,21 +78,8 @@ export default function ChoiceCard({
           marginBottom: 0,
         }}
       >
-        <div style={{ display: "flex", justifyContent:"space-between", }}>
+        <div style={{ display: "flex", justifyContent: "space-between", }}>
 
-          {/* Image */}
-
-          {!isBookmark && <img
-            src={image || icon || ""}
-            alt={title || "career icon"}
-            style={{
-              width: "2.5rem",
-              height: "auto",
-              display: "block",
-              filter: effectiveSelected ? "none" : "invert(1)",
-              marginBottom: "0.5rem",
-            }}
-          />}
 
           <div
             style={{
@@ -162,12 +149,23 @@ export default function ChoiceCard({
 
         </div>
 
+          {!isBookmark && <img
+            src={image || icon || ""}
+            alt={title || "career icon"}
+            style={{
+              width: "2.5rem",
+              height: "auto",
+              display: "block",
+              filter: effectiveSelected ? "none" : "invert(1)",
+              marginBottom: "0.5rem",
+            }}
+          />}
 
         {/* Title */}
         <p
           style={{
             fontSize: "1.2rem",
-            width: isBookmark?"12ch":"120%",
+            width: isBookmark ? "12ch" : "120%",
             marginRight: "auto",
             marginTop: "0",
             position: "relative",

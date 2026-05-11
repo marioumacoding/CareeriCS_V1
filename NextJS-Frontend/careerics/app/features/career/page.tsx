@@ -242,6 +242,7 @@ export default function CareerDiscoveryPage() {
                   buttonVariant="primary-inverted"
                   buttonLabel="Learn More"
                   onClick={() => router.push(blogPath)}
+                  onBookmark={() => {}}
                 />
               );
             })

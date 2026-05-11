@@ -10,6 +10,7 @@ import type {
   APIAssessmentSessionType,
   APISubmitAssessmentResponse,
 } from "@/types";
+import { Button } from "@/components/ui";
 
 const STORAGE_PREFIX = "skill-assessment:";
 
@@ -83,7 +84,7 @@ export default function AssessmentPage() {
 
   const sidebarQuestions = questions.map((q, idx) => ({
     id: idx + 1,
-    title: q.question_text,
+    title: "",
     text: q.question_text,
   }));
 
@@ -294,6 +295,7 @@ export default function AssessmentPage() {
 
   const percentage = Math.round(resultsData?.score || 0);
 
+  
   return (
     <Interview
       questions={sidebarQuestions}
@@ -309,8 +311,8 @@ export default function AssessmentPage() {
     >
       <div style={{
         width: "100%", height: "100%", display: "flex", flexDirection: "column",
-        alignItems: "center", justifyContent: "center", position: "relative",
-        padding: "10px 100px", boxSizing: "border-box",
+        alignItems: "center", justifyContent: "center", position: "fixed",
+       boxSizing: "border-box", paddingTop: "20vh",overflowY: "auto",paddingLeft: "7vw"
       }}
       >
         
@@ -329,7 +331,7 @@ export default function AssessmentPage() {
               <div style={{ position: "relative", width: "200px", height: "200px" }}>
                 <svg width="200" height="200" style={{ transform: "rotate(-90deg)" }}>
                   <circle cx="100" cy="100" r="90" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="15" />
-                  <circle 
+                  <circle   
                     cx="100" cy="100" r="90" fill="none" stroke="#D4FF47" strokeWidth="15" 
                     strokeDasharray="565" strokeDashoffset={565 - (565 * percentage) / 100}
                     strokeLinecap="round" style={{ transition: "stroke-dashoffset 1s ease-out" }}
@@ -354,14 +356,15 @@ export default function AssessmentPage() {
               <p style={{ fontSize: "18px", opacity: 0.8, lineHeight: "1.6", marginBottom: "40px" }}>
                 Assessment complete. You can now review each question to see the correct answers.
               </p>
-              <button
+              <Button
+              variant="secondary"
                 onClick={() => {
                   void startNewSession();
                 }}
-                style={{ width: "100%", maxWidth: "250px", backgroundColor: "#C1CBE6", border: "none", padding: "12px", borderRadius: "12px", fontWeight: "bold", fontSize: "16px", cursor: "pointer", color: "#111827" }}
+                style={{ width: "100%", maxWidth: "250px", border: "none", padding: "25px", borderRadius: "12px", fontWeight: "bold", fontSize: "16px", cursor: "pointer", color: "#111827",marginTop: "20px"  }}
               >
                 Retake Assessment
-              </button>
+              </Button>
             </div>
           </div>
 
@@ -401,8 +404,21 @@ export default function AssessmentPage() {
                       transition: "0.2s ease",
                     }}>
                     <span style={{ fontSize: "17px", fontWeight: "500" }}>{choice}</span>
-                    <div style={{ width: "22px", height: "22px", borderRadius: "50%", border: "2px solid #111827", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      {isReviewing && isCorrect ? (
+                    <div 
+                        style={{ 
+                            width: "22px", 
+                            height: "22px", 
+                            minWidth: "22px",   
+                            minHeight: "22px",  
+                            flexShrink: 0,     
+                            borderRadius: "50%", 
+                            border: "2px solid #111827", 
+                            display: "flex", 
+                            alignItems: "center", 
+                            justifyContent: "center" 
+                          }}
+                        >                 
+                       {isReviewing && isCorrect ? (
                         <span style={{ fontSize: "12px", fontWeight: "bold" }}>✓</span>
                       ) : isReviewing && isSelected && !isCorrect ? (
                         <span style={{ fontSize: "12px", fontWeight: "bold" }}>✕</span>
@@ -416,7 +432,8 @@ export default function AssessmentPage() {
             </div>
 
             <div style={{ display: "flex", gap: "30px", marginTop: "35px", marginBottom: "30px" }}>
-              <button 
+              <Button 
+              variant="secondary"
                 onClick={() => {
                   const prevQ = currentQuestion - 1;
                   if (prevQ >= 1) {
@@ -427,40 +444,43 @@ export default function AssessmentPage() {
                 disabled={currentQuestion === 1}
                 style={{
                   display: "flex", alignItems: "center", backgroundColor: "#C1CBE6",
-                  border: "none", borderRadius: "50px", padding: "5px 25px 5px 5px",
+                  border: "none", borderRadius: "50px", padding: "25px 15px 25px 5px",
                   cursor: currentQuestion === 1 ? "not-allowed" : "pointer",
                   opacity: currentQuestion === 1 ? 0.5 : 1, transition: "0.3s"
                 }}
               >
-                <div style={{ width: "35px", height: "35px", backgroundColor: "white", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", marginRight: "15px" }}><img src="/auth/redo.svg" alt="prev" style={{ width: "18px" }} /></div>
+                <div style={{ width: "48px", height: "48px", backgroundColor: "white", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", marginRight: "15px",position: "relative",right: "4px" }}><img src="/auth/redo.svg" alt="prev" style={{ width: "18px" }} /></div>
                 <span style={{ color: "#111827", fontWeight: "bold", fontSize: "16px", fontFamily: 'var(--font-nova-square)' }}>Previous</span>
-              </button>
+              </Button>
 
               {currentQuestion < questions.length ? (
-                <button
+                <Button 
+                variant="primary-inverted"
                   onClick={handleNext}
                   disabled={!isAnswered}
                   style={{
-                    display: "flex", alignItems: "center", backgroundColor: "var(--light-green)",
-                    border: "none", borderRadius: "50px", padding: "5px 5px 5px 25px",
+                    display: "flex", alignItems: "center", 
+                    border: "none", borderRadius: "50px", padding: "25px 15px 25px 25px",
                     cursor: !isAnswered ? "not-allowed" : "pointer",
                     opacity: !isAnswered ? 0.5 : 1, transition: "0.3s"
                   }}
                 >
                   <span style={{ color: "#111827", fontWeight: "bold", fontSize: "16px", fontFamily: 'var(--font-nova-square)', marginRight: "15px" }}>Next</span>
-                  <div style={{ width: "35px", height: "35px", backgroundColor: "white", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", transform: "rotate(180deg)" }}><img src="/auth/redo.svg" alt="next" style={{ width: "18px" }} /></div>
-                </button>
+                  <div style={{ width: "47px", height: "47px", backgroundColor: "white", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", transform: "rotate(180deg)", left: "15px", position: "relative" }}><img src="/auth/redo.svg" alt="next" style={{ width: "18px" }} /></div>
+                </Button>
               ) : (
                 !isReviewing && (
-                  <button
+                  <Button
+                    variant="primary"
+
                     onClick={() => {
                       void handleFinish();
                     }}
                     disabled={!allAnswered || isSubmitting}
-                    style={{ width: "200px", backgroundColor: "var(--primary-green)", border: "none", padding: "10px 0", borderRadius: "12px", fontWeight: "800", fontSize: "16px", color: "#111827", opacity: allAnswered && !isSubmitting ? 1 : 0.4, cursor: allAnswered && !isSubmitting ? "pointer" : "not-allowed" }}
+                    style={{ width: "200px",  border: "none", padding: "25px 15px", borderRadius: "12px", fontWeight: "800", fontSize: "16px", color: "#111827", opacity: allAnswered && !isSubmitting ? 1 : 0.4, cursor: allAnswered && !isSubmitting ? "pointer" : "not-allowed" }}
                   >
-                    {isSubmitting ? "Submitting..." : "Finish"}
-                  </button>
+                    {isSubmitting ? "Submitting..." : "Back to Results"}
+                  </Button>
                 )
               )}
             </div>

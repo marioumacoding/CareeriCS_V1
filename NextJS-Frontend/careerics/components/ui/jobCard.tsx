@@ -83,7 +83,7 @@ const JobCard: React.FC<JobProps> = ({
         flexDirection: "column",
         gap: "15px",
         position: "relative",
-        width: "100%",
+        width: "104%",
         boxSizing: "border-box",
         fontFamily: "'Nova Square', sans-serif",
         cursor: "pointer",

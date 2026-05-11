@@ -249,25 +249,19 @@ function toBuilderPayload(
     email: getFormValue(formData, "email"),
     linkedin: getFormValue(formData, "link"),
     education: educationList
-      .map((entry) => ({
-        institution: getFormValue(formData, `inst-${entry.id}`),
-        qualification: getFormValue(formData, `q-${entry.id}`),
-        period: getFormValue(formData, `t-${entry.id}`),
-        details: getFormValue(formData, `d-${entry.id}`),
+      .map((e) => ({
+        institution: getFormValue(formData, `inst-${e.id}`),
+        qualification: getFormValue(formData, `q-${e.id}`),
+        period: getFormValue(formData, `t-${e.id}`),
+        details: getFormValue(formData, `d-${e.id}`),
       }))
-      .filter((item) => item.institution || item.qualification || item.period || item.details),
+      .filter((i) => i.institution || i.qualification || i.period || i.details),
     languages: langList
-      .map((entry) => ({
-        language: getFormValue(formData, `ln-${entry.id}`),
-        proficiency: getFormValue(formData, `lp-${entry.id}`),
-      }))
-      .filter((item) => item.language),
+      .map((e) => ({ language: getFormValue(formData, `ln-${e.id}`), proficiency: getFormValue(formData, `lp-${e.id}`) }))
+      .filter((i) => i.language),
     skills: skillList
-      .map((entry) => ({
-        skill_name: getFormValue(formData, `sn-${entry.id}`),
-        proficiency: getFormValue(formData, `sp-${entry.id}`),
-      }))
-      .filter((item) => item.skill_name),
+      .map((e) => ({ skill_name: getFormValue(formData, `sn-${e.id}`), proficiency: getFormValue(formData, `sp-${e.id}`) }))
+      .filter((i) => i.skill_name),
     certifications: certList
       .map((entry) => ({
         title: getFormValue(formData, `cname-${entry.id}`),
@@ -276,15 +270,15 @@ function toBuilderPayload(
       }))
       .filter((item) => item.title || item.organization || item.period),
     experiences: experienceList
-      .map((entry) => ({
-        role: getFormValue(formData, `role-${entry.id}`),
-        organization: getFormValue(formData, `org-${entry.id}`),
-        period: getFormValue(formData, `tp-${entry.id}`),
-        responsibilities: splitTextLines(getFormValue(formData, `resp-${entry.id}`)),
-        achievements: getFormValue(formData, `ach-${entry.id}`),
-        technologies: splitTextLines(getFormValue(formData, `tech-${entry.id}`)),
+      .map((e) => ({
+        role: getFormValue(formData, `role-${e.id}`),
+        organization: getFormValue(formData, `org-${e.id}`),
+        period: getFormValue(formData, `tp-${e.id}`),
+        responsibilities: splitTextLines(getFormValue(formData, `resp-${e.id}`)),
+        achievements: getFormValue(formData, `ach-${e.id}`),
+        technologies: splitTextLines(getFormValue(formData, `tech-${e.id}`)),
       }))
-      .filter((item) => item.role),
+      .filter((i) => i.role),
     projects: projectList
       .map((entry) => ({
         title: getFormValue(formData, `pname-${entry.id}`),
@@ -295,11 +289,11 @@ function toBuilderPayload(
       }))
       .filter((item) => item.title || item.role || item.description),
     references: referenceList
-      .map((entry) => ({
-        name: getFormValue(formData, `rn-${entry.id}`),
-        role: getFormValue(formData, `rr-${entry.id}`),
-        organization: getFormValue(formData, `ro-${entry.id}`),
-        contact_info: getFormValue(formData, `rc-${entry.id}`),
+      .map((e) => ({
+        name: getFormValue(formData, `rn-${e.id}`),
+        role: getFormValue(formData, `rr-${e.id}`),
+        organization: getFormValue(formData, `ro-${e.id}`),
+        contact_info: getFormValue(formData, `rc-${e.id}`),
       }))
       .filter((item) => item.name || item.role || item.organization || item.contact_info),
     awards: awardList
@@ -312,6 +306,7 @@ function toBuilderPayload(
       .filter((item) => item.title || item.organization || item.date || item.description),
   };
 }
+
 
 export default function CVBuilderPage() {
   const router = useRouter();
@@ -375,11 +370,7 @@ export default function CVBuilderPage() {
   };
 
   useEffect(() => {
-    return () => {
-      if (downloadUrl) {
-        URL.revokeObjectURL(downloadUrl);
-      }
-    };
+    return () => { if (downloadUrl) URL.revokeObjectURL(downloadUrl); };
   }, [downloadUrl]);
 
   useEffect(() => {
@@ -518,20 +509,11 @@ export default function CVBuilderPage() {
   };
 
   const handleSubmit = async () => {
-    if (isAuthLoading) {
-      setBuildError("Checking your session. Please try again in a moment.");
-      return;
-    }
-
-    if (!user?.id) {
-      setBuildError("Please sign in first to build your CV.");
-      return;
-    }
-
+    if (isAuthLoading) { setBuildError("Checking your session. Please try again."); return; }
+    if (!user?.id) { setBuildError("Please sign in first to build your CV."); return; }
     setIsBuilding(true);
     setIsFinished(false);
     setBuildError(null);
-
     try {
       const payload = toBuilderPayload(
         formData,
@@ -546,10 +528,7 @@ export default function CVBuilderPage() {
       );
 
       const pdfBlob = await cvService.buildCV(user.id, payload);
-      if (downloadUrl) {
-        URL.revokeObjectURL(downloadUrl);
-      }
-
+      if (downloadUrl) URL.revokeObjectURL(downloadUrl);
       const url = URL.createObjectURL(pdfBlob);
       setDownloadUrl(url);
       setDownloadName(
@@ -557,9 +536,7 @@ export default function CVBuilderPage() {
       );
       setIsFinished(true);
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Failed to build CV. Please try again.";
-      setBuildError(message);
+      setBuildError(error instanceof Error ? error.message : "Failed to build CV. Please try again.");
     } finally {
       setIsBuilding(false);
     }
@@ -567,21 +544,15 @@ export default function CVBuilderPage() {
 
   const handleGoogleDriveQuickOpen = () => {
     if (isOpeningDrive) return;
-
     setIsOpeningDrive(true);
-
     if (downloadUrl) {
       const link = document.createElement("a");
       link.href = downloadUrl;
       link.download = downloadName;
       link.click();
     }
-
     window.open("https://drive.google.com/drive/my-drive", "_blank", "noopener,noreferrer");
-
-    window.setTimeout(() => {
-      setIsOpeningDrive(false);
-    }, 1400);
+    window.setTimeout(() => setIsOpeningDrive(false), 1400);
   };
 
   const selectedCountry = Country.getAllCountries().find(
@@ -594,11 +565,11 @@ export default function CVBuilderPage() {
 
   const ALL_LANGUAGES = ISO6391.getAllNames().sort();
   const PROFICIENCY_LEVELS = [
-    "Native",
-    "Professional Working",
-    "Full Professional",
-    "Limited Working",
-    "Elementary",
+    "elementary",
+    "conversational",
+    "proficient",
+    "ull professional",
+    "native/bilingual",
   ];
 
   return (
@@ -937,7 +908,7 @@ export default function CVBuilderPage() {
                                     type: "row",
                                     fields: [
                                       { id: `sn-${entry.id}`, type: "text", placeholder: "Skill" },
-                                      { id: `sp-${entry.id}`, type: "select", placeholder: "Level", options: ["Beginner", "Intermediate", "Advanced", "Expert"] },
+                                      { id: `sp-${entry.id}`, type: "select", placeholder: "Level", options: ["Beginner", "Intermediate", "proficient", "Expert"] },
                                     ],
                                   },
                                 ]}

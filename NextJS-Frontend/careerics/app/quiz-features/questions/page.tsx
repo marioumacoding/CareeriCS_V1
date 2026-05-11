@@ -683,7 +683,7 @@ export default function CareerQuestionsPage() {
       minWidth: "12vw",
       cursor: currentStepId === 1 ? "not-allowed" : "pointer",
       opacity: currentStepId === 1 ? 0.4 : 1,
-      visibility: currentStepId === 1 ? "hidden" : "visible", // Ekhtiyari: t-khfiha law f awel step
+      visibility: currentStepId === 1 ? "hidden" : "visible", 
     }}
   >
     Back
@@ -757,7 +757,7 @@ export default function CareerQuestionsPage() {
               padding: "4vh 1.3rem 3.2vh 1.3rem",
               display: "flex",
               flexDirection: "column",
-              gap: "2vh",
+              gap: "5vh",
               position: "relative",
             }}
           >

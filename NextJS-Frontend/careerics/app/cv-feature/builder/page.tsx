@@ -565,11 +565,11 @@ export default function CVBuilderPage() {
 
   const ALL_LANGUAGES = ISO6391.getAllNames().sort();
   const PROFICIENCY_LEVELS = [
-    "Native",
-    "Professional Working",
-    "Full Professional",
-    "Limited Working",
-    "Elementary",
+    "elementary",
+    "conversational",
+    "proficient",
+    "ull professional",
+    "native/bilingual",
   ];
 
   return (
@@ -908,7 +908,7 @@ export default function CVBuilderPage() {
                                     type: "row",
                                     fields: [
                                       { id: `sn-${entry.id}`, type: "text", placeholder: "Skill" },
-                                      { id: `sp-${entry.id}`, type: "select", placeholder: "Level", options: ["Beginner", "Intermediate", "Advanced", "Expert"] },
+                                      { id: `sp-${entry.id}`, type: "select", placeholder: "Level", options: ["Beginner", "Intermediate", "proficient", "Expert"] },
                                     ],
                                   },
                                 ]}

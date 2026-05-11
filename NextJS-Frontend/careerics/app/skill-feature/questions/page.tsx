@@ -479,7 +479,7 @@ export default function AssessmentPage() {
                     disabled={!allAnswered || isSubmitting}
                     style={{ width: "200px",  border: "none", padding: "25px 15px", borderRadius: "12px", fontWeight: "800", fontSize: "16px", color: "#111827", opacity: allAnswered && !isSubmitting ? 1 : 0.4, cursor: allAnswered && !isSubmitting ? "pointer" : "not-allowed" }}
                   >
-                    {isSubmitting ? "Submitting..." : "Finish"}
+                    {isSubmitting ? "Submitting..." : "Back to Results"}
                   </Button>
                 )
               )}

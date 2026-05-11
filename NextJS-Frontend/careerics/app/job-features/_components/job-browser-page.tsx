@@ -1,5 +1,5 @@
 "use client";
-
+import { Button } from "@/components/ui/button";
 import React, { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import JobCard from "@/components/ui/jobCard";
@@ -717,23 +717,23 @@ export default function JobBrowserPage({
       </div>
     ));
   };
-
+//job card
   return (
     <div style={{
       display: "flex",
       height: "100%",
-      padding: "40px",
-      paddingLeft: "100px",
+      padding: "60px",
+      paddingLeft: "50px",
       boxSizing: "border-box",
-      overflow: "auto",
+      overflow: "hidden",
       scrollbarWidth: "none",
       position: "relative",
-      paddingBottom: "10px",
+      paddingBottom: "60px",
       paddingTop: "0px",
     }}>
       <div style={{
         width: "500px",
-        height: "110%",
+        minHeight: "0",
         display: "flex",
         flexDirection: "column",
         position: "relative",
@@ -742,8 +742,10 @@ export default function JobBrowserPage({
         overflowY: "auto",
         paddingRight: "60px",
         scrollbarWidth: "none",
-        zIndex: 5,
+        zIndex: 1,
       }}>
+
+
         <div style={{ position: "relative", width: "100%" }}>
           <input
             type="text"
@@ -910,23 +912,26 @@ export default function JobBrowserPage({
         </div>
 
         <div style={{ display: "flex", gap: "10px", justifyContent: "space-between", alignItems: "center", paddingBottom: "20px" }}>
-          <button
+          <Button
+          variant="outline"
             type="button"
             onClick={() => setCurrentPage((page) => Math.max(page - 1, 1))}
             disabled={currentPage <= 1 || isLoading}
             style={{
-              minWidth: "120px",
+              width: "20px",
+              minWidth: "20px",
               height: "40px",
               borderRadius: "999px",
               border: "1px solid rgba(255,255,255,0.35)",
-              backgroundColor: currentPage > 1 && !isLoading ? "transparent" : "rgba(255,255,255,0.08)",
-              color: currentPage > 1 && !isLoading ? "white" : "rgba(255,255,255,0.45)",
+              // backgroundColor: currentPage > 1 && !isLoading ? "transparent" : "rgba(255,255,255,0.08)",
+              // color: currentPage > 1 && !isLoading ? "white" : "rgba(255,255,255,0.45)",
               cursor: currentPage > 1 && !isLoading ? "pointer" : "default",
             }}
           >
             Previous
-          </button>
-          <button
+          </Button>
+          <Button
+          variant="primary"
             type="button"
             onClick={() => setCurrentPage((page) => Math.min(page + 1, Math.max(totalPages, 1)))}
             disabled={currentPage >= totalPages || isLoading || !totalPages}
@@ -935,40 +940,40 @@ export default function JobBrowserPage({
               height: "40px",
               borderRadius: "999px",
               border: "1px solid rgba(255,255,255,0.35)",
-              backgroundColor: currentPage < totalPages && !isLoading ? "transparent" : "rgba(255,255,255,0.08)",
-              color: currentPage < totalPages && !isLoading ? "white" : "rgba(255,255,255,0.45)",
+              // backgroundColor: currentPage < totalPages && !isLoading ? "transparent" : "rgba(255,255,255,0.08)",
+              // color: currentPage < totalPages && !isLoading ? "white" : "rgba(255,255,255,0.45)",
               cursor: currentPage < totalPages && !isLoading ? "pointer" : "default",
             }}
           >
             Next
-          </button>
+          </Button>
         </div>
       </div>
 
       <div style={{
         width: "1.5px",
         backgroundColor: "rgb(255,255,255)",
-        height: "100%",
+        height: "85%",
         alignSelf: "center",
         flexShrink: 0,
         position: "relative",
-        top: "100px",
+        top: "40px",
       }} />
-
+{/* job details */}
       <div style={{
         flex: 1,
-        height: "99%",
         width: "100%",
         justifyContent: "center",
         alignItems: "flex-start",
-        paddingLeft: "120px",
-        paddingRight: "20px",
+        paddingLeft: "100px",
+        paddingRight: "10px",
         minWidth: 0,
         position: "relative",
         zIndex: 1,
         top: "10vh",
         display: "flex",
         scrollbarWidth: "none",
+        right: "2vw",
       }}>
         <div style={{ display: "flex", justifyContent: "center", alignItems: "flex-start", width: "100%" }}>
           {selectedJob ? (

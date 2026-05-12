@@ -16,6 +16,40 @@ import type {
 
 let cachedCareerTracks: APICareerTrack[] | null = null;
 let careerTracksPromise: Promise<ApiResponse<APICareerTrack[]>> | null = null;
+const USER_SESSIONS_CACHE_TTL_MS = 5_000;
+const userSessionsCache = new Map<
+  string,
+  {
+    data: APICareerSessionRead[];
+    expiresAt: number;
+  }
+>();
+const userSessionsPromiseCache = new Map<
+  string,
+  Promise<ApiResponse<APICareerSessionRead[]>>
+>();
+
+function getUserSessionsCacheKey(userId: string): string {
+  return userId.trim();
+}
+
+function getCachedUserSessions(
+  userId: string,
+): APICareerSessionRead[] | null {
+  const cacheKey = getUserSessionsCacheKey(userId);
+  const cached = userSessionsCache.get(cacheKey);
+
+  if (!cached) {
+    return null;
+  }
+
+  if (cached.expiresAt <= Date.now()) {
+    userSessionsCache.delete(cacheKey);
+    return null;
+  }
+
+  return cached.data;
+}
 
 export const careerService = {
   listTracks(): Promise<ApiResponse<APICareerTrack[]>> {
@@ -52,7 +86,38 @@ export const careerService = {
   getUserSessions(
     userId: string,
   ): Promise<ApiResponse<APICareerSessionRead[]>> {
-    return fastapiApi.get<APICareerSessionRead[]>(`/career/sessions/user/${userId}`);
+    const cachedSessions = getCachedUserSessions(userId);
+    if (cachedSessions) {
+      return Promise.resolve({
+        data: cachedSessions,
+        success: true,
+      });
+    }
+
+    const cacheKey = getUserSessionsCacheKey(userId);
+    const pendingRequest = userSessionsPromiseCache.get(cacheKey);
+    if (pendingRequest) {
+      return pendingRequest;
+    }
+
+    const nextRequest = fastapiApi
+      .get<APICareerSessionRead[]>(`/career/sessions/user/${userId}`)
+      .then((response) => {
+        if (response.success && response.data) {
+          userSessionsCache.set(cacheKey, {
+            data: response.data,
+            expiresAt: Date.now() + USER_SESSIONS_CACHE_TTL_MS,
+          });
+        }
+
+        return response;
+      })
+      .finally(() => {
+        userSessionsPromiseCache.delete(cacheKey);
+      });
+
+    userSessionsPromiseCache.set(cacheKey, nextRequest);
+    return nextRequest;
   },
 
   getCardsByType(

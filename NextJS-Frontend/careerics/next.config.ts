@@ -34,15 +34,6 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: configDir,
   },
-
-  async rewrites() {
-    return [
-      {
-        source: "/api/dotnet/:path*",
-        destination: `${process.env.DOTNET_API_URL ?? "http://localhost:5000/api"}/:path*`,
-      },
-    ];
-  },
 };
 
 export default nextConfig;

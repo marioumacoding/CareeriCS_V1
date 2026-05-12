@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/providers";
 
 type CardType = "horizontal" | "square" | "vertical";
 
@@ -33,7 +34,7 @@ const layouts = {
     titleWidth: "100%",
     descTop: "55%",
     left: "9%",
-    descWidth: "80%",
+    descWidth: "20ch",
   },
 
   vertical: {
@@ -45,9 +46,22 @@ const layouts = {
     titleWidth: "65%",
     descTop: "43%",
     left: "10%",
-    descWidth: "80%",
+    descWidth: "20ch",
   },
 };
+
+/**
+ * Extract the redirect target from a login URL.
+ * e.g. "/auth/login?redirect=/features/career" → "/features/career"
+ */
+function extractRedirectTarget(url: string): string | null {
+  try {
+    const parsed = new URL(url, "http://localhost");
+    return parsed.searchParams.get("redirect") || parsed.searchParams.get("callbackUrl");
+  } catch {
+    return null;
+  }
+}
 
 export default function FeatureCard({
   type = "horizontal",
@@ -58,13 +72,28 @@ export default function FeatureCard({
 }: CardProps) {
   const [hover, setHover] = useState(false);
   const router = useRouter();
+  const { isAuthenticated, isLoading } = useAuth();
   const layout = layouts[type];
+
+  const handleCardClick = () => {
+    // If user is authenticated and the link is a login URL with a redirect param,
+    // navigate directly to the redirect target instead of going to login.
+    if (isAuthenticated && !isLoading && link?.includes("/auth/login")) {
+      const redirectTarget = extractRedirectTarget(link);
+      if (redirectTarget) {
+        router.push(redirectTarget);
+        return;
+      }
+    }
+    // Otherwise, use the link as-is
+    router.push(link);
+  };
 
   return (
     <div
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
-      onClick={() => router.push(link)}
+      onClick={handleCardClick}
       style={{
         width: "100%",
         aspectRatio: layout.aspectRatio,
@@ -115,7 +144,7 @@ export default function FeatureCard({
           fontFamily: "var(--font-jura)",
           position: "absolute",
           color: "var(--text-grey)",
-          fontSize: "1vw",
+          fontSize: "0.79rem",
           fontWeight: "400",
           top: layout.descTop,
           left: layout.left,

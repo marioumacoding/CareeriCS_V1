@@ -6,8 +6,15 @@ import { LoaderCircle } from "lucide-react";
 
 import CourseActionPopup from "@/components/ui/course-action-popup";
 import { CourseCards } from "@/components/ui/courseCards";
+import { useAuth } from "@/providers/auth-provider";
 import { roadmapService } from "@/services";
-import { enrollCourse } from "@/lib/course-progress";
+import {
+  COURSE_PROGRESS_UPDATED_EVENT,
+  completeCourse,
+  enrollCourse,
+  loadCourseProgress,
+  type CourseProgressState,
+} from "@/lib/course-progress";
 import type { RoadmapCoursesRead } from "@/types";
 
 function LoadingState({ label }: { label: string }) {
@@ -46,12 +53,15 @@ function LoadingState({ label }: { label: string }) {
 export default function CourseLibraryPage() {
   const searchParams = useSearchParams();
   const roadmapId = searchParams.get("roadmapId") || "";
+  const { user } = useAuth();
 
   const [searchTerm, setSearchTerm] = useState("");
   const [roadmapCourses, setRoadmapCourses] = useState<RoadmapCoursesRead | null>(null);
+  const [courseProgress, setCourseProgress] = useState<CourseProgressState>({ current: [], completed: [] });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [pendingEnrollmentCourse, setPendingEnrollmentCourse] = useState<
+  const [activePopupMode, setActivePopupMode] = useState<"enroll" | "complete" | null>(null);
+  const [activePopupCourse, setActivePopupCourse] = useState<
     RoadmapCoursesRead["sections"][number]["courses"][number] | null
   >(null);
 
@@ -92,6 +102,29 @@ export default function CourseLibraryPage() {
     };
   }, [roadmapId]);
 
+  useEffect(() => {
+    const syncCourseProgress = () => {
+      setCourseProgress(loadCourseProgress(user?.id));
+    };
+
+    syncCourseProgress();
+
+    const handleCourseProgressUpdated = () => {
+      syncCourseProgress();
+    };
+
+    window.addEventListener(COURSE_PROGRESS_UPDATED_EVENT, handleCourseProgressUpdated as EventListener);
+    window.addEventListener("storage", handleCourseProgressUpdated);
+
+    return () => {
+      window.removeEventListener(
+        COURSE_PROGRESS_UPDATED_EVENT,
+        handleCourseProgressUpdated as EventListener,
+      );
+      window.removeEventListener("storage", handleCourseProgressUpdated);
+    };
+  }, [user?.id]);
+
   const filteredSections = useMemo(() => {
     if (!roadmapCourses) {
       return [];
@@ -113,27 +146,78 @@ export default function CourseLibraryPage() {
       .filter((section) => section.courses.length > 0 || section.section_title.toLowerCase().includes(normalizedSearch));
   }, [roadmapCourses, searchTerm]);
 
+  const courseStatusById: Partial<Record<string, "enrolled" | "completed">> = {};
+
+  for (const course of courseProgress.current) {
+    courseStatusById[course.id] = "enrolled";
+  }
+
+  for (const course of courseProgress.completed) {
+    courseStatusById[course.id] = "completed";
+  }
+
   const totalTopics = filteredSections.length;
   const totalCourses = filteredSections.reduce((acc, section) => acc + section.courses.length, 0);
-  const completedCount = 0;
+  const completedCount = filteredSections.reduce(
+    (acc, section) =>
+      acc + section.courses.filter((course) => courseStatusById[course.id] === "completed").length,
+    0,
+  );
 
   const handleCourseClick = (course: RoadmapCoursesRead["sections"][number]["courses"][number]) => {
-    window.open(course.url, "_blank", "noopener,noreferrer");
-    setPendingEnrollmentCourse(course);
-  };
-
-  const confirmEnrollment = () => {
-    if (!pendingEnrollmentCourse) {
+    if (courseStatusById[course.id] === "enrolled") {
+      setActivePopupCourse(course);
+      setActivePopupMode("complete");
       return;
     }
 
-    enrollCourse({
-      id: pendingEnrollmentCourse.id,
-      title: pendingEnrollmentCourse.title,
-      provider: pendingEnrollmentCourse.provider,
-    });
+    if (courseStatusById[course.id] === "completed") {
+      window.open(course.url, "_blank", "noopener,noreferrer");
+      return;
+    }
 
-    setPendingEnrollmentCourse(null);
+    window.open(course.url, "_blank", "noopener,noreferrer");
+    setActivePopupCourse(course);
+    setActivePopupMode("enroll");
+  };
+
+  const confirmEnrollment = () => {
+    if (!activePopupCourse) {
+      return;
+    }
+
+    const nextProgress = enrollCourse(
+      {
+        id: activePopupCourse.id,
+        title: activePopupCourse.title,
+        provider: activePopupCourse.provider,
+        url: activePopupCourse.url,
+      },
+      user?.id,
+    );
+
+    setCourseProgress(nextProgress);
+    setActivePopupMode("complete");
+  };
+
+  const confirmCompletion = () => {
+    if (!activePopupCourse) {
+      return;
+    }
+
+    const nextProgress = completeCourse(activePopupCourse.id, user?.id);
+    setCourseProgress(nextProgress);
+    setActivePopupCourse(null);
+    setActivePopupMode(null);
+  };
+
+  const handleContinueCourse = () => {
+    if (activePopupCourse?.url) {
+      window.open(activePopupCourse.url, "_blank", "noopener,noreferrer");
+    }
+
+    setActivePopupCourse(null);
+    setActivePopupMode(null);
   };
 
   if (isLoading) {
@@ -164,7 +248,7 @@ export default function CourseLibraryPage() {
     <div
       style={{
         width: "100%",
-        padding: "20px 40px",
+        padding: "50px 40px",
         color: "white",
         boxSizing: "border-box",
         display: "flex",
@@ -179,7 +263,7 @@ export default function CourseLibraryPage() {
               {roadmapCourses?.roadmap_title || "Courses"}
             </h1>
 
-            <div style={{ position: "relative", width: "280px" }}>
+            <div style={{ position: "relative", width: "300px",marginLeft: "auto" }}>
               <input
                 type="text"
                 placeholder="search"
@@ -187,16 +271,16 @@ export default function CourseLibraryPage() {
                 onChange={(event) => setSearchTerm(event.target.value)}
                 style={{
                   width: "100%",
-                  backgroundColor: "rgba(234, 18, 18, 0.05)",
+                  backgroundColor: "transparent",
                   border: "1px solid rgb(255, 255, 255)",
-                  borderRadius: "20px",
-                  padding: "8px 45px 8px 15px",
+                  borderRadius: "18px",
+                  padding: "8px 15px 8px 15px",
                   color: "white",
                   outline: "none",
                 }}
               />
               <img
-                src="/cv/search.svg"
+                src="/global/search.svg"
                 alt="search"
                 style={{
                   position: "absolute",
@@ -210,46 +294,56 @@ export default function CourseLibraryPage() {
             </div>
           </div>
 
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "35px" }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "35px", alignItems: "center" }}>
+            
+            {/* 1. Total Topics */}
             <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-              <div style={{ width: "2px", height: "35px", backgroundColor: "#D4FF47" }} />
+              <div style={{ width: "2px", height: "35px", backgroundColor: "#E6FFB2" }} />
               <div>
                 <span style={{ fontSize: "15px", fontWeight: "bold" }}>{totalTopics} topics</span>
                 <br />
                 <span style={{ fontSize: "11px", opacity: 0.6 }}>- by Top Courses</span>
               </div>
             </div>
+
+            {/* 2. Total Courses */}
             <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-              <div style={{ width: "2px", height: "35px", backgroundColor: "#D4FF47" }} />
+              <div style={{ width: "2px", height: "35px", backgroundColor: "#E6FFB2" }} />
               <div>
                 <span style={{ fontSize: "15px", fontWeight: "bold" }}>{totalCourses} courses</span>
                 <br />
                 <span style={{ fontSize: "11px", opacity: 0.6 }}>- by Top Courses</span>
               </div>
             </div>
+
+            {/* 3. Courses Completed (The new unified style) */}
+            <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+              <div style={{ width: "2px", height: "35px", backgroundColor: "#E6FFB2" }} />
+              <div>
+                <span style={{ fontSize: "15px", fontWeight: "bold" }}>
+                  <span style={{ color: "#D4FF47" }}>{completedCount}</span>
+                  <span style={{ opacity: 0.7 }}>/{totalCourses}</span> Completed
+                </span>
+                <br />
+                <span style={{ fontSize: "11px", opacity: 0.6 }}>- Your Progress</span>
+              </div>
+            </div>
+
           </div>
         </div>
 
-        <div style={{ backgroundColor: "#1E3A8A", padding: "20px 30px", borderRadius: "20px", minWidth: "170px" }}>
-          <span style={{ fontSize: "13px", opacity: 0.8 }}>Courses Completed</span>
-          <div style={{ display: "flex", alignItems: "center", gap: "12px", marginTop: "8px" }}>
-            <div style={{ width: "3px", height: "40px", backgroundColor: "#D4FF47" }} />
-            <h2 style={{ margin: 0, fontSize: "34px" }}>
-              <span style={{ color: "#D4FF47" }}>{completedCount}</span>
-              <span style={{ fontSize: "20px", opacity: 0.7 }}> /{totalCourses}</span>
-            </h2>
+      
           </div>
-        </div>
-      </div>
-
-      <hr
-        style={{
-          border: "none",
-          height: "1px",
-          backgroundColor: "rgba(255,255,255,0.1)",
-          marginBottom: "35px",
-        }}
-      />
+        
+        <hr
+          style={{
+            border: "none",
+            borderTop: "2px solid rgba(255, 251, 251, 0.72)", 
+            marginBottom: "20px",
+            opacity: 1, // 3ashan n-ensure eno msh faded
+            width: "100%"
+          }}
+        />
 
       <div style={{ display: "flex", flexDirection: "column", gap: "45px" }}>
         {filteredSections.length ? (
@@ -258,7 +352,11 @@ export default function CourseLibraryPage() {
               <h3 style={{ fontSize: "20px", marginBottom: "40px", fontWeight: "400" }}>
                 {section.section_title}:
               </h3>
-              <CourseCards courses={section.courses} onCourseClick={handleCourseClick} />
+              <CourseCards
+                courses={section.courses}
+                onCourseClick={handleCourseClick}
+                statusByCourseId={courseStatusById}
+              />
             </div>
           ))
         ) : (
@@ -275,12 +373,17 @@ export default function CourseLibraryPage() {
         )}
       </div>
 
-      {pendingEnrollmentCourse ? (
+      {activePopupCourse && activePopupMode ? (
         <CourseActionPopup
-          mode="enroll"
-          courseTitle={pendingEnrollmentCourse.title}
-          onConfirm={confirmEnrollment}
-          onCancel={() => setPendingEnrollmentCourse(null)}
+          mode={activePopupMode}
+          courseTitle={activePopupCourse.title}
+          courseOrg={activePopupCourse.provider}
+          onConfirm={activePopupMode === "enroll" ? confirmEnrollment : confirmCompletion}
+          onCancel={() => {
+            setActivePopupCourse(null);
+            setActivePopupMode(null);
+          }}
+          onContinue={activePopupMode === "complete" ? handleContinueCourse : undefined}
         />
       ) : null}
     </div>

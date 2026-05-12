@@ -28,8 +28,8 @@ export const RectangularCard = ({
 }) => {
     const [isHovered, setIsHovered] = useState(false);
 
-    const baseBg = theme === "dark" ? "#1C427B" : "#C1CBE6";
-    const hoverBg = "var(--hover-green)";
+    const baseBg = theme === "dark" ? "var(--medium-blue)" : "#C1CBE6";
+    const hoverBg = "var(--light-green)";
 
     const active = isHovered || selected;
 
@@ -37,34 +37,6 @@ export const RectangularCard = ({
 
     const textColor =
         theme === "dark" && !active ? "white" : "black";
-
-    const RadioIndicator = () => (
-        <div
-            style={{
-                position: "relative",
-                height: "1rem",
-                width: "1rem",
-                borderRadius: "999px",
-                border: `2px solid ${textColor}`,
-                boxSizing: "border-box",
-            }}
-        >
-            {selected && (
-                <div
-                    style={{
-                        position: "absolute",
-                        top: "50%",
-                        left: "50%",
-                        transform: "translate(-50%, -50%)",
-                        width: "0.5rem",
-                        height: "0.5rem",
-                        borderRadius: "999px",
-                        backgroundColor: textColor,
-                    }}
-                />
-            )}
-        </div>
-    );
 
     return (
         <div
@@ -101,7 +73,7 @@ export const RectangularCard = ({
                     style={{
                         color: textColor,
                         fontSize: "0.8rem",
-                        maxWidth: "30ch",
+                        maxWidth: variant === "normal"?"30ch":"fit-content",
                         textAlign: "center",
                         whiteSpace: variant === "radio" ? "nowrap" : "normal",
                         marginRight:"auto",
@@ -127,8 +99,6 @@ export const RectangularCard = ({
                 )}
             </div>
 
-            {/* Radio indicator */}
-            {variant === "radio" && <RadioIndicator />}
         </div>
     );
 };

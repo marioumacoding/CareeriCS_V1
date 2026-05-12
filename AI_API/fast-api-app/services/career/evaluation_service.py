@@ -1,9 +1,10 @@
 import json
-from typing import Any, List, Dict
+import re
+from typing import Any, List, Dict, Optional
 from sqlalchemy.orm import Session
 from uuid import UUID, uuid4
 
-from db.models import CareerTrackResult, CareerTrack
+from db.models import CareerTrackResult, CareerTrack, Roadmap
 from .answer_service import get_questions_and_answers_for_session
 from .card_service import get_selected_cards
 
@@ -11,17 +12,44 @@ from ai.prompts import career_quiz_evaluation_prompt
 from ai.completion import deepseek_response
 
 
-def _serialize_track_scores(scores: List[Dict[str, Any]], track_map: Dict[str, CareerTrack]):
+def _normalize_label(value: str) -> str:
+    normalized = re.sub(r"[^a-z0-9]+", " ", value.lower()).strip()
+    return re.sub(r"\s+roadmap$", "", normalized).strip()
+
+
+def _resolve_roadmap_id(track_name: str, roadmaps: List[Roadmap]) -> Optional[UUID]:
+    normalized_track_name = _normalize_label(track_name)
+
+    for roadmap in roadmaps:
+        normalized_roadmap_title = _normalize_label(roadmap.title)
+        if normalized_track_name == normalized_roadmap_title:
+            return roadmap.id
+
+    for roadmap in roadmaps:
+        normalized_roadmap_title = _normalize_label(roadmap.title)
+        if normalized_track_name in normalized_roadmap_title or normalized_roadmap_title in normalized_track_name:
+            return roadmap.id
+
+    return None
+
+
+def _serialize_track_scores(
+    scores: List[Dict[str, Any]],
+    track_map: Dict[str, CareerTrack],
+    roadmaps: List[Roadmap],
+):
     serialized = []
 
     for item in scores:
         track_id = str(item["track_id"])
         track = track_map.get(track_id)
+        roadmap_id = _resolve_roadmap_id(track.name, roadmaps) if track else None
 
         serialized.append({
             "track_id": track_id,
             "track_name": track.name if track else "Unknown Track",
             "track_description": track.description if track else None,
+            "roadmap_id": roadmap_id,
             "score": int(item["score"]),
         })
 
@@ -41,6 +69,7 @@ def evaluate_career_track(db: Session, session_id: str) -> Dict[str, Any]:
     raw_answers = get_questions_and_answers_for_session(db, session_id)
     selected_cards = get_selected_cards(db, session_id)
     tracks = db.query(CareerTrack).all()
+    roadmaps = db.query(Roadmap).all()
     track_map = {str(track.id): track for track in tracks}
 
     # -------------------------
@@ -111,7 +140,7 @@ def evaluate_career_track(db: Session, session_id: str) -> Dict[str, Any]:
         raise e
 
     return {
-        "track_scores": _serialize_track_scores(normalized_results, track_map)
+        "track_scores": _serialize_track_scores(normalized_results, track_map, roadmaps)
     }
 
 
@@ -129,6 +158,7 @@ def get_career_track_results(db: Session, session_id: str) -> Dict[str, Any]:
 
     track_ids = [result.track_id for result in track_results]
     tracks = db.query(CareerTrack).filter(CareerTrack.id.in_(track_ids)).all()
+    roadmaps = db.query(Roadmap).all()
     track_map = {str(track.id): track for track in tracks}
 
     serialized_results = [
@@ -140,7 +170,7 @@ def get_career_track_results(db: Session, session_id: str) -> Dict[str, Any]:
     ]
 
     return {
-        "track_scores": _serialize_track_scores(serialized_results, track_map)
+        "track_scores": _serialize_track_scores(serialized_results, track_map, roadmaps)
     }
 
 

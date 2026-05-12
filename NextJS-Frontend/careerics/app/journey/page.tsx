@@ -1,267 +1,170 @@
 "use client";
 
-import React, { useState } from "react";
-import JourneyButton from "@/components/ui/journey-button";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+
+import JourneyTree from "@/components/ui/journey-tree";
+import { useAuth } from "@/providers/auth-provider";
+import {
+  buildJourneyFirstPhaseHref,
+  buildJourneyPhaseHref,
+  loadJourneyTrackCards,
+  persistSelectedJourneyTrackId,
+  readJourneyPhaseState,
+  readSelectedJourneyTrackId,
+} from "@/lib/journey";
 
 export default function JourneyPage() {
-  const [selected, setSelected] = useState("sections");
+  const router = useRouter();
+  const { user, isLoading: isAuthLoading } = useAuth();
+  const userId = user?.id ?? null;
 
-  const courses = [
-    {
-      topic: "Frontend Basics",
-      courses: [
-        { name: "HTML Fundamentals", org: "FreeCodeCamp" },
-        { name: "CSS Layouts", org: "Coursera" },
-        { name: "JavaScript Basics", org: "Udemy" },
-        { name: "Responsive Design", org: "Meta" },
-      ],
-    },
-    {
-      topic: "React",
-      courses: [
-        { name: "React Fundamentals", org: "Meta" },
-        { name: "React Hooks", org: "Scrimba" },
-        { name: "State Management", org: "Frontend Masters" },
-      ],
-    },
-  ];
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const skills = [
-    { id: 1, name: "HTML" },
-    { id: 2, name: "CSS" },
-    { id: 3, name: "JavaScript" },
-    { id: 4, name: "React" },
-    { id: 5, name: "Next.js" },
-    { id: 6, name: "TypeScript" },
-    { id: 7, name: "Node.js" },
-  ];
+  useEffect(() => {
+    let alive = true;
 
-  return (
-    <div
-      style={{
-        width: "100%",
-        height: "100vh",
-        display: "flex",
-      }}
-    >
-      {/* ================= LEFT PANEL ================= */}
-      <div
-        style={{
-          width: "30%",
-          height: "fit-content",
-          marginRight: "2vh",
-          paddingInline: "10px",
-          display: "block",
-        }}
-      >
-        <h1 style={{ color: "white", fontSize: "24px", marginBottom: "2vh" }}>
-          Quick Stats
-        </h1>
+    const redirectToTrackJourney = async () => {
+      if (isAuthLoading) {
+        return;
+      }
 
-        {/* Stats Card */}
-        <div
-          style={{
-            width: "100%",
-            backgroundColor: "#1C427B",
-            borderRadius: "4vh",
-            padding: "20px",
-            display: "flex",
-            flexDirection: "column",
-            gap: "1vh",
-          }}
-        >
-          <h1 style={{ color: "white" }}>Current Level</h1>
+      if (!userId) {
+        if (!alive) {
+          return;
+        }
 
-          <div style={{ display: "flex", alignItems: "stretch", gap: "1vh" }}>
-            <div
-              style={{
-                width: "1vh",
-                backgroundColor: "#E6FFB2",
-                borderRadius: "1vh",
-              }}
-            />
-            <h1 style={{ color: "white", margin: 0 }}>Beginner</h1>
-          </div>
+        setIsLoading(false);
+        setError("Please sign in to continue your journey.");
+        return;
+      }
 
-          <h1 style={{ color: "white", marginTop: "3vh" }}>
-            Roadmap Progress
-          </h1>
+      setIsLoading(true);
+      setError(null);
 
+      try {
+        const tracks = await loadJourneyTrackCards(userId);
+
+        if (!alive) {
+          return;
+        }
+
+        if (!tracks.length) {
+          setIsLoading(false);
+          setError("No journey track found. Start with the career quiz from Home.");
+          return;
+        }
+
+        const persistedTrackId = readSelectedJourneyTrackId(userId);
+        const activeTrack =
+          tracks.find((track) => track.id === persistedTrackId) || tracks[0];
+
+        persistSelectedJourneyTrackId(activeTrack.id, userId);
+
+        if (!alive) {
+          return;
+        }
+
+        const phaseState = readJourneyPhaseState(activeTrack.id, userId);
+        router.replace(buildJourneyPhaseHref(phaseState.maxReached, activeTrack.id));
+      } catch {
+        if (!alive) {
+          return;
+        }
+
+        setIsLoading(false);
+        setError("Unable to load your journey right now.");
+      }
+    };
+
+    void redirectToTrackJourney();
+
+    return () => {
+      alive = false;
+    };
+  }, [isAuthLoading, router, userId]);
+
+  if (isLoading) {
+    return (
+      <JourneyTree
+        current={1}
+        maxReached={1}
+        renderContent={() => (
           <div
             style={{
               width: "100%",
-              height: "2vh",
-              backgroundColor: "#131F3F",
-              borderRadius: "1vh",
-            }}
-          >
-            <div
-              style={{
-                width: "30%",
-                height: "100%",
-                backgroundColor: "#E6FFB2",
-                borderRadius: "1vh",
-              }}
-            />
-          </div>
-
-          {/* Completed */}
-          <div style={{ display: "flex", gap: "1vh", marginTop: "3vh" }}>
-            <div
-              style={{
-                width: "1vh",
-                backgroundColor: "#E6FFB2",
-                borderRadius: "1vh",
-              }}
-            />
-            <div>
-              <h1 style={{ color: "#E6FFB2", margin: 0, fontSize: "24px" }}>
-                10
-              </h1>
-              <h1 style={{ color: "white", margin: 0 }}>
-                Completed Topics
-              </h1>
-            </div>
-          </div>
-
-          {/* Remaining */}
-          <div style={{ display: "flex", gap: "1vh", marginTop: "3vh" }}>
-            <div
-              style={{
-                width: "1vh",
-                backgroundColor: "#FFB2B2",
-                borderRadius: "1vh",
-              }}
-            />
-            <div>
-              <h1 style={{ color: "#FFB2B2", margin: 0, fontSize: "24px" }}>
-                10
-              </h1>
-              <h1 style={{ color: "white", margin: 0 }}>
-                Remaining Topics
-              </h1>
-            </div>
-          </div>
-        </div>
-
-        {/* ================= SKILLS ================= */}
-        <div>
-          <h1
-            style={{
-              color: "white",
-              fontSize: "24px",
-              marginTop: "3vh",
-              marginBottom: "2vh",
-            }}
-          >
-            Test Your Skills
-          </h1>
-
-          {selected === "sections" && (
-            <JourneyButton
-              course="Take Assessment"
-              icon="/sidebar/CV.svg"
-            />
-          )}
-        </div>
-
-        {selected === "steps" && (
-          <div
-            style={{
-              width: "100%",
-              padding: "20px",
-              backgroundColor: "#1C427B",
-              borderRadius: "4vh",
+              height: "100%",
               display: "flex",
-              flexDirection: "column",
-              gap: "2vh",
+              justifyContent: "center",
+              alignItems: "center",
+              color: "white",
+              fontFamily: "var(--font-nova-square)",
             }}
           >
-            {skills.map((skill) => (
-              <button
-                key={skill.id}
-                style={{
-                  width: "100%",
-                  backgroundColor: "#C1CBE6",
-                  padding: "10px",
-                  borderRadius: "2vh",
-                  border: "none",
-                  cursor: "pointer",
-                  transition: "0.2s ease",
-                  fontFamily: "var(--font-jura)",
-                  fontWeight: "bold",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = "#E6FFB2";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = "#C1CBE6";
-                }}
-              >
-                {skill.name}
-              </button>
-            ))}
+            Loading your journey...
           </div>
         )}
-      </div>
+      />
+    );
+  }
 
-      {/* ================= RIGHT PANEL ================= */}
-      <div
-        style={{
-          width: "100%",
-          height: "100%",
-          paddingInline: "10px",
-        }}
-      >
-        <h1 style={{ color: "white", fontSize: "24px", marginBottom: "2vh" }}>
-          Roadmap
-        </h1>
-
+  return (
+    <JourneyTree
+      current={1}
+      maxReached={1}
+      resolvePhasePath={(phase) => buildJourneyPhaseHref(phase)}
+      renderContent={() => (
         <div
           style={{
             width: "100%",
-            height: "54vh",
-            backgroundColor: "#C1CBE6",
-            borderRadius: "4vh",
-            padding: "20px",
+            height: "100%",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+            alignItems: "center",
+            color: "white",
+            padding: "40px",
+            textAlign: "center",
+            gap: "1rem",
           }}
-        />
-
-        {/* ================= COURSES ================= */}
-        {courses.map((topicItem, topicIndex) => (
-          <div key={topicIndex}>
-            <h1
-              style={{
-                color: "white",
-                fontSize: "24px",
-                marginTop: "3vh",
-                marginBottom: "2vh",
-              }}
-            >
-              Courses - {topicItem.topic}
-            </h1>
-
-            <div
-              style={{
-                width: "100%",
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-                gap: "4vh",
-              }}
-            >
-              {topicItem.courses.map((course, courseIndex) => (
-                <JourneyButton
-                  key={courseIndex}
-                  course={course.name}
-                  organization={course.org}
-                  icon="/interview/download.svg"
-                  variant="secondary"
-                />
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
+        >
+          <h1 style={{ margin: 0, fontSize: "1.6rem" }}>Journey Not Ready Yet</h1>
+          <p style={{ margin: 0, color: "#C1CBE6", maxWidth: "60ch" }}>
+            {error || "Start your journey from Home by selecting a career track."}
+          </p>
+          <button
+            type="button"
+            onClick={() => router.push("/features/home")}
+            style={{
+              border: "none",
+              borderRadius: "2vh",
+              backgroundColor: "var(--light-green)",
+              color: "black",
+              padding: "0.9rem 1.6rem",
+              fontFamily: "var(--font-nova-square)",
+              cursor: "pointer",
+            }}
+          >
+            Go To Home
+          </button>
+          <button
+            type="button"
+            onClick={() => router.push(buildJourneyFirstPhaseHref())}
+            style={{
+              border: "1px solid #C1CBE6",
+              borderRadius: "2vh",
+              backgroundColor: "transparent",
+              color: "white",
+              padding: "0.8rem 1.4rem",
+              fontFamily: "var(--font-nova-square)",
+              cursor: "pointer",
+            }}
+          >
+            Open Empty Journey View
+          </button>
+        </div>
+      )}
+    />
   );
 }

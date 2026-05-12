@@ -5,6 +5,9 @@ import { Button } from "@/components/ui/button";
 import { careerService } from "@/services";
 import type { APICareerCardRead, APICareerCardSelectionItem } from "@/types";
 
+const MIN_CARDS_PER_STEP = 3;
+const MAX_CARDS_PER_STEP = 5;
+
 export default function HobbiesGrid() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -65,29 +68,54 @@ export default function HobbiesGrid() {
 
   const currentCards = step === 0 ? hobbyCards : technicalCards;
   const currentTitle = step === 0
-    ? "Choose Your Favorite Hobbies"
-    : "Choose Your Favorite Technical Skills";
+    ? "Choose Your Favorite interests"
+    : "Choose Your Favorite strengths";
   const currentSubtitle = step === 0
-    ? "Step 1 of 2: Select at least one hobby"
-    : "Step 2 of 2: Select at least one technical skill";
-
+    ? "Step 1 of 2: Select between 3 and 5 interests"
+    : "Step 2 of 2: Select between 3 and 5 strengths";
   const currentSelectionIds = step === 0 ? selectedHobbyIds : selectedTechnicalIds;
 
   const selectedSummary = useMemo(() => {
-    return `${selectedHobbyIds.length} hobbies • ${selectedTechnicalIds.length} technical skills selected`;
-  }, [selectedHobbyIds.length, selectedTechnicalIds.length]);
+    if (step === 0) {
+      return `${selectedHobbyIds.length} interests selected`;
+    }
+
+    return `${selectedTechnicalIds.length} strengths selected`;
+  }, [selectedHobbyIds.length, selectedTechnicalIds.length, step]);
 
   const toggleCard = (cardId: string) => {
     if (step === 0) {
-      setSelectedHobbyIds((prev) =>
-        prev.includes(cardId) ? prev.filter((id) => id !== cardId) : [...prev, cardId],
-      );
+      setSelectedHobbyIds((prev) => {
+        if (prev.includes(cardId)) {
+          setError(null);
+          return prev.filter((id) => id !== cardId);
+        }
+
+        if (prev.length >= MAX_CARDS_PER_STEP) {
+          setError(`You can select up to ${MAX_CARDS_PER_STEP} interests.`);
+          return prev;
+        }
+
+        setError(null);
+        return [...prev, cardId];
+      });
       return;
     }
 
-    setSelectedTechnicalIds((prev) =>
-      prev.includes(cardId) ? prev.filter((id) => id !== cardId) : [...prev, cardId],
-    );
+    setSelectedTechnicalIds((prev) => {
+      if (prev.includes(cardId)) {
+        setError(null);
+        return prev.filter((id) => id !== cardId);
+      }
+
+      if (prev.length >= MAX_CARDS_PER_STEP) {
+        setError(`You can select up to ${MAX_CARDS_PER_STEP} strengths.`);
+        return prev;
+      }
+
+      setError(null);
+      return [...prev, cardId];
+    });
   };
 
   const handleBack = () => {
@@ -104,8 +132,13 @@ export default function HobbiesGrid() {
       return;
     }
 
-    if (!selectedHobbyIds.length || !selectedTechnicalIds.length) {
-      setError("Please select at least one hobby and at least one technical skill.");
+    if (selectedHobbyIds.length < MIN_CARDS_PER_STEP) {
+      setError("Choose at least 3 interests to continue.");
+      return;
+    }
+
+    if (selectedTechnicalIds.length < MIN_CARDS_PER_STEP) {
+      setError("Choose at least 3 strengths to continue.");
       return;
     }
 
@@ -130,8 +163,8 @@ export default function HobbiesGrid() {
 
   const handleNext = () => {
     if (step === 0) {
-      if (!selectedHobbyIds.length) {
-        setError("Choose at least one hobby to continue.");
+      if (selectedHobbyIds.length < MIN_CARDS_PER_STEP) {
+        setError("Choose at least 3 interests to continue.");
         return;
       }
       setError(null);
@@ -142,19 +175,21 @@ export default function HobbiesGrid() {
     void submitSelections();
   };
 
-  const isCurrentStepValid = currentSelectionIds.length > 0;
-
+const isCurrentStepValid = currentSelectionIds.length >= 3 ;
   return (
     <div
       style={{
-        width: "100%",
+        width: "90%", // Zabatt de men 1000% le 100% 3ashan el layout
         minHeight: "100%",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        padding: "1.5rem",
+        padding: "1rem",
         boxSizing: "border-box",
+        position: "relative",
+        left: "6vw",
+        marginTop: "10vh",
       }}
     >
       <div
@@ -166,7 +201,7 @@ export default function HobbiesGrid() {
           gap: "1rem",
         }}
       >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem", flexWrap: "wrap",position: "relative", left: "6vw" }}>
           <div>
             <h1
               style={{
@@ -174,6 +209,7 @@ export default function HobbiesGrid() {
                 fontSize: "clamp(1.6rem, 3.2vw, 2.4rem)",
                 fontFamily: "var(--font-nova-square)",
                 margin: 0,
+
               }}
             >
               {currentTitle}
@@ -187,12 +223,14 @@ export default function HobbiesGrid() {
             style={{
               background: "rgba(184, 239, 70, 0.15)",
               border: "1px solid rgba(184, 239, 70, 0.35)",
-              color: "#E6FFB2",
+              color: "var(--light-green)",
               borderRadius: "999px",
               padding: "0.5rem 0.9rem",
               fontSize: "0.9rem",
               fontWeight: 700,
               whiteSpace: "nowrap",
+              position: "relative",
+              right: "4vw",
             }}
           >
             {selectedSummary}
@@ -207,13 +245,16 @@ export default function HobbiesGrid() {
 
         <div
           style={{
-            background: "linear-gradient(180deg, #1F2A44 0%, #131A2D 100%)",
+            background: "#BABABA",
             borderRadius: "1.6rem",
-            width: "100%",
-            minHeight: "22rem",
-            padding: "1.1rem",
+            width: "85%",
+            height: "100%",
+            // minHeight: "fit-content",
+            padding: "2rem",
             border: "1px solid rgba(255, 255, 255, 0.08)",
             boxSizing: "border-box",
+            position: "relative",
+            left: "5vw",
           }}
         >
           {isLoadingCards ? (
@@ -227,9 +268,10 @@ export default function HobbiesGrid() {
           ) : (
             <div
               style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
-                gap: "0.9rem",
+                display: "flex",
+                flexWrap: "wrap",
+                gap: "1.4rem",
+                justifyContent: "flex-start",
               }}
             >
               {currentCards.map((card) => {
@@ -240,22 +282,29 @@ export default function HobbiesGrid() {
                     type="button"
                     onClick={() => toggleCard(card.id)}
                     style={{
+                      width:"0",
+                      minWidth:"fit-content",
                       backgroundColor: isSelected ? "#E6FFB2" : "#1C427B",
                       color: isSelected ? "#111827" : "#F9FAFB",
                       border: isSelected ? "1px solid #D9FF8F" : "1px solid rgba(255, 255, 255, 0.12)",
-                      borderRadius: "0.95rem",
-                      padding: "0.95rem 0.85rem",
-                      textAlign: "left",
+                      borderRadius: "1rem",
+                      padding: "0.7rem 1.2rem",
+                      textAlign: "center",
                       cursor: "pointer",
                       transition: "all 0.2s ease",
-                      minHeight: "4.2rem",
-                      fontSize: "0.95rem",
-                      fontWeight: 700,
+                      minHeight: "3rem",
+                      fontSize: "1rem",
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "center",
+                      alignItems: "center",
+                      whiteSpace:"normal",
+                      flex:1
                     }}
                   >
                     <div>{card.name}</div>
                     {card.description ? (
-                      <div style={{ marginTop: "0.35rem", fontSize: "0.78rem", fontWeight: 500, opacity: 0.8 }}>
+                      <div style={{ marginTop: "0.2rem", fontSize: "0.75rem", fontWeight: 500, opacity: 0.8 }}>
                         {card.description}
                       </div>
                     ) : null}
@@ -266,35 +315,53 @@ export default function HobbiesGrid() {
           )}
         </div>
 
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.75rem" }}>
-          <Button
-            type="button"
-            onClick={handleBack}
-            style={{
-              backgroundColor: "#C1CBE6",
-              color: "#111827",
-              borderRadius: "0.8rem",
-              padding: "0.75rem 1.35rem",
-              fontWeight: 700,
-            }}
-          >
-            {step === 0 ? "Back" : "Previous"}
-          </Button>
+          <div style={{ 
+          display: "flex", 
+          justifyContent: "space-between", 
+          alignItems: "center", 
+          gap: "0.75rem", 
+          width: "100%",
+          marginTop: "1rem" 
+        }}>
+          {step !== 0 ? (
+            <Button
+              variant="primary-inverted"
+              type="button"
+              onClick={handleBack}
+              style={{
+                color: "#111827",
+                borderRadius: "0.8rem",
+                padding: "0.75rem 1.35rem",
+                fontWeight: 700,
+                height: "6.5vh",
+                width: "20%", 
+                flex: "none"  
+              }}
+            >
+              Previous
+            </Button>
+          ) : (
+            // Optional: Add an empty div if you want to keep the "Next" button pushed to the right
+            <div style={{ width: "20%" }} /> 
+          )}
 
           <Button
+            variant="primary"
             type="button"
             onClick={handleNext}
             disabled={isLoadingCards || !isCurrentStepValid || isSubmitting}
             style={{
-              backgroundColor: "#B8EF46",
               color: "#111827",
               borderRadius: "0.8rem",
               padding: "0.75rem 1.35rem",
               fontWeight: 800,
+              width: "20%", 
+              height: "6.5vh",
+              flex: "none",   
               opacity: isLoadingCards || !isCurrentStepValid || isSubmitting ? 0.55 : 1,
             }}
           >
-            {step === 0 ? "Continue to Technical" : isSubmitting ? "Saving..." : "Start Questions"}
+            {step === 0 ? "Continue to Strengths" : isSubmitting ? "Saving..." : "Start Questions"}
           </Button>
         </div>
       </div>

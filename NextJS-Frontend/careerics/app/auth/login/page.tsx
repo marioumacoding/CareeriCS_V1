@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { authService } from "@/services/auth.service";
-import AuthLayout from "@/app/auth/layout";
+import { resolvePostAuthPath } from "@/lib/auth/post-auth-redirect";
 import InputField from "@/components/ui/input-field";
 import { Button } from "@/components/ui/button"
 import AlertMessage from "@/components/ui/alert-message";
@@ -19,7 +19,10 @@ export default function Login() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const callbackUrl = "/features/home";
+  const redirectTo = resolvePostAuthPath({
+    redirect: searchParams.get("redirect"),
+    callbackUrl: searchParams.get("callbackUrl"),
+  });
 
   // -- Form state --
   const [email, setEmail] = useState("");
@@ -49,10 +52,10 @@ export default function Login() {
       // localStorage session is read fresh by the AuthProvider on mount.
       // This avoids the race condition where ProtectedRoute checks auth
       // before onAuthStateChange has fired.
-      window.location.href = callbackUrl;
-    } catch (err: any) {
+      window.location.href = redirectTo;
+    } catch (err: unknown) {
       console.error("[Login] sign-in error:", err);
-      setError(err.message ?? "Login failed. Please check your credentials.");
+      setError(err instanceof Error ? err.message : "Login failed. Please check your credentials.");
     } finally {
       setLoading(false);
     }
@@ -60,10 +63,10 @@ export default function Login() {
 
   async function handleGoogleLogin() {
     try {
-      await authService.signInWithGoogle(callbackUrl);
+      await authService.signInWithGoogle(redirectTo);
       // Supabase redirects to Google — no further code runs here
-    } catch (err: any) {
-      setError(err.message ?? "Google login failed.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Google login failed.");
     }
   }
 
@@ -144,7 +147,7 @@ export default function Login() {
             onClick={handleGoogleLogin}
             style={{  whiteSpace: "nowrap" }}
           >
-            <img src="/auth/Google.svg" alt="Google" style={{ height: "4vh" }} />
+            <img src="/auth/google.svg" alt="Google" style={{ height: "3vh" }} />
             Continue with Google
           </Button>
         </div>

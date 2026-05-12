@@ -4,10 +4,14 @@ import { useRouter } from "next/navigation";
 import ChoiceCard from "@/components/ui/choice-card-career";
 import { useAuth } from "@/providers/auth-provider";
 import { careerService } from "@/services";
+import {
+  buildCareerQuizSelectionHref,
+  startCareerQuizSession,
+} from "@/lib/career-quiz";
 import type { APICareerTrack } from "@/types";
 import { CareerCardsContainer } from "@/components/ui/career-cards-container";
+import TipCard from "@/components/ui/3ateyat";
 
-const CARD_IMAGE_PATH = "/Landing/Rectangle.svg";
 const VISIBLE_TRACKS_COUNT = 4;
 const TRACK_DESCRIPTION_FALLBACK =
   "Explore this path and see what the day-to-day work, opportunities, and growth can look like.";
@@ -86,22 +90,24 @@ export default function CareerDiscoveryPage() {
 
     if (!user?.id) {
       setStartError("Please sign in first to start the career quiz.");
-      router.push("/auth/login?callbackUrl=/features/career");
+      router.push("/auth/login?redirect=/features/career");
       return;
     }
 
     setStartError(null);
     setIsStartingQuiz(true);
 
-    const response = await careerService.createSession({ user_id: user.id });
-
-    if (!response.success || !response.data?.id) {
+    try {
+      const sessionId = await startCareerQuizSession(user.id);
+      router.push(buildCareerQuizSelectionHref(sessionId));
+    } catch (error) {
       setIsStartingQuiz(false);
-      setStartError(response.message || "Unable to start the quiz right now. Please try again.");
-      return;
+      setStartError(
+        error instanceof Error
+          ? error.message
+          : "Unable to start the quiz right now. Please try again.",
+      );
     }
-
-    router.push(`/quiz-features/hobbies?sessionId=${encodeURIComponent(response.data.id)}`);
   };
 
   return (
@@ -126,60 +132,38 @@ export default function CareerDiscoveryPage() {
           height: "100%",
         }}
       >
-        {/* Quiz Banner */}
-        <div style={{ gridArea: "1 / 1 / 3 / 7" }}>
-          <div
-            onClick={() => {
+        <TipCard
+          variant="feature"
+          onclick={() => {
               void handleStartQuiz();
             }}
+          style={{
+            gridArea: "1 / 1 / 3 / 7",
+            backgroundColor: "var(--dark-blue)"
+          }}
+          icon="/tracks/career-quiz.svg"
+          title="Start career quiz"
+          description={
+            "Choose your favorite hobbies and activities,then answer a few personalized questions.\n" +
+            "Just like that, you’ll get your best fit career choices."
+          }        >
+
+        </TipCard>
+
+        {startError ? (
+          <p
             style={{
-              backgroundColor: "#142143",
-              borderRadius: "4vh",
-              paddingBlock: "1rem",
-              paddingLeft: "3rem",
-              paddingRight: "2rem",
-              color: "white",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              cursor: isStartingQuiz || isAuthLoading ? "wait" : "pointer",
-              height: "100%",
-              opacity: isStartingQuiz ? 0.8 : 1,
+              gridArea: "2 / 1 / 3 / 7",
+              margin: 0,
+              color: "#FFD3D3",
+              fontFamily: "var(--font-jura)",
+              fontSize: "0.95rem",
+              alignSelf: "end",
             }}
           >
-            <div>
-              <h2
-                style={{
-                  fontSize: "1.2rem",
-                  marginBottom: "1.5vh",
-                  fontFamily: "var(--font-nova-square)",
-                }}
-              >
-                Start career quiz
-              </h2>
-
-              <p
-                style={{
-                  fontSize: "0.9rem",
-                  opacity: 0.8,
-                }}
-              >
-                Choose your favorite hobbies and activities, then answer a few personalized questions.<br />
-                Just like that you’ll get your best fit career choices
-              </p>
-
-              {startError ? (
-                <p style={{ marginTop: "1vh", color: "#FFD3D3", fontSize: "1.8vh" }}>
-                  {startError}
-                </p>
-              ) : null}
-            </div>
-
-            <div style={{ fontSize: "4vh" }}>
-              {isStartingQuiz ? "…" : "❯"}
-            </div>
-          </div>
-        </div>
+            {startError}
+          </p>
+        ) : null}
 
         {/* Career Paths */}
         <CareerCardsContainer
@@ -189,9 +173,9 @@ export default function CareerDiscoveryPage() {
           rightOnclick={handleNext}
           style={{
             gridArea: "3 / 1 / 8 / 7",
-            backgroundColor: "#1C427B",
+            backgroundColor: "var(--medium-blue)",
             borderRadius: "4vh",
-            gap:0
+            gap: 0
           }}
         >
 
@@ -254,10 +238,11 @@ export default function CareerDiscoveryPage() {
                   key={track.id}
                   title={track.name}
                   description={track.description || TRACK_DESCRIPTION_FALLBACK}
-                  image={CARD_IMAGE_PATH}
+                  image={`/tracks/${track.id}.svg`}
                   buttonVariant="primary-inverted"
                   buttonLabel="Learn More"
                   onClick={() => router.push(blogPath)}
+                  onBookmark={() => {}}
                 />
               );
             })

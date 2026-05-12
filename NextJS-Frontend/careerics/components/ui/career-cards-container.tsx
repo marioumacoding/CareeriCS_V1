@@ -4,8 +4,8 @@ export const CareerCardsContainer = ({
     style,
     isScrollable = false,
     Title = "Your Careers",
-    leftOnclick,
-    rightOnclick,
+    leftOnclick = () => { },
+    rightOnclick = () => { },
 }: {
     children: React.ReactNode;
     style?: React.CSSProperties;
@@ -17,10 +17,11 @@ export const CareerCardsContainer = ({
     return (
         <div
             style={{
-                backgroundColor: "#1C427B",
+                backgroundColor: "var(--medium-blue)",
                 borderRadius: "4vh",
                 paddingBlock: "3vh",
-                paddingInline: isScrollable ? 0 : "1.5rem",
+                paddingInline: isScrollable ? "0": "1.5rem",
+                paddingLeft:isScrollable ? "2rem" :"none",
                 color: "white",
                 height: "100%",
                 width: "100%",
@@ -30,26 +31,6 @@ export const CareerCardsContainer = ({
                 ...style,
             }}
         >
-            {isScrollable && (
-                <div
-                    style={{
-                        color: "white",
-                        width: "fit-content",
-                        height: "fit-content",
-                        fontSize: "4vh",
-                        fontWeight: "bold",
-                        fontFamily: "var(--font-jura)",
-                        paddingInline: "1rem",
-                        cursor: "pointer",
-                        transform: "rotate(180deg)",
-                        marginTop: "1rem",
-                    }}
-                    onClick={leftOnclick}
-                >
-                    {"❯"}
-                </div>
-            )}
-
             <div
                 style={{
                     display: "flex",
@@ -72,48 +53,90 @@ export const CareerCardsContainer = ({
                 >
                     {Title}
                 </h3>
-                <div
-                    style={{
-                        display: "grid",
-                        position: "relative",
-                        height: "100%",
-                        width: "100%",
-                        gap: "20px",
+                <div style={{ display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "space-between", width: "100%", height: "100%" }}>
 
-                        gridTemplateColumns: isScrollable
-                            ? "repeat(auto-fill, minmax(calc(25% - 15px), 1fr))"
-                            : "repeat(3,1fr)",
+                    <div
+                        style={{
+                            display: "grid",
+                            position: "relative",
+                            height: "100%",
+                            width: "100%",
+                            gap: "20px",
 
-                        overflowX: isScrollable ? "visible" : "visible",
-                        overflowY: "hidden",
+                            gridTemplateColumns: isScrollable
+                                ? "repeat(auto-fill, minmax(calc(25% - 15px), 1fr))"
+                                : "repeat(3,1fr)",
 
-                        gridAutoFlow: isScrollable ? "column" : "row",
+                            overflow: "hidden",
 
-                        scrollbarWidth: "none",
-                    }}
-                >
-                    {children}
+                            gridAutoFlow: isScrollable ? "column" : "row",
 
+                            scrollbarWidth: "none",
+                        }}
+                    >
+                        {children}
+
+                    </div>
+
+                    {isScrollable && (
+                        <div
+                            style={
+                                {
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    userSelect: "none",
+                                    width: "2.5rem",
+                                    marginLeft: "auto",
+                                    height: "100%",
+                                    justifyContent: "center",
+                                    gap: "0.5rem",
+                                    alignItems:"center",
+                                }
+                            }
+                        >
+
+                            <Arrow
+                                direction="prev"
+                                onClick={leftOnclick}
+                            />
+
+                            <Arrow
+                                direction="next"
+                                onClick={rightOnclick}
+                            />
+
+
+                        </div>
+                    )}
                 </div>
             </div>
-            {isScrollable && (
-                <div
-                    style={{
-                        color: "white",
-                        width: "fit-content",
-                        height: "fit-content",
-                        fontSize: "4vh",
-                        fontWeight: "bold",
-                        fontFamily: "var(--font-jura)",
-                        paddingInline: "1rem",
-                        cursor: "pointer",
-                        marginTop: "1rem",
-                    }}
-                    onClick={rightOnclick}
-                >
-                    {"❯"}
-                </div>
-            )}
+        </div>
+    );
+};
+
+const Arrow = ({
+    direction,
+    onClick,
+}: {
+    direction: "prev" | "next";
+    onClick: () => void;
+}) => {
+    const rotation =
+        direction === "prev"
+            ? "rotate(180deg)"
+            : "rotate(0deg)";
+
+    return (
+        <div
+            onClick={onClick}
+            style={{
+                fontSize: "1.5rem",
+                fontFamily: "var(--font-jura)",
+                cursor: "pointer",
+                transform: rotation,
+            }}
+        >
+            ❯
         </div>
     );
 };

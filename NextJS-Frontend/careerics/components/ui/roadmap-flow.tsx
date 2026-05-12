@@ -19,27 +19,33 @@ type StepFlowProps = {
   isNavigatable?: boolean;
   onSelect?: (index: number) => void;
   selectedIndex?: number;
-
-  // NEW: allow parent-controlled routing
+  lockedStepIndexes?: number[];
+  variant?: "light" | "dark";
   routeOnClick?: boolean;
   roadmapId?: string;
 };
 
 const COLUMNS = 4;
 const ROW_GAP = 60;
-const DEFAULT_BORDER_COLOR = "#C1CBE6";
-const NODE_HEIGHT = 50;
+const NODE_HEIGHT = 55;
 
 export const StepFlow: React.FC<StepFlowProps> = ({
   steps,
   onSelect,
   isNavigatable = true,
   selectedIndex,
+  lockedStepIndexes = [],
   routeOnClick = true,
   roadmapId,
+  variant = "light",
 }) => {
+  const DEFAULT_BORDER_COLOR = variant === "light" ? "#C1CBE6" : "var(--medium-blue)";
   const router = useRouter();
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const lockedStepIndexSet = new Set(lockedStepIndexes);
+
+  let horizontalCount = 0;
+  let verticalCount = 0;
 
   const rows: StepNode[][] = [];
 
@@ -77,7 +83,6 @@ export const StepFlow: React.FC<StepFlowProps> = ({
     if (node.href && node.href !== "#") {
       return node.href;
     }
-
     return node.label ? toSlug(node.label) : "";
   };
 
@@ -93,21 +98,21 @@ export const StepFlow: React.FC<StepFlowProps> = ({
       }}
     >
       {flat.map((node, index) => {
-        if (!node.label)
-          return <div key={`empty-${index}`} />;
+        if (!node.label) return <div key={`empty-${index}`} />;
 
         const rowIndex = Math.floor(index / COLUMNS);
         const colIndex = index % COLUMNS;
-        const isOddRow = rowIndex % 2 === 1;
 
         const isLastStep = node.globalIndex === steps.length - 1;
 
-        const isEndOfRow = isOddRow
-          ? colIndex === 0
-          : colIndex === COLUMNS - 1;
+        const isEndOfRow =
+          rowIndex % 2 === 1
+            ? colIndex === 0
+            : colIndex === COLUMNS - 1;
 
         const isHovered = hoveredIndex === node.globalIndex;
         const isSelected = selectedIndex === node.globalIndex;
+        const isLocked = lockedStepIndexSet.has(node.globalIndex);
 
         return (
           <div
@@ -124,9 +129,17 @@ export const StepFlow: React.FC<StepFlowProps> = ({
           >
             {/* NODE */}
             <div
-              onMouseEnter={() => setHoveredIndex(node.globalIndex)}
+              onMouseEnter={() => {
+                if (!isLocked) {
+                  setHoveredIndex(node.globalIndex);
+                }
+              }}
               onMouseLeave={() => setHoveredIndex(null)}
               onClick={() => {
+                if (isLocked) {
+                  return;
+                }
+
                 onSelect?.(node.globalIndex);
 
                 if (isNavigatable && routeOnClick && node.label) {
@@ -142,45 +155,72 @@ export const StepFlow: React.FC<StepFlowProps> = ({
                   }
 
                   const query = params.toString();
-                  router.push(query ? `/roadmap-feature?${query}` : "/roadmap-feature");
+                  router.push(
+                    query
+                      ? `/roadmap-feature?${query}`
+                      : "/roadmap-feature"
+                  );
                 }
               }}
               style={{
                 width: "100%",
                 height: NODE_HEIGHT,
-
-                border: `2px solid ${
-                  isHovered || isSelected
-                    ? "var(--hover-green)"
-                    : DEFAULT_BORDER_COLOR
-                }`,
-
-                borderRadius: "99px",
+                border: `2px solid ${isLocked
+                  ? "rgba(148, 163, 184, 0.35)"
+                  : isHovered || isSelected
+                  ? "var(--light-green)"
+                  : DEFAULT_BORDER_COLOR
+                  }`,
+                borderRadius: "3.5vh",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 textAlign: "center",
-
                 background:
-                  isHovered || isSelected
-                    ? "var(--hover-green)"
-                    : "#C1CBE6",
-
-                fontSize: "0.9rem",
+                  isLocked
+                    ? "rgba(15, 23, 42, 0.65)"
+                    : isHovered || isSelected
+                    ? "var(--light-green)"
+                    : variant === "light" ?
+                      "#C1CBE6" :
+                      "var(--medium-blue)",
+                fontSize: "0.8rem",
                 zIndex: 2,
-                cursor: isNavigatable ? "pointer" : "default",
+                cursor: isLocked ? "not-allowed" : isNavigatable ? "pointer" : "default",
+                paddingBlock: "1rem",
+                paddingInline: "0.5rem",
+                color: isLocked
+                  ? "#CBD5E1"
+                  : isHovered || isSelected || variant === "light"
+                    ? "black"
+                    : "white",
+                opacity: isLocked ? 0.8 : 1,
               }}
             >
-              {node.label}
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: "0.15rem",
+                }}
+              >
+                <span>{node.label}</span>
+                {isLocked ? (
+                  <span style={{ fontSize: "0.55rem", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+                    Locked
+                  </span>
+                ) : null}
+              </div>
             </div>
 
-            {/* HORIZONTAL CONNECTOR */}
+            {/* HORIZONTAL CONNECTOR (occurrence-based flip) */}
             {!isEndOfRow && !isLastStep && (
               <div
                 style={{
                   position: "absolute",
                   top: "50%",
-                  left: isOddRow
+                  left: rowIndex % 2 === 1
                     ? `-${HORIZONTAL_DISTANCE}px`
                     : "100%",
                   width: `${HORIZONTAL_DISTANCE}px`,
@@ -191,18 +231,22 @@ export const StepFlow: React.FC<StepFlowProps> = ({
                 }}
               >
                 <img
-                  src="/connector.svg"
+                  src={variant==="light"?"/roadmap/connector.svg":"/roadmap/connector-blue.svg"}
                   alt=""
                   style={{
                     width: "100%",
                     height: "100%",
                     objectFit: "fill",
+                    transform:
+                      horizontalCount++ % 2 === 1
+                        ? "scaleX(-1)"
+                        : "scaleX(1)",
                   }}
                 />
               </div>
             )}
 
-            {/* VERTICAL CONNECTOR */}
+            {/* VERTICAL CONNECTOR (occurrence-based flip) */}
             {isEndOfRow && !isLastStep && (
               <div
                 style={{
@@ -217,12 +261,16 @@ export const StepFlow: React.FC<StepFlowProps> = ({
                 }}
               >
                 <img
-                  src="/connectorV.svg"
+                  src={variant==="light"?"/roadmap/connector-vertical.svg":"/roadmap/connector-vertical-blue.svg"}
                   alt=""
                   style={{
                     width: "100%",
                     height: "100%",
                     objectFit: "fill",
+                    transform:
+                      verticalCount++ % 2 === 1
+                        ? "scaleY(-1)"
+                        : "scaleY(1)",
                   }}
                 />
               </div>

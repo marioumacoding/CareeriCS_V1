@@ -1,28 +1,40 @@
 "use client";
-import React, { useRef, useState, useEffect } from 'react';
-import { Button } from "@/components/ui/button"; 
-import InterviewContainer from "@/components/ui/interview-card"; 
-import { useRouter } from 'next/navigation';
-import { cvService } from "@/services";
-import { useAuth } from "@/providers/auth-provider";
 
-type AppStatus = 'idle' | 'enhancing' | 'completed';
+import React, { useEffect, useRef, useState } from "react";
+
+import { useAuth } from "@/providers/auth-provider";
+import { cvService } from "@/services";
+import { Button } from "@/components/ui/button";
+import InterviewContainer from "@/components/ui/interview-card";
+import { PdfPreviewFrame } from "@/components/ui/pdf-preview-frame";
+
+type AppStatus = "idle" | "enhancing" | "completed";
+
+function toSafePdfFileName(label: string, fallback: string): string {
+  const normalized = label
+    .trim()
+    .replace(/[^a-z0-9]+/gi, "_")
+    .replace(/^_+|_+$/g, "");
+
+  return `${normalized || fallback}.pdf`;
+}
 
 export default function CV() {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [status, setStatus] = useState<AppStatus>('idle');
+  const [status, setStatus] = useState<AppStatus>("idle");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedFilePreviewUrl, setSelectedFilePreviewUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
   const [downloadName, setDownloadName] = useState("enhanced-cv.pdf");
   const [isOpeningDrive, setIsOpeningDrive] = useState(false);
-  const router = useRouter();
   const { user } = useAuth();
 
   useEffect(() => {
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = 'auto'; };
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "auto";
+    };
   }, []);
 
   useEffect(() => {
@@ -34,63 +46,76 @@ export default function CV() {
   }, [downloadUrl]);
 
   useEffect(() => {
-    if (!selectedFile) {
-      setSelectedFilePreviewUrl(null);
-      return;
-    }
-
-    const previewUrl = URL.createObjectURL(selectedFile);
-    setSelectedFilePreviewUrl(previewUrl);
-
     return () => {
-      URL.revokeObjectURL(previewUrl);
+      if (selectedFilePreviewUrl) {
+        URL.revokeObjectURL(selectedFilePreviewUrl);
+      }
     };
-  }, [selectedFile]);
+  }, [selectedFilePreviewUrl]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      setSelectedFile(e.target.files[0]);
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files.length > 0) {
+      if (selectedFilePreviewUrl) {
+        URL.revokeObjectURL(selectedFilePreviewUrl);
+      }
+
+      const nextFile = event.target.files[0];
+      setSelectedFile(nextFile);
+      setSelectedFilePreviewUrl(
+        nextFile.type === "application/pdf" ? URL.createObjectURL(nextFile) : null,
+      );
       setError(null);
     }
   };
 
   const handleAction = async () => {
-    if (status === 'idle') {
+    if (status === "idle") {
       if (!selectedFile) {
         fileInputRef.current?.click();
-      } else {
-        if (!user?.id) {
-          setError("Please sign in first to enhance your CV.");
-          return;
-        }
-
-        setError(null);
-        setStatus('enhancing');
-        const oldUrl = downloadUrl;
-
-        try {
-          const pdfBlob = await cvService.enhanceCV(user.id, selectedFile);
-          if (oldUrl) {
-            URL.revokeObjectURL(oldUrl);
-          }
-
-          const url = URL.createObjectURL(pdfBlob);
-          setDownloadUrl(url);
-          setDownloadName(`${selectedFile.name.replace(/\.[^.]+$/, "")}-enhanced.pdf`);
-          setStatus('completed');
-        } catch (enhanceError) {
-          const message =
-            enhanceError instanceof Error
-              ? enhanceError.message
-              : "Failed to enhance CV. Please try again.";
-          setError(message);
-          setStatus('idle');
-        }
+        return;
       }
-    } else if (status === 'completed') {
-      setSelectedFile(null);
+
+      if (!user?.id) {
+        setError("Please sign in first to enhance your CV.");
+        return;
+      }
+
       setError(null);
-      setStatus('idle');
+      setStatus("enhancing");
+      const oldUrl = downloadUrl;
+
+      try {
+        const pdfBlob = await cvService.enhanceCV(user.id, selectedFile);
+        if (oldUrl) {
+          URL.revokeObjectURL(oldUrl);
+        }
+
+        const url = URL.createObjectURL(pdfBlob);
+        setDownloadUrl(url);
+        setDownloadName(
+          toSafePdfFileName(
+            `${selectedFile.name.replace(/\.[^.]+$/, "")}-enhanced`,
+            "enhanced-cv",
+          ),
+        );
+        setStatus("completed");
+      } catch (enhanceError) {
+        const message =
+          enhanceError instanceof Error
+            ? enhanceError.message
+            : "Failed to enhance CV. Please try again.";
+        setError(message);
+        setStatus("idle");
+      }
+    } else if (status === "completed") {
+      if (selectedFilePreviewUrl) {
+        URL.revokeObjectURL(selectedFilePreviewUrl);
+      }
+
+      setSelectedFile(null);
+      setSelectedFilePreviewUrl(null);
+      setError(null);
+      setStatus("idle");
       fileInputRef.current?.click();
     }
   };
@@ -116,49 +141,47 @@ export default function CV() {
 
   return (
     <div style={{ width: "100%", maxWidth: "1200px" }}>
-      {/* Headline */}
-      <h1 style={{
-        fontSize: "36px",
-        fontWeight: "300",
-        maxWidth: "600px",
-        lineHeight: "1.1",
-        marginBottom: "40px",
-        marginTop: "-30px",
-        fontFamily: "var(--font-nova-square)"
-      }}>
+      <h1
+        style={{
+          fontSize: "36px",
+          fontWeight: "300",
+          maxWidth: "600px",
+          lineHeight: "1.1",
+          marginBottom: "40px",
+          marginTop: "-30px",
+          fontFamily: "var(--font-nova-square)",
+        }}
+      >
         Upload your CV and we&apos;ll do the rest!
       </h1>
 
-      {/* Layout Row */}
       <div style={{ display: "flex", alignItems: "flex-start", gap: "80px", width: "100%" }}>
-        
-        {/* LEFT GROUP */}
         <div style={{ display: "flex", flexDirection: "column", gap: "30px", flexShrink: 0 }}>
-          <div 
-            onClick={() => status === 'idle' && fileInputRef.current?.click()}
+          <div
+            onClick={() => status === "idle" && fileInputRef.current?.click()}
             style={{
-              width: "220px", 
+              width: "220px",
               height: "300px",
-              backgroundColor: "white", 
+              backgroundColor: "white",
               borderRadius: "32px",
-              display: "flex", 
-              alignItems: "center", 
+              display: "flex",
+              alignItems: "center",
               justifyContent: "center",
-              cursor: status === 'idle' ? "pointer" : "default",
+              cursor: status === "idle" ? "pointer" : "default",
               transition: "all 0.3s ease",
+              overflow: "hidden",
             }}
           >
-            {selectedFile && selectedFile.type === 'application/pdf' && selectedFilePreviewUrl ? (
-              <iframe
-                src={`${selectedFilePreviewUrl}#toolbar=0&navpanes=0&scrollbar=0`}
+            {selectedFile && selectedFile.type === "application/pdf" && selectedFilePreviewUrl ? (
+              <PdfPreviewFrame
+                src={selectedFilePreviewUrl}
                 title="Selected CV preview"
-                style={{ width: '100%', height: '100%', border: 'none', borderRadius: '32px' }}
               />
             ) : selectedFile ? (
               <img
-                src="/cv/cv.svg"
+                src="/interview/analyzing.svg"
                 alt="Selected CV file"
-                style={{ width: '84px', height: '125px', objectFit: 'contain' }}
+                style={{ width: "84px", height: "125px", objectFit: "contain" }}
               />
             ) : (
               <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="rgb(0, 0, 0)" strokeWidth="1">
@@ -167,127 +190,146 @@ export default function CV() {
             )}
           </div>
 
-          <Button 
-            onClick={handleAction} 
+          <Button
+            onClick={() => void handleAction()}
             style={{
-              width: "220px", 
-              height: "35px", // Fixed height
-              flex:"none",
+              width: "220px",
+              height: "35px",
+              flex: "none",
               borderRadius: "16px",
-              fontWeight: "bold", 
-              fontSize: "14px", 
+              fontWeight: "bold",
+              fontSize: "14px",
               marginTop: "-20px",
               border: "none",
-              cursor: status === 'enhancing' ? "default" : "pointer",
+              cursor: status === "enhancing" ? "default" : "pointer",
               transition: "all 0.3s ease",
-              backgroundColor: status === 'enhancing' ? "#555" : "#bfff4f",
-              color: status === 'enhancing' ? "#888" : "black",
+              backgroundColor: status === "enhancing" ? "#555" : "#bfff4f",
+              color: status === "enhancing" ? "#f4f4f5" : "black",
             }}
-            disabled={status === 'enhancing'}
+            disabled={status === "enhancing"}
           >
-            {status === 'enhancing' ? "Enhance" : 
-             status === 'completed' ? "Upload another CV" : 
-             selectedFile ? "Enhance Now" : "Open Files"}
+            {status === "enhancing"
+              ? "Enhancing..."
+              : status === "completed"
+                ? "Upload another CV"
+                : selectedFile
+                  ? "Enhance Now"
+                  : "Open Files"}
           </Button>
 
-          {error && (
+          {error ? (
             <p style={{ color: "#ffb4b4", maxWidth: "220px", marginTop: "-8px" }}>{error}</p>
-          )}
+          ) : null}
         </div>
 
-        <input type="file" ref={fileInputRef} style={{ display: "none" }} onChange={handleFileChange} accept=".pdf,.docx" />
+        <input
+          type="file"
+          ref={fileInputRef}
+          style={{ display: "none" }}
+          onChange={handleFileChange}
+          accept=".pdf,.docx"
+        />
 
-        {/* Vertical Divider - Matching the card height (300px) */}
         <div style={{ width: "1px", height: "300px", backgroundColor: "rgb(255, 255, 255)" }} />
 
-        {/* RIGHT GROUP */}
         <div style={{ flex: 1 }}>
-          {status === 'completed' && (
-            <div style={{ 
-              display: "flex", 
-              flexDirection: "column", 
-              gap: "30px", 
-              alignItems: "center", 
-              width: "100%" 
-            }}>
+          {status === "completed" ? (
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "30px",
+                alignItems: "center",
+                width: "100%",
+              }}
+            >
               <InterviewContainer
                 questionTitle=""
-                videoBoxStyle={{ 
-                  background: 'rgba(255, 255, 255, 0.41)', 
-                  width: '80%', 
-                  height: '300px', // Matches card and divider height
-                  boxShadow: '0 20px 50px rgba(0,0,0,0.3)',
-                  borderRadius: '40px',
+                videoBoxStyle={{
+                  background: "rgba(255, 255, 255, 0.41)",
+                  width: "80%",
+                  minHeight: "300px",
+                  boxShadow: "0 20px 50px rgba(0,0,0,0.3)",
+                  borderRadius: "40px",
                 }}
                 videoContent={
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '20px', padding: '20px', height: '100%', flexWrap: 'wrap' }}>
-                    <div style={{ width: 'min(34vw, 180px)', height: 'min(46vw, 240px)', minWidth: '130px', minHeight: '170px', backgroundColor: 'white', borderRadius: '25px', flexShrink: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      {downloadUrl ? (
-                        <iframe
-                          src={`${downloadUrl}#view=FitH&zoom=page-fit&pagemode=none&toolbar=0`}
-                          title="CV preview"
-                          style={{ width: '100%', height: '100%', border: 'none' }}
-                        />
-                      ) : (
-                        <span style={{ color: '#6b7280', fontSize: '12px', textAlign: 'center', padding: '10px' }}>
-                          Preview unavailable
-                        </span>
-                      )}
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "20px",
+                      padding: "20px",
+                      minHeight: "300px",
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: "min(34vw, 180px)",
+                        height: "min(46vw, 240px)",
+                        minWidth: "130px",
+                        minHeight: "170px",
+                        borderRadius: "25px",
+                        flexShrink: 0,
+                        overflow: "hidden",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <PdfPreviewFrame src={downloadUrl} title="CV preview" />
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "15px" }}>
                       <a
                         href={downloadUrl ?? "#"}
                         download={downloadName}
                         style={{
-                          backgroundColor: '#d4ff47',
-                          color: '#1a1a1a',
-                          border: 'none',
-                          padding: '14px 40px',
-                          borderRadius: '12px',
-                          fontWeight: 'bold',
-                          width: '240px',
-                          textAlign: 'center',
-                          textDecoration: 'none',
-                          pointerEvents: downloadUrl ? 'auto' : 'none',
+                          backgroundColor: "#d4ff47",
+                          color: "#1a1a1a",
+                          border: "none",
+                          padding: "14px 40px",
+                          borderRadius: "12px",
+                          fontWeight: "bold",
+                          width: "240px",
+                          textAlign: "center",
+                          textDecoration: "none",
+                          pointerEvents: downloadUrl ? "auto" : "none",
                           opacity: downloadUrl ? 1 : 0.5,
                         }}
                       >
                         Download
                       </a>
-                      <span style={{ color: 'white', textAlign: 'center', opacity: 0.6 }}>or</span>
+                      <span style={{ color: "white", textAlign: "center", opacity: 0.6 }}>or</span>
                       <button
                         type="button"
                         onClick={handleGoogleDriveQuickOpen}
                         disabled={isOpeningDrive}
-                        style={{ backgroundColor: 'white', color: '#1a1a1a', border: 'none', padding: '12px 20px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '10px', width: '240px', justifyContent: 'center', cursor: isOpeningDrive ? 'default' : 'pointer', opacity: isOpeningDrive ? 0.7 : 1 }}
+                        style={{
+                          backgroundColor: "white",
+                          color: "#1a1a1a",
+                          border: "none",
+                          padding: "12px 20px",
+                          borderRadius: "10px",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "10px",
+                          width: "240px",
+                          justifyContent: "center",
+                          cursor: isOpeningDrive ? "default" : "pointer",
+                          opacity: isOpeningDrive ? 0.7 : 1,
+                        }}
                       >
-                        <img src="/interview/drive.svg" style={{ width: '18px' }} alt="Drive" /> {isOpeningDrive ? 'Opening Drive...' : 'Google Drive'}
+                        <img src="/global/drive.svg" style={{ width: "18px" }} alt="Drive" />
+                        {isOpeningDrive ? "Opening Drive..." : "Google Drive"}
                       </button>
                     </div>
                   </div>
                 }
               />
-              
-              <Button 
-                onClick={() => router.push('/features/home')}
-                style={{
-                  width: "220px",
-                  height: "35px",
-                  flex: "none",
-                  borderRadius: "16px",
-                  fontWeight: "bold",
-                  fontSize: "14px",
-                  marginTop: "-20px",
-                  backgroundColor: "#C1CBE6",
-                  color: "black",
-                  cursor: "pointer",
-                  transition: "all 0.3s ease",
-                }}
-              >
-                Go back to home
-              </Button>
+
             </div>
-          )}
+          ) : null}
         </div>
       </div>
     </div>

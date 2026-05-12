@@ -1,7 +1,7 @@
 "use client";
 import { forwardRef, type ButtonHTMLAttributes, CSSProperties, useState } from "react";
 
-type ButtonVariant = "primary" | "secondary" | "outline" | "ghost" | "danger" | "text" | "primary-inverted";
+type ButtonVariant = "primary" | "secondary" | "outline" | "ghost" | "danger" | "text" | "primary-inverted" | "popup" | "popup-inverted";
 type ButtonSize = "sm" | "md" | "lg";
 
 interface TextButtonContent {
@@ -35,19 +35,19 @@ const baseStyle: CSSProperties = {
 const variantStyles: Record<ButtonVariant, { default: CSSProperties; hover: CSSProperties }> = {
   primary: {
     default: { backgroundColor: "var(--primary-green)", color: "black" },
-    hover: { backgroundColor: "var(--hover-green)" }
+    hover: { backgroundColor: "var(--light-green)" }
   },
   secondary: {
     default: { backgroundColor: "white", color: "#18181b" },
-    hover: { backgroundColor: "var(--hover-grey)" }
+    hover: { backgroundColor: "var(--light-blue)" }
   },
   outline: {
-    default: { backgroundColor: "transparent", border: "0.7vh solid white", color: "white" },
-    hover: { backgroundColor: "#f4f4f5", color: "black" }
+    default: { backgroundColor: "transparent", border: "0.3vh solid white", color: "white" },
+    hover: { backgroundColor: "white", color: "black" }
   },
   ghost: {
     default: { backgroundColor: "transparent", color: "#18181b" },
-    hover: { backgroundColor: "#f4f4f5" }
+    hover: { backgroundColor: "white" }
   },
   danger: {
     default: { backgroundColor: "#dc2626", color: "white" },
@@ -58,9 +58,17 @@ const variantStyles: Record<ButtonVariant, { default: CSSProperties; hover: CSSP
     hover: { color: "white", textDecoration: "underline" }
   },
   "primary-inverted": {
-    default: { backgroundColor: "var(--hover-green)", color: "black" },
+    default: { backgroundColor: "var(--light-green)", color: "black" },
     hover: { backgroundColor: "var(--primary-green)" }
-  }
+  },
+  "popup": {
+    default: { backgroundColor: "var(--medium-blue)", color:"white" },
+    hover: { backgroundColor: "white", color: "black" }
+  },
+  "popup-inverted": {
+    default: { backgroundColor: "white", color: "black" },
+    hover: { backgroundColor: "var(--medium-blue)", color:"white" }
+  },
 };
 
 const sizeStyles: Record<ButtonSize, CSSProperties> = {

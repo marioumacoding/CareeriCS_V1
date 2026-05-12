@@ -1,10 +1,11 @@
 "use client";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import InterviewLayout from "@/components/ui/interview";
 import InterviewContainer from "@/components/ui/interview-card";
 import { useInterviewFlow } from "@/hooks";
 import { interviewService } from "@/services/interview.service";
+import { reportsService } from "@/services/reports.service";
 
 export default function LastAnalysisPage() {
   const router = useRouter();
@@ -13,7 +14,6 @@ export default function LastAnalysisPage() {
     currentQ,
     questions,
     questionsError,
-    buildRecordingUrl,
   } = useInterviewFlow();
 
   const [isPreparing, setIsPreparing] = useState(true);
@@ -22,19 +22,11 @@ export default function LastAnalysisPage() {
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
   const [downloadName, setDownloadName] = useState("interview-analysis.pdf");
 
-  const reportUrl = useMemo(() => {
-    if (!sessionId) {
-      return "";
-    }
-
-    return interviewService.getSessionReportUrl(sessionId);
-  }, [sessionId]);
-
   useEffect(() => {
     let alive = true;
 
-    const warmupReport = async () => {
-      if (!sessionId || !reportUrl) {
+    const finalizeInterview = async () => {
+      if (!sessionId) {
         if (alive) {
           setReportError("Session is missing. Please retry the interview flow.");
           setIsPreparing(false);
@@ -42,65 +34,66 @@ export default function LastAnalysisPage() {
         return;
       }
 
-      try {
-        const response = await fetch(reportUrl);
+      const response = await interviewService.completeSession(sessionId);
+      if (!alive) {
+        return;
+      }
 
+      if (!response.success || !response.data?.report?.id) {
+        setReportError(response.message || "Report is not ready yet. Please retry download below.");
+        setDownloadUrl(null);
+        setIsPreparing(false);
+        return;
+      }
+
+      const reportDownloadUrl = reportsService.getReportDownloadUrl(response.data.report.id);
+
+      try {
+        const reportResponse = await fetch(reportDownloadUrl);
         if (!alive) {
           return;
         }
 
-        if (!response.ok) {
-          setReportError("Report is not ready yet. You can retry download below.");
-          setDownloadUrl((prev) => {
-            if (prev) {
-              URL.revokeObjectURL(prev);
-            }
-            return null;
-          });
+        if (!reportResponse.ok) {
+          setReportError("Completed report was saved, but preview download failed. Please retry.");
+          setDownloadUrl(null);
+          setIsPreparing(false);
           return;
         }
 
-        const blob = await response.blob();
-        if (!blob.size) {
-          setReportError("Report is empty. Please retry download below.");
+        const blob = await reportResponse.blob();
+        if (!alive) {
           return;
         }
-
-        const contentDisposition = response.headers.get("content-disposition") || "";
-        const utf8NameMatch = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
-        const simpleNameMatch = contentDisposition.match(/filename=\"?([^\";]+)\"?/i);
-        const derivedName = decodeURIComponent(
-          utf8NameMatch?.[1] || simpleNameMatch?.[1] || "interview-analysis.pdf"
-        );
 
         const objectUrl = URL.createObjectURL(blob);
-        setDownloadName(derivedName);
-        setDownloadUrl((prev) => {
-          if (prev) {
-            URL.revokeObjectURL(prev);
+        setDownloadName(response.data.report.filename || "interview-analysis.pdf");
+        setDownloadUrl((previous) => {
+          if (previous) {
+            URL.revokeObjectURL(previous);
           }
+
           return objectUrl;
         });
         setReportError("");
+        setIsPreparing(false);
       } catch {
         if (!alive) {
           return;
         }
 
-        setReportError("Could not reach report service. You can retry download below.");
-      } finally {
-        if (alive) {
-          setIsPreparing(false);
-        }
+        setReportError("Completed report was saved, but preview download failed. Please retry.");
+        setDownloadUrl(null);
+        setIsPreparing(false);
       }
     };
 
-    warmupReport();
+    void finalizeInterview();
 
     return () => {
       alive = false;
     };
-  }, [sessionId, reportUrl]);
+  }, [sessionId]);
 
   useEffect(() => {
     return () => {
@@ -380,7 +373,7 @@ export default function LastAnalysisPage() {
                     opacity: isOpeningDrive ? 0.7 : downloadUrl ? 1 : 0.55,
                   }}
                 >
-                  <img src="/interview/drive.svg" style={{ width: "20px" }} alt="Drive" />
+                  <img src="/global/drive.svg" style={{ width: "20px" }} alt="Drive" />
                   {isOpeningDrive ? "Opening Drive..." : "Google Drive"}
                 </button>
               </div>
@@ -391,17 +384,7 @@ export default function LastAnalysisPage() {
 
         <div style={{ display: "flex", gap: "40px", marginTop: "60px" }}>
           <button
-            onClick={() =>
-              router.push(
-                buildRecordingUrl({
-                  q: "1",
-                  followup: null,
-                  followupId: null,
-                  followupMode: false,
-                  questionId: null,
-                })
-              )
-            }
+            onClick={() => router.push("/features/interview")}
             style={{
               backgroundColor: "#d4ff47",
               color: "black",

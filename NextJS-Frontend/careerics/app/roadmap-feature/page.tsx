@@ -6,29 +6,15 @@ import RoadmapProgress from "@/components/ui/roadmapProgress";
 import { StepFlow } from "@/components/ui/roadmap-flow";
 import StepCheckbox from "@/components/ui/roadmapStepCheckbox";
 import RoadmapResourceCard from "@/components/ui/roadmapResourceCard";
+import {
+  buildRoadmapStepFlowItems,
+  buildRoadmapUiSections,
+  getLockedRoadmapStepIndexes,
+  resolveRoadmapSectionSelection,
+} from "@/lib/roadmap-ui";
 import { useAuth } from "@/providers/auth-provider";
 import { roadmapService } from "@/services";
 import type { ApiResponse, RoadmapListItem, RoadmapProgressSummary, RoadmapRead } from "@/types";
-
-type Skill = {
-  id: string;
-  text: string;
-  checked: boolean;
-};
-
-type SectionResource = {
-  title: string;
-  url: string;
-  resourceType: string;
-};
-
-type Section = {
-  id: string;
-  title: string;
-  href: string;
-  resources: SectionResource[];
-  skills: Skill[];
-};
 
 type CachedApiRequest<T> = {
   expiresAt: number;
@@ -54,10 +40,6 @@ function normalizeRoadmapListPayload(payload: unknown): RoadmapListItem[] {
   return [];
 }
 
-function toSlug(text: string): string {
-  return text.toLowerCase().replace(/\s+/g, "-");
-}
-
 export default function RoadmapFeaturePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -71,6 +53,7 @@ export default function RoadmapFeaturePage() {
   const [progress, setProgress] = useState<RoadmapProgressSummary | null>(null);
   const [localStepCompletion, setLocalStepCompletion] = useState<Record<string, boolean>>({});
   const [selectedSectionPreferenceId, setSelectedSectionPreferenceId] = useState("");
+  const [sectionAccessMessage, setSectionAccessMessage] = useState<string | null>(null);
 
   const inFlightStepIdsRef = useRef<Set<string>>(new Set());
   const roadmapByIdCacheRef = useRef<Map<string, CachedApiRequest<RoadmapRead>>>(new Map());
@@ -154,6 +137,7 @@ export default function RoadmapFeaturePage() {
       }
 
       setRoadmap(response.data);
+      setSectionAccessMessage(null);
     };
 
     void loadRoadmap();
@@ -197,120 +181,41 @@ export default function RoadmapFeaturePage() {
     };
   }, [activeRoadmapId, isAuthLoading, user?.id]);
 
-  const orderedSections = useMemo(
-    () => roadmap?.sections.slice().sort((a, b) => a.order - b.order) || [],
-    [roadmap],
-  );
-
-  const progressByStepId = useMemo(() => {
-    const map = new Map<string, boolean>();
-    for (const section of progress?.sections || []) {
-      for (const step of section.steps) {
-        map.set(step.step_id, step.completion_status === "completed");
-      }
-    }
-    return map;
-  }, [progress]);
-
-  const sections = useMemo<Section[]>(() => {
-    return orderedSections.map((section) => {
-      const rawResources = section.steps
-        .slice()
-        .sort((a, b) => a.order - b.order)
-        .flatMap((step) => step.resources || [])
-        .map((resource) => {
-          const title = String(resource.title || "").trim();
-          const url = String(resource.url || "").trim();
-          const resourceType = String(resource.resourceType || "resource").trim();
-
-          return {
-            title: title || (url ? "Resource Link" : "Resource"),
-            url,
-            resourceType: resourceType || "resource",
-          };
-        })
-        .filter((resource) => resource.title || resource.url);
-
-      const resources: SectionResource[] = [];
-      const seenResourceKeys = new Set<string>();
-
-      for (const resource of rawResources) {
-        const key = `${resource.url}|${resource.title}`;
-        if (seenResourceKeys.has(key)) {
-          continue;
-        }
-
-        seenResourceKeys.add(key);
-        resources.push(resource);
-      }
-
-      const skills = section.steps
-        .slice()
-        .sort((a, b) => a.order - b.order)
-        .map((step) => {
-          const backendValue = progressByStepId.get(step.id) || false;
-          const checked = step.id in localStepCompletion ? localStepCompletion[step.id] : backendValue;
-
-          return {
-            id: step.id,
-            text: step.title,
-            checked,
-          };
-        });
-
-      return {
-        id: section.id,
-        title: section.title,
-        href: section.id,
-        resources,
-        skills,
-      };
+  const sections = useMemo(() => {
+    return buildRoadmapUiSections({
+      roadmap,
+      progress,
+      localStepCompletion,
     });
-  }, [localStepCompletion, orderedSections, progressByStepId]);
+  }, [localStepCompletion, progress, roadmap]);
 
-  const selectedSectionId = useMemo(() => {
-    if (!sections.length) {
-      return "";
-    }
-
-    const preferredSectionExists = sections.some((section) => section.id === selectedSectionPreferenceId);
-    if (preferredSectionExists) {
-      return selectedSectionPreferenceId;
-    }
-
-    const normalizedStepParam = stepParam.trim().toLowerCase();
-    if (normalizedStepParam) {
-      const matchedByParam = sections.find(
-        (section) =>
-          section.id.toLowerCase() === normalizedStepParam ||
-          toSlug(section.title) === normalizedStepParam,
-      );
-
-      if (matchedByParam) {
-        return matchedByParam.id;
-      }
-    }
-
-    return sections[0].id;
+  const sectionSelection = useMemo(() => {
+    return resolveRoadmapSectionSelection({
+      sections,
+      preferredSectionId: selectedSectionPreferenceId,
+      requestedSectionParam: stepParam,
+    });
   }, [sections, selectedSectionPreferenceId, stepParam]);
 
-  const selectedIndex = useMemo(() => {
-    return Math.max(
-      0,
-      sections.findIndex((section) => section.id === selectedSectionId),
-    );
-  }, [sections, selectedSectionId]);
-
-  const selectedSection = sections[selectedIndex] || sections[0] || null;
+  const { selectedSection, selectedIndex } = sectionSelection;
+  const activeSectionAccessMessage = sectionAccessMessage || sectionSelection.lockedMessage;
 
   const handleSectionSelect = useCallback(
     (index: number) => {
-      const nextSectionId = sections[index]?.id;
-      if (!nextSectionId) {
+      const nextSection = sections[index];
+      if (!nextSection) {
         return;
       }
 
-      setSelectedSectionPreferenceId(nextSectionId);
+      if (nextSection.locked) {
+        setSectionAccessMessage(
+          nextSection.lockReason || "Complete the previous section first to unlock this one.",
+        );
+        return;
+      }
+
+      setSectionAccessMessage(null);
+      setSelectedSectionPreferenceId(nextSection.id);
     },
     [sections],
   );
@@ -337,6 +242,13 @@ export default function RoadmapFeaturePage() {
       return;
     }
 
+    if (selectedSection.locked) {
+      setSectionAccessMessage(
+        selectedSection.lockReason || "Complete the previous section first to unlock this one.",
+      );
+      return;
+    }
+
     const step = selectedSection.skills[skillIndex];
     if (!step) {
       return;
@@ -349,6 +261,7 @@ export default function RoadmapFeaturePage() {
     const previousChecked = step.checked;
     const nextChecked = !previousChecked;
 
+    setSectionAccessMessage(null);
     setLocalStepCompletion((previous) => ({
       ...previous,
       [step.id]: nextChecked,
@@ -371,6 +284,7 @@ export default function RoadmapFeaturePage() {
         ...previous,
         [step.id]: previousChecked,
       }));
+      setSectionAccessMessage(response.message || "Unable to update progress right now.");
       return;
     }
 
@@ -382,21 +296,19 @@ export default function RoadmapFeaturePage() {
     });
   };
 
-  const steps = useMemo(
-    () =>
-      sections.map((section) => ({
-        label: section.title,
-        href: section.href,
-      })),
-    [sections],
-  );
+  const steps = useMemo(() => buildRoadmapStepFlowItems(sections), [sections]);
+
+  const lockedStepIndexes = useMemo(() => getLockedRoadmapStepIndexes(sections), [sections]);
 
   const completedSections = progress?.completed_sections || 0;
   const totalSections = progress?.total_sections || sections.length;
   const completedSteps = progress?.completed_steps || 0;
   const totalSteps = progress?.total_steps || sections.reduce((sum, section) => sum + section.skills.length, 0);
-  const currentSectionCompletedSteps = selectedSection?.skills.filter((skill) => skill.checked).length || 0;
-  const currentSectionTotalSteps = selectedSection?.skills.length || 0;
+  const currentSectionCompletedSteps = selectedSection
+    ? selectedSection.skills.filter((skill) => skill.checked).length
+    : 0;
+  const currentSectionTotalSteps = selectedSection ? selectedSection.skills.length : 0;
+  const roadmapHeading = roadmap?.title ? `${roadmap.title} Roadmap` : "Loading roadmap...";
 
   return (
     <div
@@ -409,16 +321,23 @@ export default function RoadmapFeaturePage() {
         overflow: "clip",
       }}
     >
-      {/* Title */}
-      <h1
-        style={{
-          fontSize: "2rem",
-          color: "white",
-          marginBottom: "1rem",
-        }}
-      >
-        {(roadmap?.title || "Roadmap")} Roadmap
-      </h1>
+      <div style={{ display: "flex", flexDirection: "column", gap: "0.45rem", marginBottom: "1rem" }}>
+        <h1
+          style={{
+            fontSize: "2rem",
+            color: "white",
+            margin: 0,
+          }}
+        >
+          {roadmapHeading}
+        </h1>
+
+        {activeSectionAccessMessage ? (
+          <p style={{ margin: 0, color: "#FFD3D3", fontSize: "0.95rem" }}>
+            {activeSectionAccessMessage}
+          </p>
+        ) : null}
+      </div>
 
       <div
         style={{
@@ -429,9 +348,8 @@ export default function RoadmapFeaturePage() {
           flex: 1,
         }}
       >
-        {/* Left Panel */}
         <div style={{ display: "flex", flexDirection: "column", width: "70%" }}>
-          <div style={{ display: "flex", gap: "2rem", marginBottom: "1rem" }}>
+          <div style={{ display: "flex", gap: "2rem", marginBottom: "2rem" }}>
             <RoadmapProgress
               text="Sections Completed"
               done={String(completedSections)}
@@ -461,19 +379,19 @@ export default function RoadmapFeaturePage() {
             <StepFlow
               steps={steps}
               selectedIndex={selectedIndex}
+              lockedStepIndexes={lockedStepIndexes}
               onSelect={handleSectionSelect}
               isNavigatable={false}
             />
           </div>
         </div>
 
-        {/* Right Panel */}
         <div
           style={{
             display: "flex",
             flexDirection: "column",
             padding: "1rem 2rem",
-            backgroundColor: "#636771",
+            backgroundColor: "var(--medium-grey)",
             borderRadius: "4vh",
             width: "30%",
             marginLeft: "2rem",
@@ -519,6 +437,15 @@ export default function RoadmapFeaturePage() {
                   gap: "0.7rem",
                 }}
               >
+                <p
+                  style={{
+                    fontSize: "1.1rem",
+                    color: "white",
+                    fontFamily: "var(--font-nova-square)",
+                  }}
+                >
+                  Resources:
+                </p>
                 {selectedSection?.resources.map((resource) => {
                   const key = `${resource.url}|${resource.title}|${resource.resourceType}`;
 
@@ -531,27 +458,28 @@ export default function RoadmapFeaturePage() {
                     />
                   );
                 })}
+                <div
+                  style={{
+                    height: "0.1rem",
+                    backgroundColor: "white",
+                    width: "100%",
+                  }}
+                />
               </div>
             )}
 
-            <div
-              style={{
-                height: "0.1rem",
-                backgroundColor: "white",
-                width: "100%",
-                marginBottom: "1rem",
-              }}
-            />
-
-            <p
-              style={{
-                margin: "0 0 1rem 0",
-                fontSize: "1rem",
-                color: "#f3f4f6",
-              }}
-            >
-              Topics to cover:
-            </p>
+            {(selectedSection?.skills.length ?? 0) > 0 ? (
+              <p
+                style={{
+                  margin: "0 0 1rem 0",
+                  fontSize: "1.1rem",
+                  color: "white",
+                  fontFamily: "var(--font-nova-square)",
+                }}
+              >
+                Topics to cover:
+              </p>
+            ) : null}
 
             <div
               style={{
@@ -565,6 +493,7 @@ export default function RoadmapFeaturePage() {
                   key={skill.id}
                   text={skill.text}
                   isChecked={skill.checked}
+                  disabled={Boolean(selectedSection?.locked)}
                   onToggle={() => {
                     void toggleSkill(index);
                   }}

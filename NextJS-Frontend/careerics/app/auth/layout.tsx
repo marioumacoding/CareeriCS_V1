@@ -56,8 +56,9 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
       break;
 
     case "/auth/callback":
-      CardTitle = "Callback";
+      CardTitle = "Logging You In";
       showDiv = false;
+      BackPath = "/auth/login";
       break;
 
     default:
@@ -100,7 +101,7 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
             width: "70vw",
             height: "100vh",
             background:
-              "radial-gradient(circle at center, var(--bg-effect-color) -10%, rgba(0,0,0,0) 45%)",
+              "radial-gradient(circle at center, var(--phase5-color) -10%, rgba(0,0,0,0) 45%)",
             zIndex: 1,
             pointerEvents: "none",
           }}

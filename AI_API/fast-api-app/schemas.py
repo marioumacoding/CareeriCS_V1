@@ -58,19 +58,29 @@ class SessionCreate(SessionBase):
 
 class SessionUpdate(BaseModel):
     status: Optional[str] = None
-    emotion_evaluation: Optional[Dict] = None
-    tone_evaluation: Optional[Dict] = None
-    sentiment_evaluation: Optional[Dict] = None
 
 
 class SessionRead(SessionBase):
     id: UUID
     user_id: UUID
     created_at: Optional[datetime] = None
-    emotion_evaluation: Optional[Dict] = None
-    tone_evaluation: Optional[Dict] = None
     sentiment_evaluation: Optional[Dict] = None
     model_config = ConfigDict(from_attributes=True)
+
+
+class CompleteInterviewSessionResponse(BaseModel):
+    session: SessionRead
+    report: "ReportSchema"
+
+
+class InterviewArchiveItemRead(BaseModel):
+    session_id: UUID
+    session_name: str
+    session_type: str
+    session_created_at: Optional[datetime] = None
+    report_id: UUID
+    report_filename: str
+    report_created_at: datetime
 
 
 # ======================================================
@@ -388,6 +398,9 @@ class ReportSchema(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+CompleteInterviewSessionResponse.model_rebuild()
 
 
 # =====================================================
@@ -726,6 +739,7 @@ class CareerTrackScoreRead(BaseModel):
     track_id: UUID
     track_name: str
     track_description: Optional[str] = None
+    roadmap_id: Optional[UUID] = None
     score: int = Field(ge=0, le=100)
 
 class CareerEvaluationRead(BaseModel):
@@ -746,6 +760,7 @@ class JobPostBase(BaseModel):
     career_level: Optional[str] = None
     work_type: Optional[str] = None
     employment_type: Optional[str] = None
+    salary: Optional[str] = None
     description_about_role: Optional[str] = None
     description_key_responsibilities: Optional[str] = None
     description_requirements: Optional[str] = None
@@ -768,11 +783,45 @@ class JobBulkImportRequest(BaseModel):
 
 class JobPostResponse(JobPostBase):
     id: UUID
+    location_country: Optional[str] = None
+    location_city: Optional[str] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
     skills: List[str] = Field(default_factory=list)
     match_percentage: Optional[float] = None
+    is_saved: bool = False
+    saved_at: Optional[datetime] = None
+    viewed_at: Optional[datetime] = None
+    view_count: int = 0
+    last_interaction_at: Optional[datetime] = None
+    application_status: Optional[str] = None
+    applied_at: Optional[datetime] = None
     model_config = ConfigDict(from_attributes=True)
+
+
+class JobFilterOptionResponse(BaseModel):
+    id: str
+    title: str
+    count: int
+
+
+class JobFilterOptionsResponse(BaseModel):
+    countries: List[JobFilterOptionResponse] = Field(default_factory=list)
+    cities: List[JobFilterOptionResponse] = Field(default_factory=list)
+    job_types: List[JobFilterOptionResponse] = Field(default_factory=list)
+    work_types: List[JobFilterOptionResponse] = Field(default_factory=list)
+    career_levels: List[JobFilterOptionResponse] = Field(default_factory=list)
+
+
+class JobListResponse(BaseModel):
+    query: Optional[str] = None
+    total: int
+    skip: int
+    limit: int
+    page: int = 1
+    total_pages: int = 0
+    filters: JobFilterOptionsResponse = Field(default_factory=JobFilterOptionsResponse)
+    jobs: List[JobPostResponse]
 
 
 class JobInteractionResponse(BaseModel):
@@ -787,10 +836,30 @@ class JobInteractionResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+JobApplicationStatus = Literal["applied", "interview", "offer", "rejected", "saved"]
+
+
+class JobApplicationUpsertRequest(BaseModel):
+    status: JobApplicationStatus = "applied"
+
+
+class JobApplicationResponse(BaseModel):
+    id: UUID
+    job_post_id: UUID
+    user_id: UUID
+    status: JobApplicationStatus
+    applied_at: Optional[datetime] = None
+    updated_at: datetime
+    model_config = ConfigDict(from_attributes=True)
+
+
 class UserJobsListResponse(BaseModel):
     total: int
     skip: int
     limit: int
+    page: int = 1
+    total_pages: int = 0
+    filters: JobFilterOptionsResponse = Field(default_factory=JobFilterOptionsResponse)
     jobs: List[JobPostResponse]
 
 
@@ -847,6 +916,48 @@ class BulkCourseImportResult(BaseModel):
     skipped: int
     total_processed: int
     duplicates: List[str]
+
+
+# =====================================================
+# CAREER LEVEL (Blog/Details) SCHEMAS
+# =====================================================
+
+class CareerLevelBase(BaseModel):
+    job_title: str
+    level: Literal["Entry", "Junior", "Senior"]
+    salary: Optional[str] = None
+    demand: Optional[str] = None
+    responsibilities: Optional[List[str]] = None
+    fit_reasons: Optional[List[str]] = None
+    skills: Optional[List[str]] = None
+
+
+class CareerLevelCreate(CareerLevelBase):
+    pass
+
+
+class CareerLevelRead(CareerLevelBase):
+    id: UUID
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    model_config = ConfigDict(from_attributes=True)
+
+
+class CareerLevelDetailResponse(BaseModel):
+    """Response for a single level (Entry/Junior/Senior)"""
+    salary: str
+    demand: str
+    demandColor: str
+    responsibilities: List[str]
+    fitReason: List[str]
+
+
+class CareerBlogDetailsResponse(BaseModel):
+    """Full career blog details response with all levels"""
+    jobTitle: str
+    skills: List[str]
+    levels: Dict[str, CareerLevelDetailResponse]
+
 
 
 class UserCoursesListResponse(BaseModel):

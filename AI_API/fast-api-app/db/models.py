@@ -96,10 +96,6 @@ class Session(Base):
 
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
-    emotion_evaluation = Column(JSON, nullable=True)
-    tone_evaluation = Column(JSON, nullable=True)
-    sentiment_evaluation = Column(JSON, nullable=True)
-
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
 
     user = relationship("User", back_populates="sessions")
@@ -600,7 +596,7 @@ class CareerSession(Base):
 
 
 # =========================
-# CAREER TRACK
+# CAREER TRACKS
 # =========================
 class CareerTrack(Base):
     __tablename__ = "career_tracks"
@@ -742,6 +738,9 @@ class JobPost(Base):
         nullable=False
     )
 
+    # Matches existing DB column `salary` (nullable text)
+    salary = Column(String, nullable=True)
+
     user_interactions = relationship("JobUserInteraction", back_populates="job_post", cascade="all, delete-orphan")
     skills = relationship("JobPostSkill", back_populates="job_post", cascade="all, delete-orphan")
     applications = relationship("JobApplication", back_populates="job_post", cascade="all, delete-orphan")
@@ -763,6 +762,10 @@ class JobPostSkill(Base):
 
     job_post = relationship("JobPost", back_populates="skills")
     skill = relationship("Skill", back_populates="job_post_skills")
+
+    __table_args__ = (
+        Index("idx_job_skills_skill_id", "skill_id"),
+    )
 
 
 # =========================
@@ -795,6 +798,7 @@ class JobUserInteraction(Base):
     user = relationship("User")
 
     __table_args__ = (
+        UniqueConstraint("user_id", "job_post_id", name="unique_user_job_interaction"),
         Index("idx_job_user_interactions_user_saved", "user_id", "is_saved"),
         Index("idx_job_user_interactions_user_viewed_at", "user_id", "viewed_at"),
     )
@@ -902,3 +906,70 @@ class CourseUserProgress(Base):
         Index("idx_course_user_progress_user_status", "user_id", "status"),
         Index("idx_course_user_progress_saved_at", "saved_at"),
     )
+
+
+# ###########################################################################################################################
+# BLOG CAREER LEVELS (Existing tables)
+# ###########################################################################################################################
+
+# =========================
+# BLOG CAREER LEVEL
+# =========================
+class BlogCareerLevel(Base):
+    __tablename__ = "blog_career_levels"
+
+    id = Column(UUID(as_uuid=True), primary_key=True)
+    career_id = Column(UUID(as_uuid=True), ForeignKey("career_tracks.id"), nullable=False)
+    level = Column(String, nullable=False)  # "Entry", "Junior", "Senior"
+    salary_min = Column(Integer, nullable=True)
+    salary_max = Column(Integer, nullable=True)
+    market_demand = Column(String, nullable=True)  # "Low", "Medium", "High"
+    created_at = Column(DateTime(timezone=True), nullable=True)
+    updated_at = Column(DateTime(timezone=True), nullable=True)
+
+    career = relationship("CareerTrack")
+    skills = relationship("BlogCareerLevelSkill", back_populates="career_level", cascade="all, delete-orphan")
+    responsibilities = relationship("BlogCareerLevelResponsibility", back_populates="career_level", cascade="all, delete-orphan")
+    fit_profiles = relationship("BlogCareerLevelFitProfile", back_populates="career_level", cascade="all, delete-orphan")
+
+
+# =========================
+# BLOG CAREER LEVEL SKILL
+# =========================
+class BlogCareerLevelSkill(Base):
+    __tablename__ = "blog_career_level_skills"
+
+    id = Column(UUID(as_uuid=True), primary_key=True)
+    career_level_id = Column(UUID(as_uuid=True), ForeignKey("blog_career_levels.id", ondelete="CASCADE"), nullable=False)
+    skill_name = Column(String, nullable=False)
+    created_at = Column(DateTime(timezone=True), nullable=True)
+
+    career_level = relationship("BlogCareerLevel", back_populates="skills")
+
+
+# =========================
+# BLOG CAREER LEVEL RESPONSIBILITY
+# =========================
+class BlogCareerLevelResponsibility(Base):
+    __tablename__ = "blog_career_level_responsibilities"
+
+    id = Column(UUID(as_uuid=True), primary_key=True)
+    career_level_id = Column(UUID(as_uuid=True), ForeignKey("blog_career_levels.id", ondelete="CASCADE"), nullable=False)
+    description = Column(Text, nullable=False)
+    created_at = Column(DateTime(timezone=True), nullable=True)
+
+    career_level = relationship("BlogCareerLevel", back_populates="responsibilities")
+
+
+# =========================
+# BLOG CAREER LEVEL FIT PROFILE
+# =========================
+class BlogCareerLevelFitProfile(Base):
+    __tablename__ = "blog_career_level_fit_profiles"
+
+    id = Column(UUID(as_uuid=True), primary_key=True)
+    career_level_id = Column(UUID(as_uuid=True), ForeignKey("blog_career_levels.id", ondelete="CASCADE"), nullable=False)
+    statement = Column(Text, nullable=False)
+    created_at = Column(DateTime(timezone=True), nullable=True)
+
+    career_level = relationship("BlogCareerLevel", back_populates="fit_profiles")

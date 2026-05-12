@@ -1,11 +1,13 @@
 "use client";
-import React from "react";
+import React, { useState } from "react";
+import { Button } from "./button";
 
 interface SkillConfirmPopupProps {
   skillName: string;
   isLoading?: boolean;
-  onConfirm: () => void;
+  onConfirm: (questions: number) => void;
   onCancel: () => void;
+  testCode: string;
 }
 
 export default function SkillConfirmPopup({
@@ -13,7 +15,14 @@ export default function SkillConfirmPopup({
   isLoading = false,
   onConfirm,
   onCancel,
+  testCode,
 }: SkillConfirmPopupProps) {
+  const [questions, setQuestions] = useState("");
+
+  const numericValue = Number(questions);
+  const isValid =
+    questions !== "" && numericValue >= 5 && numericValue <= 20;
+
   return (
     <div
       role="dialog"
@@ -36,61 +45,206 @@ export default function SkillConfirmPopup({
       <div
         onClick={(event) => event.stopPropagation()}
         style={{
-          width: "min(92vw, 520px)",
-          borderRadius: "24px",
-          backgroundColor: "#E6FFB2",
-          padding: "28px 24px",
+          backgroundColor: "var(--light-green)",
+          width: "26rem",
+          padding: "4vh",
+          borderRadius: "40px",
+          position: "relative",
           display: "flex",
           flexDirection: "column",
-          gap: "20px",
-          textAlign: "center",
-          color: "#111827",
-          boxShadow: "0 16px 48px rgba(0, 0, 0, 0.35)",
+          gap: "2vh",
           fontFamily: "var(--font-nova-square)",
         }}
       >
-        <h2 style={{ margin: 0, fontSize: "23px", fontWeight: 400, lineHeight: 1.5 }}>
-          Do you want to start skill assessment for "{skillName}"?
-        </h2>
-
-        <div style={{ display: "flex", justifyContent: "center", gap: "12px", flexWrap: "wrap" }}>
-          <button
-            type="button"
-            onClick={onCancel}
-            disabled={isLoading}
+        <div
+          style={{
+            display: "flex",
+            width: "100%",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <h2
             style={{
-              minWidth: "120px",
-              padding: "10px 22px",
-              borderRadius: "12px",
-              border: "1px solid #334155",
-              backgroundColor: "transparent",
-              color: "#111827",
-              cursor: isLoading ? "not-allowed" : "pointer",
-              opacity: isLoading ? 0.6 : 1,
-              fontWeight: 700,
+              fontSize: "22px",
+              fontWeight: 400,
+              lineHeight: 1.5,
+            }}
+          >
+            Customize Your Assessment
+          </h2>
+          <img
+            onClick={onCancel}
+            src="/global/close.svg"
+            alt="Close popup"
+            style={{
+              width: "2rem",
+              height: "2rem",
+              filter: "invert(1)",
+              cursor: "pointer",
+            }}
+          />
+        </div>
+
+        <div
+          style={{
+            width: "100%",
+            height: "0.1rem",
+            backgroundColor: "black",
+            borderRadius: "999px",
+          }}
+        />
+
+        <div
+          style={{
+            display: "flex",
+            width: "100%",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <p style={{ marginRight: "1rem", whiteSpace: "nowrap" }}>
+            Assessment Code:
+          </p>
+          <div
+            style={{
+              paddingInline: "1rem",
+              paddingBlock: "0.5rem",
+              backgroundColor: "var(--medium-grey)",
+              borderRadius: "2vh",
+              color: "white",
+              width: "12rem",
+            }}
+          >
+            <p>{testCode}</p>
+          </div>
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            width: "100%",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <p style={{ marginRight: "1rem", whiteSpace: "nowrap" }}>
+            Skill Chosen:
+          </p>
+          <div
+            style={{
+              paddingInline: "1rem",
+              paddingBlock: "0.5rem",
+              backgroundColor: "var(--medium-grey)",
+              borderRadius: "2vh",
+              color: "white",
+              width: "12rem",
+            }}
+          >
+            <p>{skillName}</p>
+          </div>
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            width: "100%",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <p style={{ marginRight: "1rem", whiteSpace: "nowrap" }}>
+            No. of Questions:
+          </p>
+
+          <input
+            type="text"
+            inputMode="numeric"
+            placeholder="Enter number (5-20)"
+            value={questions}
+            onChange={(e) => {
+              const value = e.target.value;
+
+              if (!/^\d*$/.test(value)) return;
+
+              if (value === "") {
+                setQuestions("");
+                return;
+              }
+
+              const num = Number(value);
+
+              if (num <= 20) {
+                setQuestions(value);
+              }
+            }}
+            onBlur={() => {
+              if (questions === "") return;
+
+              let num = Number(questions);
+
+              if (num < 5) num = 5;
+              if (num > 20) num = 20;
+
+              setQuestions(String(num));
+            }}
+            style={{
+              paddingInline: "1rem",
+              paddingBlock: "0.5rem",
+              backgroundColor: "white",
+              borderRadius: "2vh",
+              color: "black",
+              width: "12rem",
+              border: "none",
+              outline: "none",
+            }}
+          />
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            width: "100%",
+            alignItems: "center",
+            gap: "0.9rem",
+          }}
+        >
+          <Button
+            onClick={onCancel}
+            variant="popup-inverted"
+            style={{
+              flex: "1 1 0",
+              minWidth: 0,
+              height: "auto",
+              paddingBlock: "0.95rem",
+              paddingInline: "0.9rem",
+              fontSize: "0.95rem",
+              lineHeight: 1.2,
+              textAlign: "center",
+              whiteSpace: "nowrap",
             }}
           >
             Cancel
-          </button>
+          </Button>
 
-          <button
-            type="button"
-            onClick={onConfirm}
-            disabled={isLoading}
+          <Button
+            onClick={() => onConfirm(numericValue)}
+            disabled={!isValid || isLoading}
+            variant="popup"
             style={{
-              minWidth: "120px",
-              padding: "10px 22px",
-              borderRadius: "12px",
-              border: "none",
-              backgroundColor: "#1e2b58",
-              color: "white",
-              cursor: isLoading ? "not-allowed" : "pointer",
-              opacity: isLoading ? 0.7 : 1,
-              fontWeight: 700,
+              flex: "1 1 0",
+              minWidth: 0,
+              height: "auto",
+              paddingBlock: "0.95rem",
+              paddingInline: "0.9rem",
+              fontSize: "0.95rem",
+              lineHeight: 1.2,
+              textAlign: "center",
+              whiteSpace: "nowrap",
             }}
           >
             {isLoading ? "Starting..." : "Start Assessment"}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

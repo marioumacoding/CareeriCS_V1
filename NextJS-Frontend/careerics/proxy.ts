@@ -43,6 +43,16 @@ export function proxy(request: NextRequest) {
 
   // Redirect logged-in users away from login/register
   if (!SKIP_AUTH_LOCAL && AUTH_ROUTES.has(pathname) && token) {
+    // If there's a redirect/callbackUrl param, send them directly to that destination
+    const redirectTarget = request.nextUrl.searchParams.get("redirect") || request.nextUrl.searchParams.get("callbackUrl");
+    if (redirectTarget) {
+      const targetUrl = request.nextUrl.clone();
+      targetUrl.pathname = redirectTarget;
+      targetUrl.search = ""; // Clear query params
+      return NextResponse.redirect(targetUrl);
+    }
+    
+    // Otherwise, send them to home (default behavior for already-logged-in users accessing login/register)
     const dashUrl = request.nextUrl.clone();
     dashUrl.pathname = "/features/home";
     return NextResponse.redirect(dashUrl);

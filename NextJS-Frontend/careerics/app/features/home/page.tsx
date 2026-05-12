@@ -1,44 +1,66 @@
 "use client";
 
 import ChoiceCard from "@/components/ui/home/choice-card-home";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { RecentActivityCard} from "@/components/ui/home/recent-activity";
+import { useEffect, useMemo, useState } from "react";
+import { RecentActivityCard } from "@/components/ui/home/recent-activity";
 import { JourneyProgressCard } from "@/components/ui/home/journey-progress-card";
 import { PhaseCard } from "@/components/ui/home/phase-card";
 import { CareerCardsContainer } from "@/components/ui/career-cards-container";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/providers/auth-provider";
-import { careerService, interviewService, reportsService, skillAssessmentService } from "@/services";
 import {
-  getUnifiedBookmarks,
-  UNIFIED_BOOKMARKS_UPDATED_EVENT,
-} from "@/lib/unified-bookmarks";
-import type { UnifiedBookmarkEntry } from "@/types";
-
-type CareerCardItem = {
-  title: string;
-  desc: string;
-  href?: string;
-  buttonLabel?: string;
-  tag?: string;
-  type?: string;
-};
+  careerService,
+  interviewService,
+  jobService,
+  skillAssessmentService,
+} from "@/services";
+import {
+  COURSE_PROGRESS_UPDATED_EVENT,
+  loadCourseProgress,
+} from "@/lib/course-progress";
+import { UNIFIED_BOOKMARKS_UPDATED_EVENT } from "@/lib/unified-bookmarks";
+import { removeTrackBookmarksFromUnifiedList } from "@/lib/unified-bookmark-actions";
+import {
+  CAREER_FEATURE_ROUTE,
+  buildCareerQuizResultsHref,
+  buildCareerQuizSelectionHref,
+  startCareerQuizSession,
+} from "@/lib/career-quiz";
+import { buildJobDetailsHref, mapApiJobToUiModel } from "@/lib/jobs";
+import {
+  JOURNEY_PHASE_STATE_UPDATED_EVENT,
+  JOURNEY_PHASES,
+  type JourneyTrackCard,
+  buildJourneyPhaseHref,
+  invalidateJourneyTrackCardsCache,
+  loadJourneyTrackCards,
+  persistSelectedJourneyTrackId,
+  readJourneyPhaseState,
+  readSelectedJourneyTrackId,
+  toProgressBucket,
+} from "@/lib/journey";
 
 type RecentActivityItem = {
+  key: string;
   id: string;
   date: string;
-  type: "career" | "roadmap" | "file";
+  type: "career" | "skill" | "interview" | "course" | "job" | "file";
   score?: number;
   timestamp: number;
+  href?: string | null;
+  downloadUrl?: string | null;
 };
 
 const RECENT_ACTIVITY_PLACEHOLDER: RecentActivityItem[] = [
   {
+    key: "placeholder",
     id: "No activity yet",
-    date: "Complete actions across CareeriCS to see activity here",
+    date: "Complete a quiz, assessment, interview, course, or job application to see activity here",
     type: "file",
     timestamp: 0,
   },
 ];
+const RECENT_ACTIVITY_LIMIT = 5;
 
 function formatActivityDate(value: string, prefix: string): string {
   const parsed = new Date(value);
@@ -61,7 +83,7 @@ function toTimestamp(value?: string | null): number {
 function getAssessmentActivityTitle(sessionType?: string): string {
   const normalized = sessionType?.toLowerCase();
   if (normalized === "skills" || normalized === "skill") {
-    return "Skills Assessment";
+    return "Skill Assessment";
   }
 
   if (normalized === "roadmap") {
@@ -79,89 +101,112 @@ function getAssessmentActivityTitle(sessionType?: string): string {
   return "Assessment Session";
 }
 
-function toProgressBucket(value: number): number {
-  const clamped = Math.min(Math.max(value, 0), 100);
-  const roundedToTen = Math.round(clamped / 10) * 10;
-  return Math.min(100, Math.max(10, roundedToTen));
-}
+function dedupeActivities(activities: RecentActivityItem[]): RecentActivityItem[] {
+  const byKey = new Map<string, RecentActivityItem>();
 
-function toCurrentPhase(progress: number): number {
-  if (progress >= 90) return 5;
-  if (progress >= 70) return 4;
-  if (progress >= 45) return 3;
-  if (progress >= 20) return 2;
-  return 1;
+  for (const activity of [...activities].sort((a, b) => b.timestamp - a.timestamp)) {
+    if (!byKey.has(activity.key)) {
+      byKey.set(activity.key, activity);
+    }
+  }
+
+  return Array.from(byKey.values()).sort((a, b) => b.timestamp - a.timestamp);
 }
 
 export default function HomePage() {
+  const router = useRouter();
   const { user, isLoading: isAuthLoading } = useAuth();
-  const [bookmarks, setBookmarks] = useState<UnifiedBookmarkEntry[]>([]);
+  const userId = user?.id ?? null;
+
   const [projectActivities, setProjectActivities] = useState<RecentActivityItem[]>([]);
-  const [selectedCareer, setSelectedCareer] = useState<string | null>(null);
-  const handleContinue = (career: CareerCardItem) => {
-    setSelectedCareer(career.title);
+  const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
+  const [isStartingCareerQuiz, setIsStartingCareerQuiz] = useState(false);
+  const [careerQuizError, setCareerQuizError] = useState<string | null>(null);
+  const [bookmarkActionError, setBookmarkActionError] = useState<string | null>(null);
+  const [activityRefreshNonce, setActivityRefreshNonce] = useState(0);
+  const [bookmarkRefreshNonce, setBookmarkRefreshNonce] = useState(0);
+  const [, setPhaseStateRefreshNonce] = useState(0);
+
+  const [journeyTracks, setJourneyTracks] = useState<JourneyTrackCard[]>([]);
+  const [isLoadingJourneyTracks, setIsLoadingJourneyTracks] = useState(false);
+  const [journeyError, setJourneyError] = useState<string | null>(null);
+
+  const handleStartCareerQuiz = async () => {
+    if (isStartingCareerQuiz || isAuthLoading) {
+      return;
+    }
+
+    if (!userId) {
+      setCareerQuizError("Please sign in first to start the career quiz.");
+      router.push(`/auth/login?redirect=${encodeURIComponent(CAREER_FEATURE_ROUTE)}`);
+      return;
+    }
+
+    setCareerQuizError(null);
+    setIsStartingCareerQuiz(true);
+
+    try {
+      const sessionId = await startCareerQuizSession(userId);
+      router.push(buildCareerQuizSelectionHref(sessionId));
+    } catch (error) {
+      setCareerQuizError(
+        error instanceof Error
+          ? error.message
+          : "Unable to start the career quiz right now. Please try again.",
+      );
+      setIsStartingCareerQuiz(false);
+    }
   };
 
-  const activeSelectedCareer = selectedCareer ?? bookmarks[0]?.title ?? null;
-  const selectedBookmark = useMemo(() => {
-    return bookmarks.find((bookmark) => bookmark.title === activeSelectedCareer) || null;
-  }, [activeSelectedCareer, bookmarks]);
-
-  const recentActivities = useMemo<RecentActivityItem[]>(() => {
-    const bookmarkActivities = bookmarks.map((bookmark) => {
-      const activityScore =
-        bookmark.kind === "career" && typeof bookmark.score === "number"
-          ? Math.min(Math.max(Math.round(bookmark.score), 0), 100)
-          : undefined;
-
-      return {
-        id: bookmark.title,
-        date: formatActivityDate(bookmark.saved_at, "Saved on"),
-        type: bookmark.kind,
-        score: activityScore,
-        timestamp: toTimestamp(bookmark.saved_at),
-      };
-    });
-
-    const mergedActivities = [...bookmarkActivities, ...projectActivities]
-      .sort((a, b) => b.timestamp - a.timestamp)
-      .slice(0, 5);
-
-    if (!mergedActivities.length) {
-      return RECENT_ACTIVITY_PLACEHOLDER;
-    }
-
-    return mergedActivities;
-  }, [bookmarks, projectActivities]);
-
-  const dashboardData = useMemo(() => {
-    const selectedScore =
-      selectedBookmark?.kind === "career" && typeof selectedBookmark.score === "number"
-        ? selectedBookmark.score
-        : 10;
-
-    const progress = toProgressBucket(selectedScore);
-    const currentPhase = toCurrentPhase(progress);
-    const nextPhase = Math.min(5, currentPhase + 1);
-
-    if (!selectedBookmark) {
-      return {
-        activities: recentActivities,
-        progress: 10,
-        currentPhase: 1,
-        nextPhase: 2,
-        nextPhaseDesc: "Select a career or roadmap to see next phase details.",
-      };
-    }
-
-    return {
-      activities: recentActivities,
-      progress,
-      currentPhase,
-      nextPhase,
-      nextPhaseDesc: selectedBookmark.description ?? "No next phase description available.",
+  useEffect(() => {
+    const handleJourneyPhaseStateUpdated = () => {
+      setPhaseStateRefreshNonce((previous) => previous + 1);
     };
-  }, [recentActivities, selectedBookmark]);
+
+    const handleBookmarksUpdated = () => {
+      if (!isAuthLoading) {
+        invalidateJourneyTrackCardsCache(userId);
+        setBookmarkRefreshNonce((previous) => previous + 1);
+      }
+    };
+
+    window.addEventListener(
+      JOURNEY_PHASE_STATE_UPDATED_EVENT,
+      handleJourneyPhaseStateUpdated as EventListener,
+    );
+    window.addEventListener(UNIFIED_BOOKMARKS_UPDATED_EVENT, handleBookmarksUpdated as EventListener);
+    window.addEventListener("storage", handleBookmarksUpdated);
+
+    return () => {
+      window.removeEventListener(
+        JOURNEY_PHASE_STATE_UPDATED_EVENT,
+        handleJourneyPhaseStateUpdated as EventListener,
+      );
+      window.removeEventListener(
+        UNIFIED_BOOKMARKS_UPDATED_EVENT,
+        handleBookmarksUpdated as EventListener,
+      );
+      window.removeEventListener("storage", handleBookmarksUpdated);
+    };
+  }, [isAuthLoading, userId]);
+
+  useEffect(() => {
+    const handleCourseProgressUpdated = () => {
+      setActivityRefreshNonce((previous) => previous + 1);
+    };
+
+    window.addEventListener(
+      COURSE_PROGRESS_UPDATED_EVENT,
+      handleCourseProgressUpdated as EventListener,
+    );
+
+    return () => {
+      window.removeEventListener(
+        COURSE_PROGRESS_UPDATED_EVENT,
+        handleCourseProgressUpdated as EventListener,
+      );
+    };
+  }, []);
 
   useEffect(() => {
     let isCancelled = false;
@@ -171,7 +216,7 @@ export default function HomePage() {
         return;
       }
 
-      if (!user?.id) {
+      if (!userId) {
         if (!isCancelled) {
           setProjectActivities([]);
         }
@@ -179,104 +224,145 @@ export default function HomePage() {
       }
 
       try {
-        const reportRequests = [
-          { type: "cv" as const, label: "CV Report" },
-          { type: "interview_session" as const, label: "Interview Report" },
-          { type: "skill_assessment" as const, label: "Assessment Report" },
-          { type: "other" as const, label: "Project Report" },
-        ];
-
         const [
-          reportResponses,
           assessmentSessionsResponse,
           interviewSessionsResponse,
           careerSessionsResponse,
+          jobApplicationsResponse,
         ] = await Promise.all([
-          Promise.all(
-            reportRequests.map((request) => reportsService.listUserReports(user.id, request.type)),
-          ),
-          skillAssessmentService.getUserSessions(user.id),
-          interviewService.getUserSessions(user.id),
-          careerService.getUserSessions(user.id),
+          skillAssessmentService.getUserSessions(userId),
+          interviewService.getUserSessions(userId),
+          careerService.getUserSessions(userId),
+          jobService.getUserApplications(userId, {
+            limit: RECENT_ACTIVITY_LIMIT,
+            sort: "date",
+          }),
         ]);
 
-        const reportActivities = reportResponses.flatMap((response, index) => {
-          const { label } = reportRequests[index];
-          const reports = response.success ? response.data ?? [] : [];
+        const careerSessions = (careerSessionsResponse.success
+          ? careerSessionsResponse.data ?? []
+          : []
+        )
+          .filter((session) => session.status?.toLowerCase() === "submitted")
+          .sort(
+            (left, right) =>
+              toTimestamp(right.submitted_at ?? right.started_at) -
+              toTimestamp(left.submitted_at ?? left.started_at),
+          );
 
-          return reports.map((report) => ({
-            id: `${label}: ${report.filename}`,
-            date: formatActivityDate(report.created_at, "Generated on"),
-            type: "file" as const,
-            timestamp: toTimestamp(report.created_at),
-          }));
+        const recentCareerSessions = careerSessions.slice(0, RECENT_ACTIVITY_LIMIT);
+        const careerResultsResponses = await Promise.all(
+          recentCareerSessions.map((session) => careerService.getCareerResults(session.id)),
+        );
+
+        const careerActivities = recentCareerSessions.map((session, index) => {
+          const activityDate = session.submitted_at ?? session.started_at ?? "";
+          const resultsResponse = careerResultsResponses[index];
+          const topTrack =
+            resultsResponse.success && resultsResponse.data?.track_scores?.length
+              ? resultsResponse.data.track_scores[0]
+              : null;
+
+          return {
+            key: `career:${session.id}`,
+            id: topTrack
+              ? `Career Quiz: ${topTrack.track_name}`
+              : "Career Quiz Completed",
+            date: formatActivityDate(activityDate, "Completed on"),
+            type: "career" as const,
+            score:
+              typeof topTrack?.score === "number"
+                ? Math.min(Math.max(Math.round(topTrack.score), 0), 100)
+                : undefined,
+            timestamp: toTimestamp(activityDate),
+            href: buildCareerQuizResultsHref(session.id, topTrack?.track_id),
+          };
         });
 
         const assessmentActivities = (
           assessmentSessionsResponse.success ? assessmentSessionsResponse.data ?? [] : []
         )
           .filter((session) => session.status === "submitted")
+          .sort(
+            (left, right) =>
+              toTimestamp(right.submitted_at ?? right.started_at) -
+              toTimestamp(left.submitted_at ?? left.started_at),
+          )
+          .slice(0, RECENT_ACTIVITY_LIMIT)
           .map((session) => {
-            const activityTimestamp = toTimestamp(session.submitted_at ?? session.started_at);
+            const activityDate = session.submitted_at ?? session.started_at;
             const activityScore =
               typeof session.score === "number"
                 ? Math.min(Math.max(Math.round(session.score), 0), 100)
                 : undefined;
 
             return {
-              id: getAssessmentActivityTitle(session.type),
-              date: formatActivityDate(
-                session.submitted_at ?? session.started_at,
-                "Submitted on",
-              ),
-              type: "file" as const,
+              key: `skill:${session.id}`,
+              id: `${getAssessmentActivityTitle(session.type)} Completed`,
+              date: formatActivityDate(activityDate, "Completed on"),
+              type: "skill" as const,
               score: activityScore,
-              timestamp: activityTimestamp,
+              timestamp: toTimestamp(activityDate),
+              href: "/features/skill",
             };
           });
 
         const interviewActivities = (
           interviewSessionsResponse.success ? interviewSessionsResponse.data ?? [] : []
-        ).map((session) => {
-          const normalizedStatus = session.status?.toLowerCase();
-          const datePrefix =
-            normalizedStatus === "completed"
-              ? "Completed on"
-              : normalizedStatus === "cancelled"
-                ? "Cancelled on"
-                : "Started on";
-
-          return {
-            id: `Interview Session: ${session.name}`,
-            date: formatActivityDate(session.created_at ?? "", datePrefix),
-            type: "file" as const,
+        )
+          .filter((session) => session.status?.toLowerCase() === "completed")
+          .sort(
+            (left, right) =>
+              toTimestamp(right.created_at) -
+              toTimestamp(left.created_at),
+          )
+          .slice(0, RECENT_ACTIVITY_LIMIT)
+          .map((session) => ({
+            key: `interview:${session.id}`,
+            id: `Interview: ${session.name}`,
+            date: formatActivityDate(session.created_at ?? "", "Completed on"),
+            type: "interview" as const,
             timestamp: toTimestamp(session.created_at),
-          };
-        });
+            href: `/interview-feature/last-analysis?type=${encodeURIComponent(
+              session.type || "hr",
+            )}&sessionId=${encodeURIComponent(session.id)}&q=1`,
+          }));
 
-        const careerActivities = (
-          careerSessionsResponse.success ? careerSessionsResponse.data ?? [] : []
-        ).map((session) => {
-          const normalizedStatus = session.status?.toLowerCase();
-          const isSubmitted = normalizedStatus === "submitted";
-          const activityDate = isSubmitted
-            ? session.submitted_at ?? session.started_at ?? ""
-            : session.started_at ?? session.submitted_at ?? "";
+        const courseActivities = loadCourseProgress(user?.id).completed.map((course) => {
+          const activityDate = course.completedAt ?? course.updatedAt ?? "";
 
           return {
-            id: isSubmitted ? "Career Quiz Submitted" : "Career Quiz Session Started",
-            date: formatActivityDate(activityDate, isSubmitted ? "Submitted on" : "Started on"),
-            type: "file" as const,
+            key: `course:${course.id}`,
+            id: `Course Completed: ${course.title}`,
+            date: formatActivityDate(activityDate, "Completed on"),
+            type: "course" as const,
             timestamp: toTimestamp(activityDate),
+            href: "/features/courses",
           };
         });
 
-        const merged = [
-          ...reportActivities,
+        const jobActivities = (
+          jobApplicationsResponse.success
+            ? (jobApplicationsResponse.data?.jobs ?? []).map(mapApiJobToUiModel)
+            : []
+        )
+          .filter((job) => Boolean(job.appliedAt))
+          .map((job) => ({
+            key: `job:${job.id}`,
+            id: `Applied to ${job.title}`,
+            date: formatActivityDate(job.appliedAt ?? "", "Applied on"),
+            type: "job" as const,
+            timestamp: toTimestamp(job.appliedAt),
+            href: buildJobDetailsHref(job.id),
+          }));
+
+        const merged = dedupeActivities([
+          ...careerActivities,
           ...assessmentActivities,
           ...interviewActivities,
-          ...careerActivities,
-        ].sort((a, b) => b.timestamp - a.timestamp);
+          ...courseActivities,
+          ...jobActivities,
+        ]).slice(0, RECENT_ACTIVITY_LIMIT);
 
         if (!isCancelled) {
           setProjectActivities(merged);
@@ -293,77 +379,175 @@ export default function HomePage() {
     return () => {
       isCancelled = true;
     };
-  }, [isAuthLoading, user?.id]);
+  }, [activityRefreshNonce, isAuthLoading, userId, user?.id]);
 
-  const loadBookmarks = useCallback(() => {
-    if (isAuthLoading) {
-      return;
-    }
-
-    setBookmarks(getUnifiedBookmarks(user?.id));
-  }, [isAuthLoading, user?.id]);
-
-  // Load bookmarks after auth completes
   useEffect(() => {
-    if (isAuthLoading) {
-      return;
-    }
+    let alive = true;
 
-    loadBookmarks();
-  }, [isAuthLoading, loadBookmarks]);
+    const loadTracks = async () => {
+      if (isAuthLoading) {
+        return;
+      }
 
-  // Listen for external bookmark updates
-  useEffect(() => {
-    const handleBookmarksUpdated = () => {
-      if (!isAuthLoading) {
-        setBookmarks(getUnifiedBookmarks(user?.id));
+      if (!userId) {
+        setJourneyTracks([]);
+        setSelectedTrackId(null);
+        setJourneyError(null);
+        setIsLoadingJourneyTracks(false);
+        return;
+      }
+
+      setIsLoadingJourneyTracks(true);
+      setJourneyError(null);
+
+      try {
+        const tracks = await loadJourneyTrackCards(userId);
+
+        if (!alive) {
+          return;
+        }
+
+        setJourneyTracks(tracks);
+        const bookmarkedTracks = tracks.filter((track) => track.source === "bookmark");
+
+        const persistedTrackId = readSelectedJourneyTrackId(userId);
+        const selectedFromStorage = persistedTrackId
+          ? bookmarkedTracks.find((track) => track.id === persistedTrackId) || null
+          : null;
+        const fallbackTrack = selectedFromStorage || bookmarkedTracks[0] || null;
+
+        setSelectedTrackId(fallbackTrack?.id || null);
+        persistSelectedJourneyTrackId(fallbackTrack?.id || null, userId);
+
+        setIsLoadingJourneyTracks(false);
+      } catch {
+        if (!alive) {
+          return;
+        }
+
+        setJourneyTracks([]);
+        setSelectedTrackId(null);
+        setJourneyError("Unable to load your journey tracks right now.");
+        setIsLoadingJourneyTracks(false);
       }
     };
 
-    window.addEventListener(UNIFIED_BOOKMARKS_UPDATED_EVENT, handleBookmarksUpdated as EventListener);
-    window.addEventListener("storage", handleBookmarksUpdated);
+    void loadTracks();
 
     return () => {
-      window.removeEventListener(
-        UNIFIED_BOOKMARKS_UPDATED_EVENT,
-        handleBookmarksUpdated as EventListener,
-      );
-      window.removeEventListener("storage", handleBookmarksUpdated);
+      alive = false;
     };
-  }, [user?.id, isAuthLoading]);
+  }, [bookmarkRefreshNonce, isAuthLoading, userId]);
 
-  const careerData: CareerCardItem[] = useMemo(() => {
-    if (bookmarks.length > 0) {
-      return bookmarks.map((bookmark) => {
-        if (bookmark.kind === "roadmap") {
-          return {
-            title: bookmark.title,
-            desc: bookmark.description || "Continue your roadmap journey.",
-            href: `/journey?career=${encodeURIComponent(bookmark.title)}`,
-            buttonLabel: "Continue",
-          };
-        }
-
-        return {
-          title: bookmark.title,
-          desc: bookmark.description || `Match score: ${bookmark.score ?? 0}%`,
-          href: `/journey?career=${encodeURIComponent(bookmark.title)}`,
-          buttonLabel: "Continue",
-          tag: "Career Suggestion",
-        };
-      });
+  const recentActivities = useMemo<RecentActivityItem[]>(() => {
+    if (!projectActivities.length) {
+      return RECENT_ACTIVITY_PLACEHOLDER;
     }
 
-    return [
-      {
-        title: "No Bookmarks Yet",
-        desc: "Save roadmap or career suggestions and they will appear here.",
-        href: "/features/career",
-        buttonLabel: "Take Career Quiz",
-        type: "bookmark",
-      },
-    ];
-  }, [bookmarks]);
+    return projectActivities;
+  }, [projectActivities]);
+
+  const bookmarkedJourneyTracks = useMemo(() => {
+    return journeyTracks.filter((track) => track.source === "bookmark");
+  }, [journeyTracks]);
+
+  const activeTrack = useMemo(() => {
+    if (!bookmarkedJourneyTracks.length) {
+      return null;
+    }
+
+    if (selectedTrackId) {
+      const matched = bookmarkedJourneyTracks.find((track) => track.id === selectedTrackId);
+      if (matched) {
+        return matched;
+      }
+    }
+
+    return bookmarkedJourneyTracks[0];
+  }, [bookmarkedJourneyTracks, selectedTrackId]);
+
+  const activePhaseState = activeTrack?.id
+    ? readJourneyPhaseState(activeTrack.id, userId)
+    : { maxReached: 1 as const };
+
+  const dashboardData = useMemo(() => {
+    if (!activeTrack) {
+      return {
+        activities: recentActivities,
+        progress: 10,
+        currentPhase: 1,
+        nextPhase: 2,
+        nextPhaseDesc: JOURNEY_PHASES[1].description,
+      };
+    }
+
+    const currentPhase = activePhaseState.maxReached;
+    const nextPhase = currentPhase >= 5 ? 5 : currentPhase + 1;
+    const progressValue =
+      currentPhase <= 1
+        ? 10
+        : toProgressBucket(((currentPhase - 1) / 4) * 100);
+
+    return {
+      activities: recentActivities,
+      progress: progressValue,
+      currentPhase,
+      nextPhase,
+      nextPhaseDesc: JOURNEY_PHASES[nextPhase - 1]?.description || "No next phase description available.",
+    };
+  }, [activePhaseState.maxReached, activeTrack, recentActivities]);
+
+  const handleSelectTrack = (trackId: string) => {
+    setBookmarkActionError(null);
+    setSelectedTrackId(trackId);
+    persistSelectedJourneyTrackId(trackId, userId);
+  };
+
+  const openTrackJourney = (track: JourneyTrackCard) => {
+    setBookmarkActionError(null);
+    persistSelectedJourneyTrackId(track.id, userId);
+    setSelectedTrackId(track.id);
+
+    const targetPhase = readJourneyPhaseState(track.id, userId).maxReached;
+    router.push(buildJourneyPhaseHref(targetPhase, track.id));
+  };
+
+  const handleRemoveTrack = async (track: JourneyTrackCard) => {
+    if (!userId) {
+      setBookmarkActionError("Please sign in first to manage your saved careers.");
+      return;
+    }
+
+    setBookmarkActionError(null);
+
+    const removal = await removeTrackBookmarksFromUnifiedList({
+      trackId: track.id,
+      roadmapId: track.roadmapId,
+      userId,
+    });
+
+    if (!removal.success) {
+      setBookmarkActionError(removal.message || "Unable to remove this career right now.");
+      return;
+    }
+
+    invalidateJourneyTrackCardsCache(userId);
+
+    const currentTracks = bookmarkedJourneyTracks;
+    const currentIndex = currentTracks.findIndex((item) => item.id === track.id);
+    const remainingTracks = currentTracks.filter((item) => item.id !== track.id);
+    const fallbackTrack = remainingTracks[currentIndex] || remainingTracks[currentIndex - 1] || remainingTracks[0] || null;
+
+    setJourneyTracks((previous) => previous.filter((item) => item.id !== track.id));
+
+    if (selectedTrackId === track.id) {
+      setSelectedTrackId(fallbackTrack?.id || null);
+      persistSelectedJourneyTrackId(fallbackTrack?.id || null, userId);
+    }
+  };
+
+  const showJourneyPlaceholder = !isLoadingJourneyTracks && !bookmarkedJourneyTracks.length;
+  const showSavedCareerPlaceholder = showJourneyPlaceholder && journeyTracks.length > 0;
 
   return (
     <div
@@ -380,21 +564,104 @@ export default function HomePage() {
       }}
     >
       <CareerCardsContainer
+        Title="Your Careers"
         style={{ gridArea: "1 / 1 / 3 / 4" }}
       >
-        {careerData.map((career) => (
+        {careerQuizError ? (
+          <p
+            style={{
+              margin: "0 0 1rem 0",
+              color: "#FFD3D3",
+              fontFamily: "var(--font-jura)",
+              fontSize: "0.95rem",
+            }}
+          >
+            {careerQuizError}
+          </p>
+        ) : null}
+
+        {bookmarkActionError ? (
+          <p
+            style={{
+              margin: "0 0 1rem 0",
+              color: "#FFD3D3",
+              fontFamily: "var(--font-jura)",
+              fontSize: "0.9rem",
+            }}
+          >
+            {bookmarkActionError}
+          </p>
+        ) : null}
+
+        {journeyError ? (
+          <p
+            style={{
+              margin: "0 0 1rem 0",
+              color: "#FFD3D3",
+              fontFamily: "var(--font-jura)",
+              fontSize: "0.9rem",
+            }}
+          >
+            {journeyError}
+          </p>
+        ) : null}
+
+        {isLoadingJourneyTracks ? (
           <ChoiceCard
-            key={career.title}
-            isSelected={activeSelectedCareer === career.title}
-            title={career.title}
-            image={`/landing/Rectangle.svg`}
-            description={career.desc}
-            buttonLabel={career.buttonLabel}
-            blogPath={career.href}
-            onClick={() => handleContinue(career)}
-            type={career.type || ""}
+            key="journey-loading"
+            title="Loading Tracks"
+            image="/landing/Rectangle.svg"
+            description="Fetching your saved careers and latest recommendations."
+            buttonLabel="Loading..."
+            type="bookmark"
+            disabled
+          />
+        ) : null}
+
+        {bookmarkedJourneyTracks.map((track) => (
+          <ChoiceCard
+            key={track.id}
+            isSelected={activeTrack?.id === track.id}
+            title={track.title}
+            image="/landing/Rectangle.svg"
+            description={track.description}
+            buttonLabel="Continue"
+            onClick={() => handleSelectTrack(track.id)}
+            onAction={() => openTrackJourney(track)}
+            onRemove={() => {
+              void handleRemoveTrack(track);
+            }}
           />
         ))}
+
+        {showJourneyPlaceholder ? (
+          <ChoiceCard
+            key="journey-empty-state"
+            title={showSavedCareerPlaceholder ? "No Saved Careers Yet" : "No Journey Started Yet"}
+            description={
+              showSavedCareerPlaceholder
+                ? "Bookmark a career roadmap to keep it here and continue your journey."
+                : "Take the career quiz to get track recommendations, then continue your 5-phase journey."
+            }
+            buttonLabel={
+              showSavedCareerPlaceholder
+                ? "Explore Roadmaps"
+                : isStartingCareerQuiz
+                  ? "Starting..."
+                  : "Take Quiz"
+            }
+            type="bookmark"
+            disabled={showSavedCareerPlaceholder ? false : isStartingCareerQuiz || isAuthLoading}
+            onAction={() => {
+              if (showSavedCareerPlaceholder) {
+                router.push("/features/roadmap");
+                return;
+              }
+
+              void handleStartCareerQuiz();
+            }}
+          />
+        ) : null}
       </CareerCardsContainer>
 
       <RecentActivityCard
@@ -416,7 +683,9 @@ export default function HomePage() {
       <PhaseCard
         type="next"
         phaseNumber={String(dashboardData.nextPhase)}
-        desc={dashboardData.nextPhaseDesc || "No next phase description available."}
+        desc={
+          dashboardData.nextPhaseDesc || "No next phase description available."
+        }
         style={{ gridArea: "3 / 3 / 5 / 6" }}
       />
     </div>

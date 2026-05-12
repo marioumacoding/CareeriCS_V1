@@ -74,6 +74,28 @@ export interface APISessionCreate {
   user_id: string;
 }
 
+export interface APISessionUpdate {
+  status?: string;
+  emotion_evaluation?: Record<string, unknown> | null;
+  tone_evaluation?: Record<string, unknown> | null;
+  sentiment_evaluation?: Record<string, unknown> | null;
+}
+
+export interface APIInterviewArchiveItem {
+  session_id: string;
+  session_name: string;
+  session_type: string;
+  session_created_at?: string | null;
+  report_id: string;
+  report_filename: string;
+  report_created_at: string;
+}
+
+export interface APICompleteInterviewSessionResponse {
+  session: APISession;
+  report: APIReport;
+}
+
 export interface APIQuestion {
   id: string;
   type: string;
@@ -293,6 +315,15 @@ export interface UserRoadmapBookmarkToggle {
 }
 
 export type UnifiedBookmarkKind = "roadmap" | "career";
+export type UnifiedBookmarkSource = "roadmap" | "career_quiz";
+
+export interface UnifiedBookmarkMetadata {
+  roadmap_id?: string | null;
+  session_id?: string | null;
+  track_id?: string | null;
+  track_name?: string | null;
+  source?: UnifiedBookmarkSource | null;
+}
 
 export interface UnifiedBookmarkEntry {
   kind: UnifiedBookmarkKind;
@@ -300,6 +331,8 @@ export interface UnifiedBookmarkEntry {
   title: string;
   description?: string | null;
   score?: number | null;
+  target_href?: string | null;
+  metadata?: UnifiedBookmarkMetadata | null;
   saved_at: string;
 }
 
@@ -309,6 +342,8 @@ export interface UnifiedBookmarkDraft {
   title: string;
   description?: string | null;
   score?: number | null;
+  target_href?: string | null;
+  metadata?: UnifiedBookmarkMetadata | null;
   saved_at?: string;
 }
 
@@ -508,9 +543,18 @@ export interface APICareerTrackScore {
   track_id: string;
   track_name: string;
   track_description?: string | null;
+  roadmap_id?: string | null;
   score: number;
 }
 
 export interface APICareerEvaluationRead {
   track_scores: APICareerTrackScore[];
+}
+
+// —— Local course progress domain ———————————————————————————————————————————————————————
+
+export interface CourseProgressTimeline {
+  started_at?: string | null;
+  completed_at?: string | null;
+  updated_at?: string | null;
 }

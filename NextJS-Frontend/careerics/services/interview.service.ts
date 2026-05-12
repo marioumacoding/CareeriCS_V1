@@ -16,6 +16,9 @@ import type {
   ApiResponse,
   APISession,
   APISessionCreate,
+  APISessionUpdate,
+  APIInterviewArchiveItem,
+  APICompleteInterviewSessionResponse,
   APIQuestion,
   APIQuestionCreate,
   APIAnswerRead,
@@ -129,12 +132,29 @@ export const interviewService = {
     return fastapiApi.get<APISession>(`/sessions/${sessionId}`);
   },
 
+  updateSession(
+    sessionId: string,
+    payload: APISessionUpdate,
+  ): Promise<ApiResponse<APISession>> {
+    return fastapiApi.put<APISession>(`/sessions/${sessionId}`, payload);
+  },
+
   getUserSessions(userId: string): Promise<ApiResponse<APISession[]>> {
     return fastapiApi.get<APISession[]>(`/sessions/user/${userId}`);
   },
 
+  getUserArchive(userId: string): Promise<ApiResponse<APIInterviewArchiveItem[]>> {
+    return fastapiApi.get<APIInterviewArchiveItem[]>(`/sessions/user/${userId}/archive`);
+  },
+
   deleteSession(sessionId: string): Promise<ApiResponse<{ detail: string }>> {
     return fastapiApi.delete<{ detail: string }>(`/sessions/${sessionId}`);
+  },
+
+  completeSession(
+    sessionId: string,
+  ): Promise<ApiResponse<APICompleteInterviewSessionResponse>> {
+    return fastapiApi.post<APICompleteInterviewSessionResponse>(`/sessions/${sessionId}/complete`);
   },
 
   /**
@@ -154,6 +174,10 @@ export const interviewService = {
 
   listQuestions(): Promise<ApiResponse<APIQuestion[]>> {
     return fastapiApi.get<APIQuestion[]>("/questions/");
+  },
+
+  listQuestionTypes(): Promise<ApiResponse<string[]>> {
+    return fastapiApi.get<string[]>("/questions/types/");
   },
 
   getQuestion(questionId: string): Promise<ApiResponse<APIQuestion>> {

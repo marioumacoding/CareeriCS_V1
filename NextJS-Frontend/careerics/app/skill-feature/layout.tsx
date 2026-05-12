@@ -19,7 +19,7 @@ export default function JourneyLayout({
         >
             <div
                 style={{
-                    background: "linear-gradient(180deg, #142143 0%, #000000 100%)",
+                    background: "linear-gradient(180deg, var(--dark-blue) 0%, #000000 100%)",
                     borderRadius: "5vh",
                     width: "100%",
                     height: "100%",
@@ -45,28 +45,31 @@ export default function JourneyLayout({
 
 
                 {/* Exit Button*/}
-                <button
-                    type="button"
-                    onClick={() => router.back()}
-                    style={{
-                        width: "5vh",
-                        height: "5vh",
-                        cursor: "pointer",
-                        margin: "20px",
-
-                    }}
-                >
-                    <img
-                        src="/Close.svg"
-                        alt="Close"
-                        style={{
-                            width: "100%",
-                            height: "100%",
-                            objectFit: "contain",
-                        }}
-                    />
-
-                </button>
+<button
+        type="button"
+        onClick={() => router.back()}
+        style={{
+            position: "absolute", // 1. Khallih tayir fo2 el elements
+            top: "30px",          // 2. Eb3ed 3an el sa2f sanna
+            right: "30px",        // 3. Elza2 f el ymeen bel-zabt
+            width: "35px",        // 4. Esta5dem px a7san men vh le-de2et el icon
+            height: "35px",
+            cursor: "pointer",
+            background: "none",
+            border: "none",
+            zIndex: 100,         
+            padding: 0,
+        }}
+    >
+        <img
+            src="/global/close.svg"
+            alt="Close"
+            style={{
+                width: "100%",
+                height: "100%",
+            }}
+        />
+    </button>
             </div>
         </div>
     );

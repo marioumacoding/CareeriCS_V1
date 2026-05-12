@@ -15,7 +15,6 @@ export default function RecordingPage() {
   const router = useRouter();
   const { user } = useAuth();
   const {
-    interviewType,
     sessionId,
     followupText,
     followupAudio,
@@ -38,8 +37,6 @@ export default function RecordingPage() {
   const [isFinalizingRecording, setIsFinalizingRecording] = useState(false);
   const [isReplayingQuestion, setIsReplayingQuestion] = useState(false);
   const [isPromptAutoplayBlocked, setIsPromptAutoplayBlocked] = useState(false);
-  const [isCreatingSession, setIsCreatingSession] = useState(false);
-  const [sessionRetryNonce, setSessionRetryNonce] = useState(0);
   const [actionError, setActionError] = useState("");
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -49,7 +46,6 @@ export default function RecordingPage() {
   const previewVideoRef = useRef<HTMLVideoElement | null>(null);
   const promptAudioElementRef = useRef<HTMLAudioElement | null>(null);
   const promptCandidateIndexRef = useRef(0);
-  const hasCreatedSessionRef = useRef(false);
   const pendingSubmitRef = useRef(false);
 
   const currentQuestion = questions.find((q) => q.id === activeId) || null;
@@ -81,9 +77,7 @@ export default function RecordingPage() {
     !user?.id
       ? "Please sign in first so an interview session can be created."
       : !sessionId
-      ? isCreatingSession
-        ? "Preparing your interview session..."
-        : actionError || "Interview session is not ready yet. Please retry session setup."
+      ? actionError || "Start your interview from the interview home first."
       : isQuestionsLoading
       ? "Questions are still loading."
       : isSubmitting
@@ -99,73 +93,6 @@ export default function RecordingPage() {
   useEffect(() => {
     setActiveId(currentQ);
   }, [currentQ]);
-
-  useEffect(() => {
-    if (hasCreatedSessionRef.current || sessionId || !user?.id) {
-      return;
-    }
-
-    let alive = true;
-
-    const createSession = async () => {
-      hasCreatedSessionRef.current = true;
-      setIsCreatingSession(true);
-      setActionError("");
-
-      const payload = {
-        name: `${interviewType.toUpperCase()} Mock Interview`,
-        type: interviewType,
-        status: "in_progress",
-        user_id: user.id,
-      };
-
-      try {
-        const response = await interviewService.createSession(payload);
-
-        if (!alive) return;
-
-        if (!response.success || !response.data?.id) {
-          hasCreatedSessionRef.current = false;
-          setActionError(
-            response.message || "Failed to create interview session. Please retry session setup.",
-          );
-          return;
-        }
-
-        router.replace(
-          buildRecordingUrl({
-            type: interviewType,
-            sessionId: response.data.id,
-            q: String(currentQ || 1),
-            questionId: null,
-            followup: null,
-            followupAudio: null,
-            followupId: null,
-            followupMode: false,
-          }),
-        );
-      } catch (error) {
-        if (!alive) return;
-
-        hasCreatedSessionRef.current = false;
-        setActionError(
-          error instanceof Error
-            ? error.message
-            : "Failed to create interview session. Please retry session setup.",
-        );
-      } finally {
-        if (alive) {
-          setIsCreatingSession(false);
-        }
-      }
-    };
-
-    void createSession();
-
-    return () => {
-      alive = false;
-    };
-  }, [sessionId, user?.id, interviewType, currentQ, router, buildRecordingUrl, sessionRetryNonce]);
 
   // 3. Timer Logic
   useEffect(() => {
@@ -493,16 +420,6 @@ export default function RecordingPage() {
     handleReset();
   };
 
-  const handleRetrySessionSetup = () => {
-    if (!user?.id || sessionId || isCreatingSession) {
-      return;
-    }
-
-    hasCreatedSessionRef.current = false;
-    setActionError("");
-    setSessionRetryNonce((prev) => prev + 1);
-  };
-
   const handleReplayQuestionAudio = async () => {
     if (isReplayingQuestion || !canReplayQuestionAudio) {
       return;
@@ -533,7 +450,7 @@ export default function RecordingPage() {
       pointerEvents: isPeeking ? "none" : "auto" 
     }}>
       <img
-        src={status === "idle" ? "/interview/Record.svg" : status === "recording" ? "/interview/Pause.svg" : "/interview/Play.svg"}
+        src={status === "idle" ? "/interview/record.svg" : status === "recording" ? "/interview/Pause.svg" : "/interview/Play.svg"}
         alt="Control"
         style={{ width: "60px", cursor: isQuestionsLoading ? "not-allowed" : "pointer", opacity: isQuestionsLoading ? 0.5 : 1 }}
         onClick={handleCameraToggle}
@@ -542,7 +459,7 @@ export default function RecordingPage() {
         {formatTime(seconds)}
       </span>
       <img 
-        src="/interview/Retake.svg" 
+        src="/interview/retake.svg" 
         alt="Reset" 
         style={{ width: "45px", cursor: "pointer" }} 
         onClick={handleReset} 
@@ -597,7 +514,7 @@ export default function RecordingPage() {
                 : !user?.id
                 ? "Please sign in to start interview session."
                 : !sessionId
-                ? "Preparing your interview session..."
+                ? "This interview session is missing. Start from the interview home first."
                 : status === "recording"
                 ? " Recording..."
                 : isFinalizingRecording
@@ -637,8 +554,8 @@ export default function RecordingPage() {
           actionButton={
             !sessionId ? (
               <button
-                onClick={handleRetrySessionSetup}
-                disabled={!user?.id || isCreatingSession}
+                onClick={() => router.push("/features/interview")}
+                disabled={false}
                 title={submitBlockedReason || undefined}
                 style={{
                   background: "#d4ff47",
@@ -648,13 +565,13 @@ export default function RecordingPage() {
                   fontWeight: "bold",
                   fontSize: "18px",
                   fontFamily: "var(--font-nova-square)",
-                  cursor: !user?.id || isCreatingSession ? "not-allowed" : "pointer",
-                  opacity: !user?.id || isCreatingSession ? 0.5 : 1,
+                  cursor: "pointer",
+                  opacity: 1,
                   transition: "0.3s",
                   color: "#1a1a1a"
                 }}
               >
-                {isCreatingSession ? "Preparing Session..." : "Retry Session Setup"}
+                Back To Interview Home
               </button>
             ) : (
               <button

@@ -2,11 +2,14 @@
 import { useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import {
+  consumePendingPostAuthPath,
+  DEFAULT_POST_AUTH_PATH,
+  getSafePostAuthPath,
+} from "@/lib/auth/post-auth-redirect";
 import { setClientToken } from "@/lib/auth/token";
-import { dotnetApi } from "@/lib/api";
 
 const TOKEN_COOKIE = "careerics_token";
-const TARGET_PATH = "/features/home";
 const COOKIE_MAX_AGE_SECONDS = 3600;
 
 function syncTokenCookie(token: string | null) {
@@ -51,6 +54,12 @@ export default function AuthCallback() {
   useEffect(() => {
     let redirected = false;
     let profileSynced = false;
+    const pendingTargetPath = consumePendingPostAuthPath();
+    const targetPath =
+      getSafePostAuthPath(searchParams.get("callbackUrl")) ??
+      getSafePostAuthPath(searchParams.get("redirect")) ??
+      pendingTargetPath ??
+      DEFAULT_POST_AUTH_PATH;
 
     const oauthErrorCode = searchParams.get("error") || "";
     const oauthErrorDescription = searchParams.get("error_description") || "";
@@ -58,6 +67,9 @@ export default function AuthCallback() {
     if (oauthError) {
       const loginUrl = new URLSearchParams();
       loginUrl.set("error", oauthError);
+      if (targetPath !== DEFAULT_POST_AUTH_PATH) {
+        loginUrl.set("callbackUrl", targetPath);
+      }
       router.replace(`/auth/login?${loginUrl.toString()}`);
       return;
     }
@@ -65,7 +77,7 @@ export default function AuthCallback() {
     const redirectIfNeeded = () => {
       if (redirected) return;
       redirected = true;
-      window.location.replace(TARGET_PATH);
+      window.location.replace(targetPath);
     };
 
     const syncProfileAndRedirect = (accessToken: string | null | undefined) => {
@@ -78,11 +90,6 @@ export default function AuthCallback() {
       }
 
       redirectIfNeeded();
-
-      // Best-effort profile sync after redirecting so callback URL is never sticky.
-      void dotnetApi.get("/users/me").catch(() => {
-        // Non-blocking for OAuth; user can still retry profile sync later.
-      });
     };
 
     const hashTokens = readOAuthHashTokens();
@@ -106,6 +113,9 @@ export default function AuthCallback() {
         const loginUrl = new URLSearchParams({
           error: "Google sign-in timed out",
         });
+        if (targetPath !== DEFAULT_POST_AUTH_PATH) {
+          loginUrl.set("callbackUrl", targetPath);
+        }
         router.replace(`/auth/login?${loginUrl.toString()}`);
       }
     }, 10000);
@@ -132,5 +142,71 @@ export default function AuthCallback() {
     };
   }, [router, searchParams]);
 
-  return null;
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: "1rem",
+        maxWidth: "24rem",
+        color: "#C1CBE6",
+      }}
+    >
+      <svg
+        width="56"
+        height="56"
+        viewBox="0 0 56 56"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        aria-hidden="true"
+      >
+        <circle
+          cx="28"
+          cy="28"
+          r="20"
+          stroke="rgba(255, 255, 255, 0.18)"
+          strokeWidth="6"
+        />
+        <path
+          d="M28 8C39.0457 8 48 16.9543 48 28"
+          stroke="var(--light-green)"
+          strokeWidth="6"
+          strokeLinecap="round"
+        >
+          <animateTransform
+            attributeName="transform"
+            type="rotate"
+            from="0 28 28"
+            to="360 28 28"
+            dur="0.9s"
+            repeatCount="indefinite"
+          />
+        </path>
+      </svg>
+
+      <p
+        style={{
+          margin: 0,
+          color: "white",
+          fontSize: "1.05rem",
+          lineHeight: 1.5,
+        }}
+      >
+        Please wait while we finish your Google sign-in.
+      </p>
+
+      <p
+        style={{
+          margin: 0,
+          fontSize: "0.95rem",
+          lineHeight: 1.6,
+        }}
+      >
+        We&apos;ll redirect you automatically in a moment.
+      </p>
+    </div>
+  );
 }

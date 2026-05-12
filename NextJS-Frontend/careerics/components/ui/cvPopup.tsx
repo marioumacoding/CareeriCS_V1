@@ -1,4 +1,5 @@
 "use client";
+
 import React, { useRef, useState } from "react";
 
 interface CVPopProps {
@@ -7,144 +8,266 @@ interface CVPopProps {
   onFileSelect?: (file: File) => Promise<void> | void;
 }
 
-export default function CVPop({ 
-  onClose, 
+export default function CVPop({
+  onClose,
   lastVersion,
-  onFileSelect 
+  onFileSelect,
 }: CVPopProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedFileName, setSelectedFileName] = useState("");
+  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
 
   const handleButtonClick = () => {
-    // Triggers the hidden file input
     fileInputRef.current?.click();
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    // Allow picking the same file again in a subsequent attempt.
     event.target.value = "";
 
-    if (!file) {
-      return;
-    }
-    setSelectedFileName(file.name);
+    if (!file) return;
 
-    if (onFileSelect) {
-      void onFileSelect(file);
+    setSelectedFile(file);
+    setSelectedFileName(file.name);
+    setStatus("idle");
+  };
+
+  const handleExtract = async () => {
+    if (!selectedFile || status === "loading") return;
+
+    setStatus("loading");
+
+    try {
+      if (onFileSelect) {
+        await onFileSelect(selectedFile);
+      }
+
+      setStatus("success");
+      setSelectedFile(null);
+      setSelectedFileName("");
+    } catch {
+      setStatus("error");
     }
   };
 
   return (
-    <div style={{
-      position: "fixed",
-      top: 0,
-      left: 0,
-      width: "100vw",
-      height: "100vh",
-      backgroundColor: "rgba(0, 0, 0, 0.7)",
-      display: "flex",
-      justifyContent: "center",
-      alignItems: "center",
-      zIndex: 1000
-    }} onClick={onClose}>
-      
-      <div style={{
-        backgroundColor: "#E6FFB2",
-        width: "fit-content",
-        padding: "4vh",
-        borderRadius: "40px",
-        position: "relative",
+    <div
+      style={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        width: "100vw",
+        height: "100vh",
+        backgroundColor: "rgba(0, 0, 0, 0.7)",
         display: "flex",
-        flexDirection: "column",
-        gap: "2vh",
-        fontFamily: "var(--font-nova-square)"
-      }} onClick={(e) => e.stopPropagation()}>
-        
-        {/* Close Button */}
-        <button onClick={onClose} style={{
-          position: "absolute",
-          top: "25px",
-          right: "25px",
-          background: "none",
-          border: "none",
-          fontSize: "24px",
-          cursor: "pointer",
-          color: "#000"
-        }}>✕</button>
-
-        <h2 style={{ fontSize: "1.1rem", margin: 0, color: "#000" }}>Replace your information</h2>
-        
-        <hr style={{ border: "none", borderTop: "2px solid rgb(0, 0, 0)", margin: 0 }} />
-
-        {/* Info Row */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span style={{ fontSize: "0.9rem", fontWeight: 500 }}>The last extracted version</span>
+        justifyContent: "center",
+        alignItems: "center",
+        zIndex: 1000,
+      }}
+      onClick={onClose}
+    >
+      <div
+        style={{
+          backgroundColor: "var(--light-green)",
+          width: "26rem",
+          padding: "4vh",
+          borderRadius: "40px",
+          position: "relative",
+          display: "flex",
+          flexDirection: "column",
+          gap: "2vh",
+          fontFamily: "var(--font-nova-square)",
+        }}
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div
+          style={{
+            display: "flex",
+            width: "100%",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <h2
+            style={{
+              fontSize: "22px",
+              fontWeight: 400,
+              lineHeight: 1.5,
+              margin: 0,
+            }}
+          >
+            Replace your information
+          </h2>
+          <img
+            onClick={onClose}
+            src="/global/close.svg"
+            alt="Close popup"
+            style={{
+              width: "2rem",
+              height: "2rem",
+              filter: "invert(1)",
+              cursor: "pointer",
+            }}
+          />
         </div>
-          <div style={{ 
-            backgroundColor: "white", 
-            color: "#8E8E8E", 
-            padding: "12px 25px", 
-            borderRadius: "14px", 
-            fontSize: "16px",
-            minWidth: "120px",
-            textAlign: "center",
-            marginLeft:"1vh",
-          }}>{lastVersion}</div>
 
-        {/* Upload Section */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "15px", alignItems: "flex-start" }}>
-          <span style={{ fontSize: "1.1rem", fontWeight: 500 }}>Upload new CV</span>
-          
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: "100%", gap: "20px" }}>
-            {/* Hidden Input */}
-            <input 
-              type="file" 
-              ref={fileInputRef} 
-              onChange={handleFileChange} 
-              style={{ display: "none" }} 
+        <div
+          style={{
+            width: "100%",
+            height: "0.1rem",
+            backgroundColor: "black",
+            borderRadius: "999px",
+          }}
+        />
+
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <span style={{ fontSize: "1.1rem", fontWeight: 500 }}>
+            The last extracted version
+          </span>
+        </div>
+
+        <div
+          style={{
+            backgroundColor: "white",
+            color: "#8E8E8E",
+            padding: "12px 25px",
+            borderRadius: "2vh",
+            fontSize: "1rem",
+            width: "100%",
+            textAlign: "center",
+          }}
+        >
+          {lastVersion}
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "15px",
+            alignItems: "flex-start",
+          }}
+        >
+          <span style={{ fontSize: "1.1rem", fontWeight: 500 }}>
+            Upload new CV
+          </span>
+
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              width: "100%",
+              gap: "20px",
+            }}
+          >
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileChange}
+              style={{ display: "none" }}
               accept=".pdf,.docx"
             />
 
-            <img 
-              src="/cv/upload.svg" 
-              alt="Upload" 
-              style={{ height: "12vh" }} 
-            />
-
-            <button 
+            <button
+              type="button"
               onClick={handleButtonClick}
               style={{
-                backgroundColor: "#8E8E8E",
+                width: "100%",
+                minHeight: "170px",
+                borderRadius: "28px",
+                border: "1px dashed rgba(17, 24, 39, 0.22)",
+                backgroundColor: "rgba(255, 255, 255, 0.55)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: "18px",
+                cursor: "pointer",
+              }}
+            >
+              <div
+                style={{
+                  width: "100%",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "14px",
+                  maxWidth: "100%",
+                }}
+              >
+                <img
+                  src={selectedFileName ? "/cv/file.svg" : "/cv/upload.svg"}
+                  alt="Upload"
+                  style={{ height: "12vh", maxHeight: "72px" }}
+                />
+                <div
+                  style={{
+                    maxWidth: "100%",
+                    padding: selectedFileName ? "10px 14px" : 0,
+                    borderRadius: "14px",
+                    backgroundColor: selectedFileName ? "rgba(17, 24, 39, 0.08)" : "transparent",
+                    color: "#111827",
+                    fontSize: "14px",
+                    textAlign: "center",
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
+                  title={selectedFileName || undefined}
+                >
+                  {selectedFileName || "Choose a PDF or DOCX file"}
+                </div>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={!selectedFileName ? handleButtonClick : handleExtract}
+              disabled={status === "loading"}
+              style={{
+                backgroundColor: "var(--medium-grey)",
                 color: "white",
                 border: "none",
                 paddingBlock: "1.5vh",
-                paddingInline:"3vw",
+                paddingInline: "3vw",
                 borderRadius: "15px",
                 fontSize: "1.1rem",
                 fontWeight: 600,
-                cursor: "pointer",
-                transition: "0.3s opacity"
+                cursor: status === "loading" ? "not-allowed" : "pointer",
+                transition: "0.3s opacity",
               }}
-              onMouseOver={(e) => e.currentTarget.style.opacity = "0.8"}
-              onMouseOut={(e) => e.currentTarget.style.opacity = "1"}
+              onMouseOver={(event) => {
+                event.currentTarget.style.opacity = "0.8";
+              }}
+              onMouseOut={(event) => {
+                event.currentTarget.style.opacity = "1";
+              }}
             >
-              Open Files
+              {status === "loading"
+                ? "Processing..."
+                : !selectedFileName
+                  ? "Open Files"
+                  : "Extract"}
             </button>
 
-            {selectedFileName ? (
-              <p
-                style={{
-                  margin: 0,
-                  color: "#24340c",
-                  opacity: 0.85,
-                  maxWidth: "100%",
-                  textAlign: "center",
-                  wordBreak: "break-word",
-                  fontSize: "14px",
-                }}
-              >
-                {selectedFileName}
+            {status === "success" ? (
+              <p style={{ color: "#000000", fontSize: "14px", margin: 0 }}>
+                Extracted successfully
+              </p>
+            ) : null}
+
+            {status === "error" ? (
+              <p style={{ color: "#ff0000", fontSize: "14px", margin: 0 }}>
+                Extraction failed
               </p>
             ) : null}
           </div>

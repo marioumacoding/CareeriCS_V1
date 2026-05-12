@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/providers";
 
-type CardType = "horizontal" | "square" | "vertical";
 
 type CardProps = {
   type?: CardType;
@@ -11,6 +10,7 @@ type CardProps = {
   color?: string;
   link?: string;
 };
+export type CardType = "horizontal" | "vertical" | "square";
 
 const layouts = {
   horizontal: {
@@ -34,7 +34,7 @@ const layouts = {
     titleWidth: "100%",
     descTop: "55%",
     left: "9%",
-    descWidth: "20ch",
+    descWidth: "100%",
   },
 
   vertical: {
@@ -43,10 +43,10 @@ const layouts = {
     path: "M0 14C0 6.268 6.26801 0 14 0H125.602C130.952 0 136.08 2.14358 139.838 5.95161L164.627 31.0702C168.385 34.8783 173.512 37.0219 178.862 37.0219L236 37.0219C243.732 37.0219 250 43.2899 250 51.0219V430C250 437.732 243.732 444 236 444H14C6.26801 444 0 437.732 0 430V14Z",
     svgHeight: "93%",
     titleTop: "20%",
-    titleWidth: "65%",
+    titleWidth: "min-content",
     descTop: "43%",
     left: "10%",
-    descWidth: "20ch",
+    descWidth: "100%",
   },
 };
 
@@ -99,61 +99,75 @@ export default function FeatureCard({
         aspectRatio: layout.aspectRatio,
         backgroundColor: color,
         border: hover ? `3px solid ${color}` : "0px solid transparent",
-        borderRadius: "15px",
+        borderRadius: "var(--radius-lg)",
         display: "flex",
-        justifyContent: "center",
-        alignItems: "flex-end",
         position: "relative",
+        alignItems: "flex-end",
       }}
     >
-      <svg
-        viewBox={layout.viewBox}
-        preserveAspectRatio="none"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
+      <div
         style={{
-          position: "absolute",
-          bottom: 0,
-          right: 0,
+          maxHeight: "90%",
           width: "100%",
-          height: layout.svgHeight,
-          borderRadius: "14px",
+          display: "grid",
+          position: "relative",
+          gridTemplateColumns: "1fr",
+          gridTemplateRows: "1fr",
         }}
       >
-        <path d={layout.path} fill="#142041" />
-      </svg>
 
-      <div
-        style={{
-          fontFamily: "var(--font-nova-square)",
-          position: "absolute",
-          color: "white",
-          fontSize: "1.4vw",
-          fontWeight: "400",
-          top: layout.titleTop,
-          left: layout.left,
-          textAlign: "left",
-          maxWidth: layout.titleWidth,
-        }}
-      >
-        {title}
-      </div>
+        <svg
+          viewBox={layout.viewBox}
+          preserveAspectRatio="none"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+          style={{
+            width: "100%",
+            height: "100%",
+            borderRadius: "var(--radius-lg)",
+            gridArea: "1/1/2/2",
+            zIndex: 0,
+            marginTop: "auto",
+          }}
+        >
+          <path d={layout.path} fill="#142041" />
+        </svg>
 
-      <div
-        style={{
-          fontFamily: "var(--font-jura)",
-          position: "absolute",
-          color: "var(--text-grey)",
-          fontSize: "0.79rem",
-          fontWeight: "400",
-          top: layout.descTop,
-          left: layout.left,
-          maxWidth: layout.descWidth,
-          textAlign: "left",
-          whiteSpace: "pre-line",
-        }}
-      >
-        {description}
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            zIndex: 1,
+            gridArea: "1/1/2/2",
+            padding: "var(--space-md)",
+            textAlign: "left",
+          }}
+        >
+
+          <p
+            style={{
+              fontFamily: "var(--font-nova-square)",
+              color: "white",
+              fontSize: "var(--text-md)",
+              fontWeight: "400",
+              maxWidth: layout.titleWidth,
+            }}
+          >
+            {title}
+          </p>
+
+          <p
+            style={{
+              fontFamily: "var(--font-jura)",
+              color: "var(--text-grey)",
+              fontSize: "var(--text-sm)",
+              fontWeight: "400",
+              maxWidth: layout.descWidth,
+            }}
+          >
+            {description}
+          </p>
+        </div>
       </div>
     </div>
   );

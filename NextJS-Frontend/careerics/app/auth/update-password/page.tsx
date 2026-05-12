@@ -175,7 +175,7 @@ export default function UpdatePassword() {
       </p>)}
 
 
-      <Button style={{ paddingInline: "12vh", marginTop: "3vh" }}>
+      <Button style={{ paddingInline: "14vh", marginTop: "3vh" }}>
         {loading ? "Updating..." : "Update Password"}
       </Button>
     </form>

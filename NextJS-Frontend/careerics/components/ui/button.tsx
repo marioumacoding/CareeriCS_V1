@@ -72,9 +72,9 @@ const variantStyles: Record<ButtonVariant, { default: CSSProperties; hover: CSSP
 };
 
 const sizeStyles: Record<ButtonSize, CSSProperties> = {
-  sm: { fontSize: "1.6vh", padding: "2vh" },
-  md: { fontSize: "2.2vh", padding: "3vh", height: "1vh" },
-  lg: { fontSize: "2.8vh", padding: "1.5vh 3vh", height: "1vh" },
+  sm: { fontSize: "var(--text-sm)", paddingBlock: "var(--button-padding-y)", paddingInline:"var(--space-md)" },
+  md: { fontSize: "var(--text-base)",paddingBlock: "var(--button-padding-y)", paddingInline:"var(--space-xl)" },
+  lg: { fontSize: "var(--text-lg)", paddingBlock: "var(--button-padding-y)", paddingInline:"var(--space-2xl)"  },
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
@@ -90,7 +90,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       ...(variant === "text" && {
         display: "inline",
         padding: 0,
-        height: "auto",
+        height: "fit-content",
         verticalAlign: "baseline",
         fontSize: "inherit",
       }),
@@ -101,15 +101,22 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
 
     if (variant === "text" && textContent) {
       return (
+        <div
+        style={{
+          display:"flex",
+          whiteSpace:"nowrap",
+          gap:"0",
+        }}
+        >
+
         <p
           style={{
             flex: 0,
             alignItems: "center",
-            fontSize: "2vh",
+            fontSize: "var(--text-sm)",
             color: "white",
             textAlign: "left",
             fontFamily: "var(--font-nova-square)",
-            padding: "0vh",
             marginTop: "1vh",
             ...style
           }}
@@ -129,6 +136,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
             {textContent.buttonText}
           </button>
         </p>
+            </div>
       );
     }
 

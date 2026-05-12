@@ -176,17 +176,20 @@ export default function LandingPage() {
           paddingBlock: "var(--space-md)",
           boxSizing: "border-box",
           zIndex: 1000,
+          whiteSpace:"nowrap"
         }}
       >
+        {!bp.small &&
         <div
-          style={{
-            fontSize: "var(--text-lg)",
-            letterSpacing: "-1px",
-            fontFamily: "var(--font-nova-square)",
-          }}
+        style={{
+          fontSize: "var(--text-lg)",
+          letterSpacing: "-1px",
+          fontFamily: "var(--font-nova-square)",
+        }}
         >
           CareeriCS
         </div>
+      }
 
         <nav
           style={{
@@ -239,11 +242,10 @@ export default function LandingPage() {
 
         <Button
           onClick={() => router.push("/auth/login")}
+          size="md"
           style={{
             paddingInline: "var(--space-lg)",
             maxWidth: "fit-content",
-            fontSize: "var(--text-md)",
-            paddingBlock: "var(--space-lg)"
           }}
           variant="outline"
         >
@@ -259,7 +261,8 @@ export default function LandingPage() {
           scrollMarginTop: "100px",
           backgroundColor: "var(--bg-color)",
           width: "100%",
-          minHeight: "100vh",
+          maxHeight: "100vh",
+          height:"fit-content",
           overflow: "hidden",
           display: "grid",
           gridTemplateColumns: "1fr 2fr",
@@ -280,7 +283,7 @@ export default function LandingPage() {
             gap: "var(--space-md)",
             justifyContent: "flext-start",
             alignItems: "center",
-            paddingTop: "20vh",
+            paddingTop: bp.small?"10vh":"20vh",
           }}
         >
           <svg
@@ -378,7 +381,8 @@ export default function LandingPage() {
           <Button
             onClick={() => router.push("/auth/register")}
             variant="primary"
-            style={{ paddingBlock: "var(--space-lg)", flex: 0, width: "100%" }}
+            size="md"
+            style={{ flex: 0, width: "100%" }}
           >
             Register
           </Button>
@@ -626,8 +630,8 @@ export default function LandingPage() {
         <Button
           onClick={() => router.push("/auth/login")}
           variant="primary"
+          size="md"
           style={{
-            padding: "var(--space-md)",
             flex: 0,
             width: "fit-content",
             marginLeft: "auto",

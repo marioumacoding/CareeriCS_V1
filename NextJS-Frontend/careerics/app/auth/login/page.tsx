@@ -85,9 +85,6 @@ export default function Login() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
-          style={{
-            width: "100%"
-          }}
         />
 
         <InputField
@@ -99,9 +96,6 @@ export default function Login() {
           onChange={(e) => setPassword(e.target.value)}
           required
           isMargin={false}
-          style={{
-            width: "100%"
-          }}
         />
 
         <Button

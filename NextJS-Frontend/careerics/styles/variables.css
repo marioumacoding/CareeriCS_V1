@@ -55,7 +55,7 @@
   ========================== */
 
     --input-padding: clamp(0.55rem, 1vw, 0.9rem);
-    --button-padding-y: clamp(0.5rem, 1vh, 0.8rem);
+    --button-padding-y: clamp(0.2rem, 0.4vw, 0.3rem);
     --button-padding-x: clamp(0.8rem, 2vw, 1.5rem);
 
     --min-touch-target: 2.75rem;

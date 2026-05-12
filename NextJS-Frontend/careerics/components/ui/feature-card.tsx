@@ -103,6 +103,7 @@ export default function FeatureCard({
         display: "flex",
         position: "relative",
         alignItems: "flex-end",
+        overflow:"hidden",
       }}
     >
       <div
@@ -113,6 +114,7 @@ export default function FeatureCard({
           position: "relative",
           gridTemplateColumns: "1fr",
           gridTemplateRows: "1fr",
+          overflow:"clip"
         }}
       >
 

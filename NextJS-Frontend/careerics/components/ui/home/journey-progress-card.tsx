@@ -1,41 +1,52 @@
 export const JourneyProgressCard = ({ percentage = 10, style }: any) => {
-
-
   return (
     <div
       style={{
         backgroundColor: "var(--dark-blue)",
-        borderRadius: " 3vh",
-        paddingTop: "3vh",
         color: "white",
-        alignContent: "center",
-        justifyItems: "center",
-        ...style,
         overflow: "hidden",
         display: "flex",
         flexDirection: "column",
+        justifyContent: "flex-start",
         alignItems: "center",
+        borderRadius: "var(--radius-lg)",
+        padding: "var(--space-md)",
+        gap: "var(--space-md)",
+        ...style,
       }}
     >
       <h3
         style={{
-          fontSize: "1.1rem",
-          marginBottom: "1vh",
+          fontSize: "var(--text-md)",
           fontFamily: "var(--font-nova-square)",
         }}
       >
         Journey Progress
       </h3>
 
-      <img
-        src={`/home/journey-progress/${percentage}.svg`}
-        alt="Progress"
+      <div
         style={{
-          position: "relative",
-          height: "70%"
+          width: "100%",
+          flex: 1,
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          overflow: "hidden",
         }}
-      />
-
+      >
+        <img
+          src={`/home/journey-progress/${percentage}.svg`}
+          alt="Progress"
+          style={{
+            maxWidth: "100%",
+            maxHeight: "100%",
+            width: "auto",
+            height: "auto",
+            objectFit: "contain",
+            display: "block",
+          }}
+        />
+      </div>
     </div>
   );
 };

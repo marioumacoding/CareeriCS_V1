@@ -1,17 +1,34 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
-import React, { useState } from "react";
-import { useRouter } from "next/navigation";
-import { usePathname } from "next/navigation";
+
+import React, { useEffect, useState } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { authService } from "@/services/auth.service";
 import { useAuth } from "@/providers/auth-provider";
 
+const LARGE = 1024;
+const MEDIUM = 640;
+
 const Sidebar = () => {
   const pathname = usePathname();
-  const [hoveredNav, setHoveredNav] = useState<number | null>(null);
-  const { user, isLoading } = useAuth();
   const router = useRouter();
+  const { user, isLoading } = useAuth();
+
+  const [hoveredNav, setHoveredNav] = useState<number | null>(null);
+  const [isOpen, setIsOpen] = useState(false);
+  const [width, setWidth] = useState<number>(0);
+
+  useEffect(() => {
+    const handleResize = () => setWidth(window.innerWidth);
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const isLarge = width >= LARGE;
+  const isMedium = width >= MEDIUM && width < LARGE;
+  const isSmall = width < MEDIUM;
 
   async function handleLogout() {
     try {
@@ -37,124 +54,216 @@ const Sidebar = () => {
     { text: "Job Search", image: "/sidebar/Job.svg", selectedImage: "/sidebar/job-selected.svg", path: "/features/job" },
   ];
 
-  return (
-    <aside
-      style={{
-        width: "20vw",
-        height: "100vh",
-        backgroundColor: "var(--bg-color)",
-        paddingTop: "3vh",
-        paddingBottom: "3vh",
-        paddingLeft: "1.7vw",
-        paddingRight: "2vw",
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "center",
-        color: "#fff",
-        flexShrink: 0,
-      }}
-    >
-      <div
+  const renderNav = (iconOnly = false, iconSize: string = "var(--icon-sm)") =>
+    navItems.map((item, i) => {
+      const isActive = pathname === item.path;
+      const isHovered = hoveredNav === i;
+      const activeState = isActive || isHovered;
+
+      return (
+        <Link key={item.path} href={item.path} style={{ textDecoration: "none" }}>
+          <div
+            title={item.text}
+            onMouseEnter={() => setHoveredNav(i)}
+            onMouseLeave={() => setHoveredNav(null)}
+            onClick={() => isSmall && setIsOpen(false)}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "var(--space-md)",
+              padding: "var(--space-sm)",
+              borderRadius: "var(--radius-lg)",
+              cursor: "pointer",
+              transition: "0.2s ease-in-out",
+              backgroundColor: isActive
+                ? "var(--primary-green)"
+                : isHovered
+                ? "var(--light-green)"
+                : "transparent",
+              color: activeState ? "#000" : "#fff",
+            }}
+          >
+            <img
+              src={activeState ? item.selectedImage : item.image}
+              alt={item.text}
+              style={{
+                height: iconSize,
+                objectFit: "contain",
+                flexShrink: 0,
+              }}
+            />
+            {!iconOnly && item.text}
+          </div>
+        </Link>
+      );
+    });
+
+  // ================= LARGE =================
+  if (isLarge) {
+    return (
+      <aside
         style={{
-          fontSize: "clamp(1.5rem, 2vw, 2rem)",
-          marginBottom: "2vh",
-          fontFamily: "var(--font-nova-square)",
-        }}
-      >
-        CareeriCS
-      </div>
-
-      <nav style={{ flex: 1, display: "flex", flexDirection: "column", gap: 5 }}>
-        {navItems.map((item, i) => {
-          const isHovered = hoveredNav === i;
-          const isActive = pathname === item.path;
-          
-          // Logic for background color priority
-          let backgroundColor = "transparent";
-          if (isActive) {
-            backgroundColor = "var(--primary-green)"; // Color for active page
-          } else if (isHovered) {
-            backgroundColor = "var(--light-green)"; // Soft highlight for hover
-          }
-
-          // Icon logic: Use selected icon for active OR hovered
-          const currentImage = isActive || isHovered ? item.selectedImage : item.image;
-
-          return (
-            <Link key={i} href={item.path} style={{ textDecoration: "none" }}>
-              <div
-                onMouseEnter={() => setHoveredNav(i)}
-                onMouseLeave={() => setHoveredNav(null)}
-                style={{
-                  padding: "2.3vh",
-                  marginLeft: "0.5vw",
-                  color: isActive || isHovered ? "#000" : "#fff",
-                  cursor: "pointer",
-                  fontSize: "0.9rem",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "1rem",
-                  backgroundColor: backgroundColor,
-                  borderRadius: 15,
-                  transition: "0.2s ease-in-out",
-                }}
-              >
-                <img
-                  src={currentImage}
-                  alt={item.text || "icon"}
-                  style={{
-                    width: "auto",
-                    height: "4vh",
-                    flexShrink: 0,
-                    objectFit: "contain",
-                    // Optional: adjust brightness of icon if hovered but not active
-                    filter: (isHovered && !isActive) ? "brightness(0.8)" : "none"
-                  }}
-                />
-                {item.text}
-              </div>
-            </Link>
-          );
-        })}
-      </nav>
-
-      {/* PROFILE SECTION */}
-      <div
-        style={{
+          width: "fit-content",
+          height: "100%",
           display: "flex",
-          alignItems: "center",
-          gap: "1rem",
-          marginTop: "2vh",
-          marginBottom: "2vh",
-          height: "10vh",
-          borderTop: "3px solid #fff",
+          flexDirection: "column",
+          padding: "var(--space-md)",
+          gap: "var(--space-md)",
+          flexShrink: 0,
+          color: "#fff",
         }}
       >
-        <img
-          src="/sidebar/profile.svg"
-          alt="User Account"
-          style={{
-            width: "auto",
-            height: "6vh",
-            flexShrink: 0,
-          }}
-        />
+        <div style={{ fontSize: "var(--text-lg)", fontFamily: "var(--font-nova-square)" }}>
+          CareeriCS
+        </div>
+
+        <nav style={{ display: "flex", flexDirection: "column", gap: "var(--space-md)" }}>
+          {renderNav(false, "var(--icon-sm)")}
+        </nav>
 
         <div
-          onClick={handleLogout}
           style={{
-            fontSize: "1rem",
-            color: "#fff",
-            whiteSpace: "nowrap",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            cursor: "pointer"
+            marginTop: "auto",
+            display: "flex",
+            alignItems: "center",
+            gap: "var(--space-md)",
+            paddingBlock: "var(--space-sm)",
+            borderTop: "2px solid #fff",
           }}
         >
-          {profileName}
+          <img src="/sidebar/profile.svg" alt="User" style={{ height: "var(--icon-md)" }} />
+          <div onClick={handleLogout} style={{ cursor: "pointer" }}>
+            {profileName}
+          </div>
         </div>
-      </div>
-    </aside>
+      </aside>
+    );
+  }
+
+  // ================= MEDIUM =================
+  if (isMedium) {
+    return (
+      <aside
+        style={{
+          width: "fit-content",
+          height: "100%",
+          display: "flex",
+          flexDirection: "column",
+          padding: "var(--space-md)",
+          gap: "var(--space-md)",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexShrink: 0,
+          color: "#fff",
+        }}
+      >
+        <div style={{ fontSize: "var(--icon-lg)", fontFamily: "var(--font-nova-square)" }}>
+          CS
+        </div>
+
+        <nav style={{ display: "flex", flexDirection: "column", gap: "var(--space-md)" }}>
+          {renderNav(true, "var(--icon-lg)")}
+        </nav>
+
+        <img
+          src="/sidebar/profile.svg"
+          onClick={handleLogout}
+          style={{ height: "var(--icon-lg)", cursor: "pointer" }}
+        />
+      </aside>
+    );
+  }
+
+  // ================= SMALL =================
+  return (
+    <>
+      {!isOpen && (
+        <button
+          onClick={() => setIsOpen(true)}
+          style={{
+            position: "fixed",
+            top: "var(--space-md)",
+            left: "var(--space-md)",
+            zIndex: 2000,
+            background: "transparent",
+            border: "none",
+            cursor: "pointer",
+            color: "#fff",
+            fontSize: "var(--text-lg)",
+          }}
+        >
+          ☰
+        </button>
+      )}
+
+      {isOpen && (
+        <>
+          <div
+            onClick={() => setIsOpen(false)}
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "rgba(0,0,0,0.5)",
+              zIndex: 1999,
+            }}
+          />
+
+          <aside
+            style={{
+              position: "fixed",
+              top: 0,
+              left: 0,
+              height: "100%",
+              width: "260px",
+              background: "#111",
+              display: "flex",
+              flexDirection: "column",
+              padding: "var(--space-md)",
+              gap: "var(--space-md)",
+              zIndex: 2000,
+              color: "#fff",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <div style={{ fontSize: "var(--text-lg)", fontFamily: "var(--font-nova-square)" }}>
+                CareeriCS
+              </div>
+
+              <button
+                onClick={() => setIsOpen(false)}
+                style={{ background: "transparent", border: "none", color: "#fff" }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <nav style={{ display: "flex", flexDirection: "column", gap: "var(--space-md)" }}>
+              {renderNav(false, "var(--icon-sm)")}
+            </nav>
+
+            <div
+              style={{
+                marginTop: "auto",
+                display: "flex",
+                alignItems: "center",
+                gap: "var(--space-md)",
+                borderTop: "2px solid #fff",
+                paddingTop: "var(--space-sm)",
+              }}
+            >
+              <img
+                src="/sidebar/profile.svg"
+                onClick={handleLogout}
+                style={{ height: "var(--icon-md)", cursor: "pointer" }}
+              />
+              <div onClick={handleLogout} style={{ cursor: "pointer" }}>
+                {profileName}
+              </div>
+            </div>
+          </aside>
+        </>
+      )}
+    </>
   );
 };
 

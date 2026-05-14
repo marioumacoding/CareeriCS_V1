@@ -555,12 +555,12 @@ export default function HomePage() {
         position: "relative",
         width: "100%",
         height: "100%",
-        padding: "40px",
+        padding: "var(--space-lg)",
+        gridRowGap: "var(--space-lg)",
+        gridColumnGap: "var(--space-lg)",
         display: "grid",
         gridTemplateColumns: "1.3fr 1.3fr 1.3fr 0.7fr 0.9fr",
         gridTemplateRows: "1.4fr 1.4fr 0.7fr 0.9fr",
-        gridColumnGap: "25px",
-        gridRowGap: "20px",
       }}
     >
       <CareerCardsContainer

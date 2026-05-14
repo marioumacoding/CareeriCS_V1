@@ -183,7 +183,6 @@ export default function LandingPage() {
         <div
         style={{
           fontSize: "var(--text-lg)",
-          letterSpacing: "-1px",
           fontFamily: "var(--font-nova-square)",
         }}
         >
@@ -194,7 +193,7 @@ export default function LandingPage() {
         <nav
           style={{
             display: "flex",
-            gap: "45px",
+            gap: "var(--space-2xl)",
             fontSize: "var(--text-base)",
             fontWeight: "500",
             fontFamily: "var(--font-jura)",

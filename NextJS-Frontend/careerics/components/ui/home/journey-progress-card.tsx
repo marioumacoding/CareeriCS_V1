@@ -1,4 +1,30 @@
+import React, { ReactNode } from "react";
+import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+
+
 export const JourneyProgressCard = ({ percentage = 10, style }: any) => {
+
+  const pathname = usePathname();
+  const LARGE = 1024;
+  const MEDIUM = 640;
+
+  const [width, setWidth] = useState(0);
+
+  useEffect(() => {
+    const handleResize = () => setWidth(window.innerWidth);
+
+    handleResize();
+
+    window.addEventListener("resize", handleResize);
+
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const isLarge = width >= LARGE;
+  const isMedium = width >= MEDIUM && width < LARGE;
+  const isSmall = width < MEDIUM;
+
   return (
     <div
       style={{
@@ -10,7 +36,7 @@ export const JourneyProgressCard = ({ percentage = 10, style }: any) => {
         justifyContent: "flex-start",
         alignItems: "center",
         borderRadius: "var(--radius-lg)",
-        padding: "var(--space-md)",
+        padding: isLarge?"var(--space-md)":"var(--space-lg)",
         gap: "var(--space-md)",
         ...style,
       }}
@@ -38,8 +64,8 @@ export const JourneyProgressCard = ({ percentage = 10, style }: any) => {
           src={`/home/journey-progress/${percentage}.svg`}
           alt="Progress"
           style={{
-            maxWidth: "100%",
-            maxHeight: "100%",
+            maxWidth: isLarge?"100%":"90%",
+            maxHeight: isLarge?"100%":"90%",
             width: "auto",
             height: "auto",
             objectFit: "contain",

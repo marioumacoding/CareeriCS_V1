@@ -734,7 +734,7 @@ export default function HomePage() {
 
       <PhaseCard
         type="current"
-        phaseNumber={String(dashboardData.currentPhase)}
+        phaseNumber={isSmall?String(dashboardData.nextPhase):String(dashboardData.currentPhase)}
         style={{
           gridArea: isLarge
             ? "3 / 2 / 5 / 3"

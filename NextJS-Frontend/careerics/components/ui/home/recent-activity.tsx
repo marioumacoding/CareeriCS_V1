@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useRef } from "react";
+import React, { useRef,ReactNode } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { CircleScore } from "../circle-score";
+import { useEffect, useState } from "react";
 
 type ActivityItem = {
   id: string;
@@ -66,6 +67,25 @@ export const RecentActivityCard = ({
     return () => el.removeEventListener("scroll", updateScrollState);
   }, [activities]);
 
+  const LARGE = 1024;
+  const MEDIUM = 640;
+
+  const [width, setWidth] = useState(0);
+
+  useEffect(() => {
+    const handleResize = () => setWidth(window.innerWidth);
+
+    handleResize();
+
+    window.addEventListener("resize", handleResize);
+
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const isLarge = width >= LARGE;
+  const isMedium = width >= MEDIUM && width < LARGE;
+  const isSmall = width < MEDIUM;
+
   return (
     <div
       style={{
@@ -76,8 +96,8 @@ export const RecentActivityCard = ({
         flexDirection: "column",
         height: "100%",
         boxSizing: "border-box",
-        padding: "var(--space-md)",
-        gap: "var(--space-md)",
+        padding: isLarge?"var(--space-md)":"var(--space-lg)",
+        gap: isLarge?"var(--space-md)":"var(--space-lg)",
         fontFamily: "var(--font-nova-square)",
         ...style,
       }}
@@ -130,9 +150,12 @@ export const RecentActivityCard = ({
               <div style={{ fontWeight: "bold", fontSize: "var(--text-sm)" }}>
                 {act.id}
               </div>
-              <div style={{ fontSize: "var(--text-xs)" }}>
+
+              {isLarge &&
+                <div style={{ fontSize: "var(--text-xs)" }}>
                 {act.date || `On ${act.id}`}
               </div>
+              }
             </div>
 
             {act.score !== undefined ? (

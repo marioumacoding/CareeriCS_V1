@@ -1,4 +1,7 @@
-import React, { useMemo, useState } from "react";
+
+"use client";
+import React, { ReactNode } from "react";
+import { useMemo, useEffect, useState } from "react";
 
 export const CareerCardsContainer = ({
     children,
@@ -13,6 +16,26 @@ export const CareerCardsContainer = ({
     Title?: string;
     columns?: number;
 }) => {
+
+    const LARGE = 1024;
+    const MEDIUM = 640;
+
+    const [width, setWidth] = useState(0);
+
+    useEffect(() => {
+        const handleResize = () => setWidth(window.innerWidth);
+
+        handleResize();
+
+        window.addEventListener("resize", handleResize);
+
+        return () => window.removeEventListener("resize", handleResize);
+    }, []);
+
+    const isLarge = width >= LARGE;
+    const isMedium = width >= MEDIUM && width < LARGE;
+    const isSmall = width < MEDIUM;
+
     const [startIndex, setStartIndex] = useState(0);
 
     const cards = React.Children.toArray(children);
@@ -65,8 +88,8 @@ export const CareerCardsContainer = ({
                 flexDirection: "column",
                 alignItems: "flex-start",
                 justifyContent: "flex-start",
-                gap: "var(--space-md)",
-                padding: "var(--space-md)",
+                padding: isLarge ? "var(--space-md)" : "var(--space-lg)",
+                gap: isLarge ? "var(--space-md)" : "var(--space-lg)",
                 borderRadius: "var(--radius-xl)",
                 ...style,
             }}
@@ -85,16 +108,24 @@ export const CareerCardsContainer = ({
                     display: "flex",
                     width: "100%",
                     height: "100%",
+
+                    // Fill available space without breaking layout
+                    minHeight: 0,
+                    minWidth: 0,
+
                     gap: "var(--space-md)",
-                    alignItems: "flex-start",
+                    alignItems: "stretch",
                     justifyContent: "flex-start",
+                    overflow:"hidden"
                 }}
             >
                 {/* Cards */}
                 <div
                     style={{
                         width: "100%",
-                        alignSelf: "stretch",
+                        height: "100%",
+                        minHeight: 0,
+                    minWidth: 0,
                         display: "grid",
                         gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
                         gridTemplateRows: "1fr",

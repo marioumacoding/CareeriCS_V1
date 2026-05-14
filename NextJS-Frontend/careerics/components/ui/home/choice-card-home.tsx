@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import React, { CSSProperties, ReactNode } from "react";
 import { X } from "lucide-react";
+import { useMemo, useEffect, useState } from "react";
 
 interface ChoiceCardProps {
   icon?: string;
@@ -47,6 +48,26 @@ export default function ChoiceCard({
 
   const isBookmark = type === "bookmark";
   const effectiveSelected = isSelected || isBookmark;
+
+  const LARGE = 1024;
+  const MEDIUM = 640;
+
+  const [width, setWidth] = useState(0);
+
+  useEffect(() => {
+    const handleResize = () => setWidth(window.innerWidth);
+
+    handleResize();
+
+    window.addEventListener("resize", handleResize);
+
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const isLarge = width >= LARGE;
+  const isMedium = width >= MEDIUM && width < LARGE;
+  const isSmall = width < MEDIUM;
+
   return (
     <div
       style={{
@@ -138,7 +159,7 @@ export default function ChoiceCard({
       </div>
 
       {/* img */}
-      {!isBookmark &&
+      {!isBookmark && !isMedium &&
         <img
           src={image || icon || ""}
           alt={title || "career icon"}

@@ -1,3 +1,10 @@
+"use client";
+import React, { ReactNode } from "react";
+import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+
+
+
 type BaseProps = {
   style?: React.CSSProperties;
   phaseNumber: string;
@@ -18,6 +25,24 @@ export const PhaseCard = (props: PhaseCardProps) => {
     borderRadius: "var(--radius-lg)",
     color: "white",
   };
+  const LARGE = 1024;
+  const MEDIUM = 640;
+
+  const [width, setWidth] = useState(0);
+
+  useEffect(() => {
+    const handleResize = () => setWidth(window.innerWidth);
+
+    handleResize();
+
+    window.addEventListener("resize", handleResize);
+
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const isLarge = width >= LARGE;
+  const isMedium = width >= MEDIUM && width < LARGE;
+  const isSmall = width < MEDIUM;
 
   // --- CURRENT PHASE ---
   if (props.type === "current") {
@@ -27,13 +52,13 @@ export const PhaseCard = (props: PhaseCardProps) => {
       <div
         style={{
           ...baseStyle,
-          paddingTop: "var(--space-md)",
+          paddingTop: isLarge ? "var(--space-md)" : "var(--space-lg)",
+          gap: isLarge?"var(--space-md)":"var(--space-lg)",
           overflow: "hidden",
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "flex-start",
-          gap: "(var--space-md)",
           ...style,
         }}
       >
@@ -43,7 +68,7 @@ export const PhaseCard = (props: PhaseCardProps) => {
             fontFamily: "var(--font-nova-square)",
           }}
         >
-          Current Phase
+          {!isSmall ? "Current Phase" : "Next Phase"}
         </h3>
 
 
@@ -58,7 +83,7 @@ export const PhaseCard = (props: PhaseCardProps) => {
           }}
         >
           <img
-            src={`/home/current-phase/${phaseNumber}.svg`}
+            src={`/home/next-phase/${phaseNumber}.svg`}
             alt="Current Phase"
             style={{
               marginTop: "auto",

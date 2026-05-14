@@ -159,7 +159,7 @@ export default function LandingPage() {
         overflowX: "hidden",
         display: "flex",
         flexDirection: "column",
-        gap:"var(--space-lg)",
+        gap: "var(--space-lg)",
       }}
     >
       {/* NAVIGATION BAR */}
@@ -176,19 +176,19 @@ export default function LandingPage() {
           paddingBlock: "var(--space-md)",
           boxSizing: "border-box",
           zIndex: 1000,
-          whiteSpace:"nowrap"
+          whiteSpace: "nowrap"
         }}
       >
         {!bp.small &&
-        <div
-        style={{
-          fontSize: "var(--text-lg)",
-          fontFamily: "var(--font-nova-square)",
-        }}
-        >
-          CareeriCS
-        </div>
-      }
+          <div
+            style={{
+              fontSize: "var(--text-lg)",
+              fontFamily: "var(--font-nova-square)",
+            }}
+          >
+            CareeriCS
+          </div>
+        }
 
         <nav
           style={{
@@ -261,7 +261,7 @@ export default function LandingPage() {
           backgroundColor: "var(--bg-color)",
           width: "100%",
           maxHeight: "100vh",
-          height:"fit-content",
+          height: "fit-content",
           overflow: "hidden",
           display: "grid",
           gridTemplateColumns: "1fr 2fr",
@@ -282,7 +282,7 @@ export default function LandingPage() {
             gap: "var(--space-md)",
             justifyContent: "flext-start",
             alignItems: "center",
-            paddingTop: bp.small?"10vh":"20vh",
+            paddingTop: bp.small ? "10vh" : "20vh",
           }}
         >
           <svg
@@ -634,7 +634,7 @@ export default function LandingPage() {
             flex: 0,
             width: "fit-content",
             marginLeft: "auto",
-            marginRight:"20vw",
+            marginRight: "20vw",
           }}
         >
           Start Your Journey

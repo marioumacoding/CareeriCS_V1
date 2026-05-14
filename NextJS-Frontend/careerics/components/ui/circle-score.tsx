@@ -21,8 +21,8 @@ export const CircleScore = ({ score }: CircleScoreProps) => {
         <div
             style={{
                 position: "relative",
-                width: "55px",
-                height: "55px",
+                  width: "var(--icon-2xl)",
+                  height: "var(--icon-2xl)",
                 backgroundColor: "#1A2E5A",
                 borderRadius: "12px",
                 display: "flex",
@@ -61,7 +61,7 @@ export const CircleScore = ({ score }: CircleScoreProps) => {
                 style={{
                     position: "absolute",
                     color: "white",
-                    fontSize: "11px",
+                    fontSize: "var(--text-xs)",
                     fontFamily: "var(--font-nova-square)",
                 }}
             >

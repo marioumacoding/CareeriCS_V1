@@ -94,5 +94,6 @@
     --icon-md: clamp(1.1rem, 2vw, 1.4rem);
     --icon-lg: clamp(1.4rem, 3vw, 2rem);
     --icon-xl: clamp(2rem, 4vw, 2.5rem);
+    --icon-2xl: clamp(2.8rem, 4vw, 3.2rem);
 
 }

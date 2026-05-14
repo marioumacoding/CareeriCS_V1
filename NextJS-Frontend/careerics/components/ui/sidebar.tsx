@@ -78,8 +78,8 @@ const Sidebar = () => {
               backgroundColor: isActive
                 ? "var(--primary-green)"
                 : isHovered
-                ? "var(--light-green)"
-                : "transparent",
+                  ? "var(--light-green)"
+                  : "transparent",
               color: activeState ? "#000" : "#fff",
             }}
           >
@@ -155,6 +155,9 @@ const Sidebar = () => {
           alignItems: "center",
           flexShrink: 0,
           color: "#fff",
+          overflowY: "auto",
+          overflowX: "hidden",
+          scrollbarWidth: "none",
         }}
       >
         <div style={{ fontSize: "var(--icon-lg)", fontFamily: "var(--font-nova-square)" }}>

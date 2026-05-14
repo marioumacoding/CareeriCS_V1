@@ -34,7 +34,7 @@ export default function RootLayout({
 
       <Sidebar />
 
-      <div style={{ flex: 1, minWidth: 0, padding: "1vh" }}>
+      <div style={{ flex: 1, minWidth: 0, padding: "var(--space-sm)" }}>
         <BG>
 
           <div style={{

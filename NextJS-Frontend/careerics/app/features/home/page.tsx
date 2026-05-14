@@ -549,6 +549,38 @@ export default function HomePage() {
   const showJourneyPlaceholder = !isLoadingJourneyTracks && !bookmarkedJourneyTracks.length;
   const showSavedCareerPlaceholder = showJourneyPlaceholder && journeyTracks.length > 0;
 
+  const LARGE = 1024;
+  const MEDIUM = 640;
+
+  const [width, setWidth] = useState(0);
+
+  useEffect(() => {
+    const handleResize = () => setWidth(window.innerWidth);
+
+    handleResize();
+
+    window.addEventListener("resize", handleResize);
+
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const isLarge = width >= LARGE;
+  const isMedium = width >= MEDIUM && width < LARGE;
+  const isSmall = width < MEDIUM;
+
+  const gridTemplateColumns = isLarge
+    ? "1.3fr 1.3fr 1.3fr 0.7fr 0.9fr"
+    : isMedium
+      ? "repeat(2, 1fr) 1.2fr"
+      : "1fr 1.2fr";
+
+  const gridTemplateRows = isLarge
+    ? "1.4fr 1.4fr 0.7fr 0.9fr"
+    : isMedium
+      ? "1.2fr repeat(2, 1fr)"
+      : "1.6fr repeat(2, 1fr)";
+
+
   return (
     <div
       style={{
@@ -559,13 +591,21 @@ export default function HomePage() {
         gridRowGap: "var(--space-lg)",
         gridColumnGap: "var(--space-lg)",
         display: "grid",
-        gridTemplateColumns: "1.3fr 1.3fr 1.3fr 0.7fr 0.9fr",
-        gridTemplateRows: "1.4fr 1.4fr 0.7fr 0.9fr",
+        gridTemplateColumns,
+        gridTemplateRows,
+        overflow: "hidden",
       }}
     >
       <CareerCardsContainer
         Title="Your Careers"
-        style={{ gridArea: "1 / 1 / 3 / 4" }}
+        columns={isSmall ? 2 : undefined}
+        style={{
+          gridArea: isLarge
+            ? "1 / 1 / 3 / 4"
+            : isMedium
+              ? "1 / 1 / 2 / 4"
+              : "1 / 1 / 2 / 3",
+        }}
       >
         {careerQuizError ? (
           <p
@@ -637,7 +677,11 @@ export default function HomePage() {
         {showJourneyPlaceholder ? (
           <ChoiceCard
             key="journey-empty-state"
-            title={showSavedCareerPlaceholder ? "No Saved Careers Yet" : "No Journey Started Yet"}
+            title={
+              showSavedCareerPlaceholder
+                ? "No Saved Careers Yet"
+                : "No Journey Started Yet"
+            }
             description={
               showSavedCareerPlaceholder
                 ? "Bookmark a career roadmap to keep it here and continue your journey."
@@ -651,7 +695,11 @@ export default function HomePage() {
                   : "Take Quiz"
             }
             type="bookmark"
-            disabled={showSavedCareerPlaceholder ? false : isStartingCareerQuiz || isAuthLoading}
+            disabled={
+              showSavedCareerPlaceholder
+                ? false
+                : isStartingCareerQuiz || isAuthLoading
+            }
             onAction={() => {
               if (showSavedCareerPlaceholder) {
                 router.push("/features/roadmap");
@@ -666,28 +714,51 @@ export default function HomePage() {
 
       <RecentActivityCard
         activities={dashboardData.activities}
-        style={{ gridArea: "1 / 4 / 3 / 6" }}
+        style={{
+          gridArea: isLarge
+            ? "1 / 4 / 3 / 6"
+            : isMedium
+              ? "2 / 3 / 4 / 4"
+              : "2 / 2 / 4 / 3",
+        }}
       />
 
       <JourneyProgressCard
         percentage={dashboardData.progress}
-        style={{ gridArea: "3 / 1 / 5 / 2" }}
+        style={{
+          gridArea: isLarge
+            ? "3 / 1 / 5 / 2"
+            : "2 / 1 / 3 / 2",
+        }}
       />
 
       <PhaseCard
         type="current"
         phaseNumber={String(dashboardData.currentPhase)}
-        style={{ gridArea: "3 / 2 / 5 / 2" }}
+        style={{
+          gridArea: isLarge
+            ? "3 / 2 / 5 / 3"
+            : isMedium
+              ? "2 / 2 / 3 / 3"
+              : "3 / 1 / 4 / 2",
+        }}
       />
 
-      <PhaseCard
-        type="next"
-        phaseNumber={String(dashboardData.nextPhase)}
-        desc={
-          dashboardData.nextPhaseDesc || "No next phase description available."
-        }
-        style={{ gridArea: "3 / 3 / 5 / 6" }}
-      />
+      {!isSmall && (
+        <PhaseCard
+          type="next"
+          phaseNumber={String(dashboardData.nextPhase)}
+          desc={
+            dashboardData.nextPhaseDesc ||
+            "No next phase description available."
+          }
+          style={{
+            gridArea: isLarge
+              ? "3 / 3 / 5 / 6"
+              : "3 / 1 / 4 / 3",
+          }}
+        />
+      )}
     </div>
   );
 }

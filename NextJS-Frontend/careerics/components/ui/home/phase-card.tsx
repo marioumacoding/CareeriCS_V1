@@ -61,6 +61,7 @@ export const PhaseCard = (props: PhaseCardProps) => {
             src={`/home/current-phase/${phaseNumber}.svg`}
             alt="Current Phase"
             style={{
+              marginTop: "auto",
               maxWidth: "100%",
               maxHeight: "100%",
               width: "auto",
@@ -139,6 +140,7 @@ export const PhaseCard = (props: PhaseCardProps) => {
           src={`/home/next-phase/${phaseNumber}.svg`}
           alt="Next Phase"
           style={{
+            marginLeft: "auto",
             maxWidth: "100%",
             maxHeight: "100%",
             width: "auto",

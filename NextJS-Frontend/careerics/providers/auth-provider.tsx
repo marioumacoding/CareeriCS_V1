@@ -19,6 +19,10 @@ import {
   type ReactNode,
 } from "react";
 import { supabase } from "@/lib/supabase";
+import {
+  clearGoogleProviderToken,
+  persistGoogleProviderToken,
+} from "@/lib/auth/google-provider-token";
 import { setClientToken } from "@/lib/auth/token";
 import type { User } from "@/types";
 import type { Session } from "@supabase/supabase-js";
@@ -82,6 +86,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const token = session?.access_token ?? null;
       setAccessToken(token);
       setClientToken(token);
+      if (session?.user?.id && session.provider_token) {
+        persistGoogleProviderToken({
+          accessToken: session.provider_token,
+          refreshToken: session.provider_refresh_token ?? null,
+          userId: session.user.id,
+        });
+      } else if (!session?.user?.id) {
+        clearGoogleProviderToken();
+      }
       syncCookie(token);              // Sync to cookie for server-side proxy
       setIsLoading(false);
     });
@@ -93,6 +106,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const token = session?.access_token ?? null;
         setAccessToken(token);
         setClientToken(token);
+        if (session?.user?.id && session.provider_token) {
+          persistGoogleProviderToken({
+            accessToken: session.provider_token,
+            refreshToken: session.provider_refresh_token ?? null,
+            userId: session.user.id,
+          });
+        } else if (!session?.user?.id) {
+          clearGoogleProviderToken();
+        }
         syncCookie(token);            // Keep cookie in sync on every auth event
       },
     );
@@ -104,6 +126,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const clearSession = useCallback(() => {
+    clearGoogleProviderToken();
     setUser(null);
     setAccessToken(null);
     setClientToken(null);

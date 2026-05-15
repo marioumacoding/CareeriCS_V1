@@ -1,6 +1,7 @@
 type BaseProps = {
   style?: React.CSSProperties;
   phaseNumber: string;
+  isLoading?: boolean;
 };
 
 type PhaseCardProps =
@@ -21,7 +22,7 @@ export const PhaseCard = (props: PhaseCardProps) => {
 
   // --- CURRENT PHASE ---
   if (props.type === "current") {
-    const { style, phaseNumber } = props;
+    const { style, phaseNumber, isLoading } = props;
 
     return (
       <div
@@ -46,21 +47,35 @@ export const PhaseCard = (props: PhaseCardProps) => {
           Current Phase
         </h3>
 
-        <img
-          src={`/home/current-phase/${phaseNumber}.svg`}
-          alt="Current Phase"
-          style={{
-            position: "relative",
-            marginLeft: "auto",
-            width: "100%",
-          }}
-        />
+        {isLoading ? (
+          <div
+            style={{
+              color: "#D7E3FF",
+              fontFamily: "var(--font-jura)",
+              fontSize: "0.95rem",
+              marginTop: "auto",
+              marginBottom: "auto",
+            }}
+          >
+            Loading phase...
+          </div>
+        ) : (
+          <img
+            src={`/home/current-phase/${phaseNumber}.svg`}
+            alt="Current Phase"
+            style={{
+              position: "relative",
+              marginLeft: "auto",
+              width: "100%",
+            }}
+          />
+        )}
       </div>
     );
   }
 
   // --- NEXT PHASE ---
-  const { style, phaseNumber, desc } = props;
+  const { style, phaseNumber, desc, isLoading } = props;
 
   return (
     <div
@@ -93,46 +108,64 @@ export const PhaseCard = (props: PhaseCardProps) => {
           Next Phase
         </h3>
 
-        <p
-          style={{
-            fontSize: "0.9rem",
-            opacity: 0.7,
-            lineHeight: "1.4",
-            margin: 0,
-            width: "25ch",
-          }}
-        >
-          {desc}
-        </p>
+        {isLoading ? (
+          <p
+            style={{
+              fontSize: "0.95rem",
+              opacity: 0.8,
+              lineHeight: "1.4",
+              margin: 0,
+              width: "25ch",
+              color: "#D7E3FF",
+              fontFamily: "var(--font-jura)",
+            }}
+          >
+            Loading phase...
+          </p>
+        ) : (
+          <p
+            style={{
+              fontSize: "0.9rem",
+              opacity: 0.7,
+              lineHeight: "1.4",
+              margin: 0,
+              width: "25ch",
+            }}
+          >
+            {desc}
+          </p>
+        )}
       </div>
 
-      <div
-        style={{
-          height: "100%",
-          position: "relative",
-          width: "fit-content",
-          display: "flex",
-          alignItems: "center",
-        }}
-      >
+      {!isLoading ? (
         <div
           style={{
-            backgroundColor: "white",
             height: "100%",
-            width: "0.4vh",
-          }}
-        />
-
-        <img
-          src={`/home/next-phase/${phaseNumber}.svg`}
-          alt="Next Phase"
-          style={{
             position: "relative",
-            height: "100%",
-            marginLeft: "auto",
+            width: "fit-content",
+            display: "flex",
+            alignItems: "center",
           }}
-        />
-      </div>
+        >
+          <div
+            style={{
+              backgroundColor: "white",
+              height: "100%",
+              width: "0.4vh",
+            }}
+          />
+
+          <img
+            src={`/home/next-phase/${phaseNumber}.svg`}
+            alt="Next Phase"
+            style={{
+              position: "relative",
+              height: "100%",
+              marginLeft: "auto",
+            }}
+          />
+        </div>
+      ) : null}
     </div>
   );
 };

@@ -10,16 +10,18 @@ export const CareerCardsContainer = ({
     isScrollable = false,
     Title = "Your Careers",
     columns = 3,
+    type = "home",
 }: {
     children: React.ReactNode;
     style?: React.CSSProperties;
     isScrollable?: boolean;
     Title?: string;
     columns?: number;
+    type?: string;
 }) => {
 
     const { isLarge, isMedium, isSmall, width } = useResponsive();
-    
+
     const [startIndex, setStartIndex] = useState(0);
 
     const cards = React.Children.toArray(children);
@@ -39,11 +41,19 @@ export const CareerCardsContainer = ({
 
     const visibleCards = useMemo(() => {
         if (!shouldScroll) return cards;
+        if (type != "home" && !isLarge) {
+            return cards.slice(
+                safeStartIndex,
+                safeStartIndex + columns * 2,
+            );
+        }
+        else {
+            return cards.slice(
+                safeStartIndex,
+                safeStartIndex + columns,
+            );
+        }
 
-        return cards.slice(
-            safeStartIndex,
-            safeStartIndex + columns,
-        );
     }, [
         cards,
         shouldScroll,
@@ -59,6 +69,11 @@ export const CareerCardsContainer = ({
             ),
         );
     };
+
+    const gridRows =
+        type !== "home" && !isLarge
+            ? "repeat(2, minmax(0, 1fr))"
+            : "1fr";
 
     return (
         <div
@@ -100,7 +115,7 @@ export const CareerCardsContainer = ({
                     gap: "var(--space-md)",
                     alignItems: "stretch",
                     justifyContent: "flex-start",
-                    overflow:"hidden"
+                    overflow: "hidden"
                 }}
             >
                 {/* Cards */}
@@ -109,10 +124,10 @@ export const CareerCardsContainer = ({
                         width: "100%",
                         height: "100%",
                         minHeight: 0,
-                    minWidth: 0,
+                        minWidth: 0,
                         display: "grid",
                         gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
-                        gridTemplateRows: "1fr",
+                        gridTemplateRows: gridRows,
                         gap: "var(--space-md)",
                     }}
                 >
@@ -152,7 +167,7 @@ export const CareerCardsContainer = ({
                 )}
 
             </div>
-        </div>
+        </div >
     );
 };
 

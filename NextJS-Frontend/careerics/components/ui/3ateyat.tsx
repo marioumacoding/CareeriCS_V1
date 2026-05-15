@@ -1,5 +1,7 @@
 "use client";
 
+import { useResponsive } from "@/hooks/useResponsive";
+import { Columns } from "lucide-react";
 import React, { CSSProperties } from "react";
 
 interface TipCardProps {
@@ -12,6 +14,8 @@ interface TipCardProps {
 }
 
 export default function TipCard({ icon, title, description, style, variant = "tip", onclick }: TipCardProps) {
+
+    const { isLarge, isMedium, isSmall, width } = useResponsive();
     return (
         <div
             onClick={variant === "feature" ? onclick : undefined}
@@ -20,14 +24,13 @@ export default function TipCard({ icon, title, description, style, variant = "ti
                 width: "100%",
                 height: "100%",
                 backgroundColor: "var(--medium-blue)",
-                borderRadius: "4vh",
+                borderRadius: "var(--radius-xl)",
                 display: "flex",
-                padding: "1rem",
-                paddingLeft:"2rem",
+                padding: "var(--space-md)",
                 overflow: "hidden",
-                justifyContent: "center",
+                justifyContent: "flex-start",
                 alignItems: "center",
-                cursor:variant==="feature"?"pointer":"normal",
+                cursor: variant === "feature" ? "pointer" : "normal",
                 ...style
             }}
         >
@@ -38,28 +41,32 @@ export default function TipCard({ icon, title, description, style, variant = "ti
                     width: "fit-content",
                     marginRight: "auto",
                     alignItems: "center",
+                    justifyContent: "flex-start",
+                    gap: "var(--space-md)",
                 }}
             >
-                <img src={icon} alt={title} style={{ height: "5rem", marginRight: "1rem" }} />
+                <img src={icon} alt={title} style={{ height: "var(--icon-2xl)" }} />
 
                 <div
                     style={{
                         color: "white",
                         fontFamily: "var(--font-nova-square)",
-
+                        display: "flex",
+                        flexDirection: "column",
                     }}
                 >
                     <p
                         style={{
-                            fontSize: "clamp(0.8rem,1.7vw,1.5rem)",
+                            fontSize: "var(--text-lg)",
                             marginRight: "auto"
                         }}
                     >
                         {title}
                     </p>
+
                     <p
                         style={{
-                            fontSize: "clamp(0.5rem,1vw,1.2rem)",
+                            fontSize: "var(--text-base)",
                             width: "100%",
                             whiteSpace: "pre-line",
                             fontFamily: "var(--font-jura)"
@@ -75,10 +82,8 @@ export default function TipCard({ icon, title, description, style, variant = "ti
                         color: "white",
                         width: "fit-content",
                         height: "fit-content",
-                        fontSize: "4vh",
-                        fontWeight: "bold",
+                        fontSize: "var(--text-lg)",
                         fontFamily: "var(--font-jura)",
-                        paddingInline: "1rem",
                         cursor: "pointer",
                         marginLeft: "auto"
                     }}

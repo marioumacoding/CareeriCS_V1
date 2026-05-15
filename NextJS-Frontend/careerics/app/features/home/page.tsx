@@ -32,6 +32,7 @@ import {
   JOURNEY_PHASES,
   type JourneyTrackCard,
   buildJourneyPhaseHref,
+  hasJourneyPhaseState,
   invalidateJourneyTrackCardsCache,
   loadJourneyTrackCards,
   persistSelectedJourneyTrackId,
@@ -126,6 +127,7 @@ export default function HomePage() {
   const [activityRefreshNonce, setActivityRefreshNonce] = useState(0);
   const [bookmarkRefreshNonce, setBookmarkRefreshNonce] = useState(0);
   const [, setPhaseStateRefreshNonce] = useState(0);
+  const [isLoadingActivities, setIsLoadingActivities] = useState(true);
 
   const [journeyTracks, setJourneyTracks] = useState<JourneyTrackCard[]>([]);
   const [isLoadingJourneyTracks, setIsLoadingJourneyTracks] = useState(false);
@@ -219,8 +221,13 @@ export default function HomePage() {
       if (!userId) {
         if (!isCancelled) {
           setProjectActivities([]);
+          setIsLoadingActivities(false);
         }
         return;
+      }
+
+      if (!isCancelled) {
+        setIsLoadingActivities(true);
       }
 
       try {
@@ -366,10 +373,12 @@ export default function HomePage() {
 
         if (!isCancelled) {
           setProjectActivities(merged);
+          setIsLoadingActivities(false);
         }
       } catch {
         if (!isCancelled) {
           setProjectActivities([]);
+          setIsLoadingActivities(false);
         }
       }
     };
@@ -469,12 +478,15 @@ export default function HomePage() {
   const activePhaseState = activeTrack?.id
     ? readJourneyPhaseState(activeTrack.id, userId)
     : { maxReached: 1 as const };
+  const hasJourneyProgressData = activeTrack?.id
+    ? hasJourneyPhaseState(activeTrack.id, userId)
+    : false;
 
   const dashboardData = useMemo(() => {
     if (!activeTrack) {
       return {
         activities: recentActivities,
-        progress: 10,
+        progress: 0,
         currentPhase: 1,
         nextPhase: 2,
         nextPhaseDesc: JOURNEY_PHASES[1].description,
@@ -483,10 +495,11 @@ export default function HomePage() {
 
     const currentPhase = activePhaseState.maxReached;
     const nextPhase = currentPhase >= 5 ? 5 : currentPhase + 1;
-    const progressValue =
-      currentPhase <= 1
+    const progressValue = hasJourneyProgressData
+      ? currentPhase <= 1
         ? 10
-        : toProgressBucket(((currentPhase - 1) / 4) * 100);
+        : toProgressBucket(((currentPhase - 1) / 4) * 100)
+      : 0;
 
     return {
       activities: recentActivities,
@@ -495,7 +508,7 @@ export default function HomePage() {
       nextPhase,
       nextPhaseDesc: JOURNEY_PHASES[nextPhase - 1]?.description || "No next phase description available.",
     };
-  }, [activePhaseState.maxReached, activeTrack, recentActivities]);
+  }, [activePhaseState.maxReached, activeTrack, hasJourneyProgressData, recentActivities]);
 
   const handleSelectTrack = (trackId: string) => {
     setBookmarkActionError(null);
@@ -548,6 +561,7 @@ export default function HomePage() {
 
   const showJourneyPlaceholder = !isLoadingJourneyTracks && !bookmarkedJourneyTracks.length;
   const showSavedCareerPlaceholder = showJourneyPlaceholder && journeyTracks.length > 0;
+  const isLoadingJourneyWidgets = isAuthLoading || isLoadingJourneyTracks;
 
   return (
     <div
@@ -611,7 +625,6 @@ export default function HomePage() {
             key="journey-loading"
             title="Loading Tracks"
             image="/landing/Rectangle.svg"
-            description="Fetching your saved careers and latest recommendations."
             buttonLabel="Loading..."
             type="bookmark"
             disabled
@@ -666,23 +679,27 @@ export default function HomePage() {
 
       <RecentActivityCard
         activities={dashboardData.activities}
+        isLoading={isLoadingActivities}
         style={{ gridArea: "1 / 4 / 3 / 6" }}
       />
 
       <JourneyProgressCard
         percentage={dashboardData.progress}
+        isLoading={isLoadingJourneyWidgets}
         style={{ gridArea: "3 / 1 / 5 / 2" }}
       />
 
       <PhaseCard
         type="current"
         phaseNumber={String(dashboardData.currentPhase)}
+        isLoading={isLoadingJourneyWidgets}
         style={{ gridArea: "3 / 2 / 5 / 2" }}
       />
 
       <PhaseCard
         type="next"
         phaseNumber={String(dashboardData.nextPhase)}
+        isLoading={isLoadingJourneyWidgets}
         desc={
           dashboardData.nextPhaseDesc || "No next phase description available."
         }

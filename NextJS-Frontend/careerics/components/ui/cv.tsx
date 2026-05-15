@@ -149,11 +149,12 @@ export default function CV() {
     const uploaded = await uploadToGoogleDrive(downloadBlob, {
       fileName: downloadName,
       mimeType: downloadBlob?.type || "application/pdf",
+      popupWindow: driveTab,
     });
 
     const nextDriveLink = uploaded?.webViewLink ?? uploaded?.webContentLink ?? null;
     if (nextDriveLink) {
-      if (driveTab) {
+      if (driveTab && !driveTab.closed) {
         driveTab.location.href = nextDriveLink;
       } else {
         window.open(nextDriveLink, "_blank", "noopener,noreferrer");
@@ -348,11 +349,9 @@ export default function CV() {
                         <img src="/global/drive.svg" style={{ width: "18px" }} alt="Drive" />
                         {isSavingToDrive
                           ? "Opening Drive..."
-                          : driveOpenLink
-                            ? "Open in Google Drive"
-                            : uploadedDriveFile
-                              ? "Saved to Google Drive"
-                              : "Save to Google Drive"}
+                          : uploadedDriveFile
+                            ? "Saved to Google Drive"
+                            : "Save to Google Drive"}
                       </button>
                       {driveUploadError ? (
                         <p style={{ color: "#ffb4b4", width: "240px", margin: 0, textAlign: "center" }}>

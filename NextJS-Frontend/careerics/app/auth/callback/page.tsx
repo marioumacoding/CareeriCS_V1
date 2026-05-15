@@ -7,6 +7,16 @@ import {
   DEFAULT_POST_AUTH_PATH,
   getSafePostAuthPath,
 } from "@/lib/auth/post-auth-redirect";
+import {
+  GOOGLE_DRIVE_AUTH_CALLBACK_QUERY_PARAM,
+  GOOGLE_DRIVE_AUTH_COMPLETED_MESSAGE,
+  GOOGLE_DRIVE_AUTH_RESULT_STORAGE_KEY,
+  type GoogleDriveAuthResultMessage,
+  isGoogleDriveAuthCallback,
+  isGoogleDrivePopupAuth,
+} from "@/lib/auth/google-drive-signin";
+import { formatGoogleOAuthErrorMessage } from "@/lib/auth/google-oauth-error";
+import { persistGoogleProviderToken } from "@/lib/auth/google-provider-token";
 import { setClientToken } from "@/lib/auth/token";
 
 const TOKEN_COOKIE = "careerics_token";
@@ -21,7 +31,16 @@ function syncTokenCookie(token: string | null) {
   document.cookie = `${TOKEN_COOKIE}=; path=/; max-age=0; SameSite=Lax`;
 }
 
-function readOAuthHashTokens(): { accessToken: string; refreshToken: string } | null {
+type OAuthHashResult = {
+  accessToken?: string;
+  refreshToken?: string;
+  providerToken?: string;
+  providerRefreshToken?: string;
+  error?: string;
+  errorDescription?: string;
+};
+
+function readOAuthHashResult(): OAuthHashResult | null {
   if (typeof window === "undefined") return null;
   const hash = window.location.hash.startsWith("#")
     ? window.location.hash.slice(1)
@@ -31,12 +50,30 @@ function readOAuthHashTokens(): { accessToken: string; refreshToken: string } | 
   const params = new URLSearchParams(hash);
   const accessToken = params.get("access_token");
   const refreshToken = params.get("refresh_token");
+  const providerToken = params.get("provider_token");
+  const providerRefreshToken = params.get("provider_refresh_token");
+  const error = params.get("error");
+  const errorDescription = params.get("error_description");
 
-  if (!accessToken || !refreshToken) {
+  if (
+    !accessToken &&
+    !refreshToken &&
+    !providerToken &&
+    !providerRefreshToken &&
+    !error &&
+    !errorDescription
+  ) {
     return null;
   }
 
-  return { accessToken, refreshToken };
+  return {
+    accessToken: accessToken ?? undefined,
+    refreshToken: refreshToken ?? undefined,
+    providerToken: providerToken ?? undefined,
+    providerRefreshToken: providerRefreshToken ?? undefined,
+    error: error ?? undefined,
+    errorDescription: errorDescription ?? undefined,
+  };
 }
 
 /**
@@ -54,6 +91,9 @@ export default function AuthCallback() {
   useEffect(() => {
     let redirected = false;
     let profileSynced = false;
+    const isDriveAuthCallback =
+      isGoogleDrivePopupAuth(searchParams.get("popup")) ||
+      isGoogleDriveAuthCallback(searchParams.get(GOOGLE_DRIVE_AUTH_CALLBACK_QUERY_PARAM));
     const pendingTargetPath = consumePendingPostAuthPath();
     const targetPath =
       getSafePostAuthPath(searchParams.get("callbackUrl")) ??
@@ -61,22 +101,71 @@ export default function AuthCallback() {
       pendingTargetPath ??
       DEFAULT_POST_AUTH_PATH;
 
-    const oauthErrorCode = searchParams.get("error") || "";
-    const oauthErrorDescription = searchParams.get("error_description") || "";
-    const oauthError = oauthErrorDescription || oauthErrorCode;
-    if (oauthError) {
+    const postDriveAuthResult = (payload: { success: boolean; error?: string }) => {
+      if (!isDriveAuthCallback) {
+        return false;
+      }
+
+      const message: GoogleDriveAuthResultMessage = {
+        type: GOOGLE_DRIVE_AUTH_COMPLETED_MESSAGE,
+        success: payload.success,
+        error: payload.error,
+        timestamp: Date.now(),
+      };
+
+      redirected = true;
+
+      if (window.opener && !window.opener.closed) {
+        window.opener.postMessage(message, window.location.origin);
+      }
+
+      try {
+        window.localStorage.setItem(
+          GOOGLE_DRIVE_AUTH_RESULT_STORAGE_KEY,
+          JSON.stringify(message),
+        );
+      } catch {
+        // postMessage is the primary path; localStorage is only a popup fallback.
+      }
+
+      return true;
+    };
+
+    const redirectToLoginWithError = (message: string) => {
+      if (postDriveAuthResult({ success: false, error: message })) {
+        return;
+      }
+
       const loginUrl = new URLSearchParams();
-      loginUrl.set("error", oauthError);
+      loginUrl.set("error", message);
       if (targetPath !== DEFAULT_POST_AUTH_PATH) {
         loginUrl.set("callbackUrl", targetPath);
       }
       router.replace(`/auth/login?${loginUrl.toString()}`);
+    };
+
+    const hashResult = readOAuthHashResult();
+    const oauthErrorCode = searchParams.get("error") || hashResult?.error || "";
+    const oauthErrorDescription =
+      searchParams.get("error_description") || hashResult?.errorDescription || "";
+    if (oauthErrorCode || oauthErrorDescription) {
+      redirectToLoginWithError(
+        formatGoogleOAuthErrorMessage({
+          error: oauthErrorCode,
+          errorDescription: oauthErrorDescription,
+        }),
+      );
       return;
     }
 
     const redirectIfNeeded = () => {
       if (redirected) return;
       redirected = true;
+
+      if (postDriveAuthResult({ success: true })) {
+        return;
+      }
+
       window.location.replace(targetPath);
     };
 
@@ -92,24 +181,44 @@ export default function AuthCallback() {
       redirectIfNeeded();
     };
 
-    const hashTokens = readOAuthHashTokens();
-    if (hashTokens) {
+    if (hashResult?.accessToken && hashResult?.refreshToken) {
       void supabase.auth
         .setSession({
-          access_token: hashTokens.accessToken,
-          refresh_token: hashTokens.refreshToken,
+          access_token: hashResult.accessToken,
+          refresh_token: hashResult.refreshToken,
         })
         .then(({ data: { session } }) => {
-          syncProfileAndRedirect(session?.access_token ?? hashTokens.accessToken);
+          if (session?.user?.id && hashResult.providerToken) {
+            persistGoogleProviderToken({
+              accessToken: hashResult.providerToken,
+              refreshToken: hashResult.providerRefreshToken ?? null,
+              userId: session.user.id,
+            });
+          } else if (session?.user?.id && session.provider_token) {
+            persistGoogleProviderToken({
+              accessToken: session.provider_token,
+              refreshToken: session.provider_refresh_token ?? null,
+              userId: session.user.id,
+            });
+          }
+
+          syncProfileAndRedirect(session?.access_token ?? hashResult.accessToken);
         })
         .catch(() => {
-          syncProfileAndRedirect(hashTokens.accessToken);
+          syncProfileAndRedirect(hashResult.accessToken);
         });
       return;
     }
 
     const timeoutId = setTimeout(() => {
       if (!redirected) {
+        if (postDriveAuthResult({
+          success: false,
+          error: "Google sign-in timed out. Please try again.",
+        })) {
+          return;
+        }
+
         const loginUrl = new URLSearchParams({
           error: "Google sign-in timed out",
         });
@@ -122,6 +231,13 @@ export default function AuthCallback() {
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
+        if (session.user?.id && session.provider_token) {
+          persistGoogleProviderToken({
+            accessToken: session.provider_token,
+            refreshToken: session.provider_refresh_token ?? null,
+            userId: session.user.id,
+          });
+        }
         clearTimeout(timeoutId);
         void syncProfileAndRedirect(session.access_token);
       }
@@ -130,6 +246,13 @@ export default function AuthCallback() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         if (session) {
+          if (session.user?.id && session.provider_token) {
+            persistGoogleProviderToken({
+              accessToken: session.provider_token,
+              refreshToken: session.provider_refresh_token ?? null,
+              userId: session.user.id,
+            });
+          }
           clearTimeout(timeoutId);
           void syncProfileAndRedirect(session.access_token);
         }

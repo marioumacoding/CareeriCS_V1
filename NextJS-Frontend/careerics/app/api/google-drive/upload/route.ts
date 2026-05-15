@@ -6,7 +6,6 @@ import type {
 
 export const runtime = "nodejs";
 
-const TOKEN_COOKIE = "careerics_token";
 const GOOGLE_DRIVE_UPLOAD_URL = "https://www.googleapis.com/upload/drive/v3/files";
 const GOOGLE_DRIVE_RESPONSE_FIELDS = "id,name,mimeType,webViewLink,webContentLink";
 
@@ -129,7 +128,7 @@ function mapGoogleDriveError(status: number, bodyText: string) {
     return jsonError(
       403,
       "GOOGLE_DRIVE_SCOPE_MISSING",
-      "Your Google session does not include Google Drive access yet. Please sign in with Google again to grant permission.",
+      "Google Drive permission was not granted yet. Please continue with Google and allow Drive access.",
     );
   }
 
@@ -145,20 +144,12 @@ function mapGoogleDriveError(status: number, bodyText: string) {
 }
 
 export async function POST(req: NextRequest) {
-  if (!req.cookies.get(TOKEN_COOKIE)?.value) {
-    return jsonError(
-      401,
-      "UNAUTHENTICATED",
-      "Please sign in first to save files to Google Drive.",
-    );
-  }
-
   const googleAccessToken = req.headers.get("x-google-access-token")?.trim();
   if (!googleAccessToken) {
     return jsonError(
       401,
       "GOOGLE_DRIVE_TOKEN_MISSING",
-      "Your Google session is missing Drive access. Please sign in with Google again to grant permission.",
+      "Google Drive permission is missing. Please continue with Google to save this file.",
     );
   }
 

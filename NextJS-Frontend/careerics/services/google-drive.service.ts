@@ -4,12 +4,9 @@ import type {
   GoogleDriveUploadedFile,
   GoogleDriveUploadErrorCode,
 } from "@/types";
-import { getStoredGoogleProviderAccessToken } from "@/lib/auth/google-provider-token";
-import { supabase } from "@/lib/supabase";
-import type { Session } from "@supabase/supabase-js";
+import { googleDriveAuthService } from "@/services/google-drive-auth.service";
 
 const GOOGLE_DRIVE_UPLOAD_PATH = "/api/google-drive/upload";
-const GOOGLE_PROVIDER = "google";
 const DEFAULT_FILE_MIME_TYPE = "application/pdf";
 
 export type GoogleDriveAuthStatus =
@@ -51,79 +48,6 @@ function buildUploadError(
   status?: number,
 ): GoogleDriveUploadError {
   return new GoogleDriveUploadError(code, message, status);
-}
-
-function resolveMissingGoogleTokenMessage(session: Session | null): string {
-  const provider = session?.user?.app_metadata?.provider;
-  if (provider && provider !== GOOGLE_PROVIDER) {
-    return "Please sign in with Google to save files to Google Drive.";
-  }
-
-  return "Saving to Google Drive requires a Google sign-in with Drive access. Please continue with Google to use this feature.";
-}
-
-async function getSupabaseSession(): Promise<Session> {
-  const { data, error } = await supabase.auth.getSession();
-
-  if (error || !data.session) {
-    throw buildUploadError(
-      "UNAUTHENTICATED",
-      "Please sign in first to save files to Google Drive.",
-    );
-  }
-
-  return data.session;
-}
-
-async function getGoogleAccessToken(allowRefresh: boolean): Promise<string> {
-  const session = await getSupabaseSession();
-  if (session.provider_token) {
-    return session.provider_token;
-  }
-
-  const storedAccessToken = session.user?.id
-    ? getStoredGoogleProviderAccessToken(session.user.id)
-    : null;
-  if (storedAccessToken) {
-    return storedAccessToken;
-  }
-
-  if (!allowRefresh) {
-    throw buildUploadError(
-      "GOOGLE_DRIVE_TOKEN_MISSING",
-      resolveMissingGoogleTokenMessage(session),
-    );
-  }
-
-  const { data, error } = await supabase.auth.refreshSession();
-  if (error || !data.session) {
-    throw buildUploadError(
-      "UNAUTHENTICATED",
-      "Please sign in again to save files to Google Drive.",
-    );
-  }
-
-  if (!data.session.provider_token) {
-    throw buildUploadError(
-      "GOOGLE_DRIVE_TOKEN_MISSING",
-      resolveMissingGoogleTokenMessage(data.session),
-    );
-  }
-
-  return data.session.provider_token;
-}
-
-async function refreshGoogleAccessToken(previousToken: string): Promise<string | null> {
-  const { data, error } = await supabase.auth.refreshSession();
-  if (error || !data.session?.provider_token) {
-    return null;
-  }
-
-  if (data.session.provider_token === previousToken) {
-    return null;
-  }
-
-  return data.session.provider_token;
 }
 
 function toUploadFile(file: Blob, fileName: string, mimeType?: string): File {
@@ -221,27 +145,14 @@ export class GoogleDriveUploadError extends Error {
 }
 
 export const googleDriveService = {
-  async getGoogleDriveAuthStatus(): Promise<GoogleDriveAuthStatus> {
-    const { data, error } = await supabase.auth.getSession();
-    if (error || !data.session?.user) {
-      return "session_required";
-    }
+  getCurrentGoogleAccessToken(): string | null {
+    return googleDriveAuthService.getStoredAccessToken();
+  },
 
-    if (data.session.provider_token) {
-      return "ready";
-    }
-
-    const storedAccessToken = getStoredGoogleProviderAccessToken(data.session.user.id);
-    if (storedAccessToken) {
-      return "ready";
-    }
-
-    const refreshedSession = await supabase.auth.refreshSession();
-    if (refreshedSession.data.session?.provider_token) {
-      return "ready";
-    }
-
-    return "google_sign_in_required";
+  getGoogleDriveAuthStatus(): GoogleDriveAuthStatus {
+    return googleDriveAuthService.getStoredAccessToken()
+      ? "ready"
+      : "google_sign_in_required";
   },
 
   async uploadGeneratedFile(
@@ -257,23 +168,25 @@ export const googleDriveService = {
     }
 
     const uploadFile = toUploadFile(file, fileName, mimeType);
-    const initialAccessToken = await getGoogleAccessToken(true);
+    const accessToken = googleDriveAuthService.getStoredAccessToken();
+    if (!accessToken) {
+      throw buildUploadError(
+        "GOOGLE_DRIVE_TOKEN_MISSING",
+        "Please continue with Google to save this file to Drive.",
+      );
+    }
 
     try {
-      return await uploadWithAccessToken(uploadFile, initialAccessToken);
+      return await uploadWithAccessToken(uploadFile, accessToken);
     } catch (error) {
       if (
         error instanceof GoogleDriveUploadError &&
         error.code === "GOOGLE_DRIVE_TOKEN_EXPIRED"
       ) {
-        const refreshedAccessToken = await refreshGoogleAccessToken(initialAccessToken);
-        if (refreshedAccessToken) {
-          return uploadWithAccessToken(uploadFile, refreshedAccessToken);
-        }
-
+        googleDriveAuthService.clearAccessToken();
         throw buildUploadError(
           "GOOGLE_DRIVE_TOKEN_EXPIRED",
-          "Your Google Drive access expired. Please continue with Google again to save files to Drive.",
+          "Your Google Drive access expired. Please continue with Google again.",
           error.status,
         );
       }

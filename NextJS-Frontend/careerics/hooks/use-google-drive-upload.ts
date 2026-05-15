@@ -70,11 +70,13 @@ function readGoogleDriveAuthMessage(rawValue: string | null): GoogleDriveAuthRes
 function waitForGoogleDriveSignIn(popup: Window): Promise<void> {
   return new Promise((resolve, reject) => {
     let finished = false;
+    let isCheckingAuthStatus = false;
 
     const cleanup = () => {
       window.removeEventListener("message", handleMessage);
       window.removeEventListener("storage", handleStorage);
       window.clearInterval(closeWatcherId);
+      window.clearInterval(authWatcherId);
     };
 
     const complete = (callback: () => void) => {
@@ -96,6 +98,24 @@ function waitForGoogleDriveSignIn(popup: Window): Promise<void> {
       }
 
       complete(resolve);
+    };
+
+    const checkAuthStatus = async () => {
+      if (finished || isCheckingAuthStatus) {
+        return;
+      }
+
+      isCheckingAuthStatus = true;
+      try {
+        const authStatus = await googleDriveService.getGoogleDriveAuthStatus();
+        if (authStatus === "ready") {
+          complete(resolve);
+        }
+      } catch {
+        // Keep waiting for the explicit callback/storage signal.
+      } finally {
+        isCheckingAuthStatus = false;
+      }
     };
 
     const handleMessage = (event: MessageEvent) => {
@@ -131,9 +151,13 @@ function waitForGoogleDriveSignIn(popup: Window): Promise<void> {
         reject(new Error("Google sign-in was cancelled before Drive access was granted."));
       });
     }, 400);
+    const authWatcherId = window.setInterval(() => {
+      void checkAuthStatus();
+    }, 800);
 
     window.addEventListener("message", handleMessage);
     window.addEventListener("storage", handleStorage);
+    void checkAuthStatus();
 
     try {
       const existingResult = readGoogleDriveAuthMessage(

@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { CircleScore } from "../circle-score";
 import { useEffect, useState } from "react";
+import { useResponsive } from "@/hooks/useResponsive";
 
 type ActivityItem = {
   id: string;
@@ -67,24 +68,7 @@ export const RecentActivityCard = ({
     return () => el.removeEventListener("scroll", updateScrollState);
   }, [activities]);
 
-  const LARGE = 1024;
-  const MEDIUM = 640;
-
-  const [width, setWidth] = useState(0);
-
-  useEffect(() => {
-    const handleResize = () => setWidth(window.innerWidth);
-
-    handleResize();
-
-    window.addEventListener("resize", handleResize);
-
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
-  const isLarge = width >= LARGE;
-  const isMedium = width >= MEDIUM && width < LARGE;
-  const isSmall = width < MEDIUM;
+  const { isLarge, isMedium, isSmall, width } = useResponsive();
 
   return (
     <div

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import React, { CSSProperties, ReactNode } from "react";
 import { X } from "lucide-react";
 import { useMemo, useEffect, useState } from "react";
+import { useResponsive } from "@/hooks/useResponsive";
 
 interface ChoiceCardProps {
   icon?: string;
@@ -49,24 +50,7 @@ export default function ChoiceCard({
   const isBookmark = type === "bookmark";
   const effectiveSelected = isSelected || isBookmark;
 
-  const LARGE = 1024;
-  const MEDIUM = 640;
-
-  const [width, setWidth] = useState(0);
-
-  useEffect(() => {
-    const handleResize = () => setWidth(window.innerWidth);
-
-    handleResize();
-
-    window.addEventListener("resize", handleResize);
-
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
-  const isLarge = width >= LARGE;
-  const isMedium = width >= MEDIUM && width < LARGE;
-  const isSmall = width < MEDIUM;
+  const { isLarge, isMedium, isSmall, width } = useResponsive();
 
   return (
     <div

@@ -1,5 +1,4 @@
 "use client";
-
 import ChoiceCard from "@/components/ui/home/choice-card-home";
 import { useEffect, useMemo, useState } from "react";
 import { RecentActivityCard } from "@/components/ui/home/recent-activity";
@@ -39,6 +38,7 @@ import {
   readSelectedJourneyTrackId,
   toProgressBucket,
 } from "@/lib/journey";
+import { useResponsive } from "@/hooks/useResponsive";
 
 type RecentActivityItem = {
   key: string;
@@ -564,9 +564,11 @@ export default function HomePage() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  const isLarge = width >= LARGE;
-  const isMedium = width >= MEDIUM && width < LARGE;
-  const isSmall = width < MEDIUM;
+  const {
+    isLarge,
+    isMedium,
+    isSmall,
+  } = useResponsive();
 
   const gridTemplateColumns = isLarge
     ? "1.3fr 1.3fr 1.3fr 0.7fr 0.9fr"
@@ -734,7 +736,7 @@ export default function HomePage() {
 
       <PhaseCard
         type="current"
-        phaseNumber={isSmall?String(dashboardData.nextPhase):String(dashboardData.currentPhase)}
+        phaseNumber={isSmall ? String(dashboardData.nextPhase) : String(dashboardData.currentPhase)}
         style={{
           gridArea: isLarge
             ? "3 / 2 / 5 / 3"

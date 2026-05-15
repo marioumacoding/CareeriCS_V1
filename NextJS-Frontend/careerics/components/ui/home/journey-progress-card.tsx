@@ -1,29 +1,12 @@
 import React, { ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useResponsive } from "@/hooks/useResponsive";
 
 
 export const JourneyProgressCard = ({ percentage = 10, style }: any) => {
 
-  const pathname = usePathname();
-  const LARGE = 1024;
-  const MEDIUM = 640;
-
-  const [width, setWidth] = useState(0);
-
-  useEffect(() => {
-    const handleResize = () => setWidth(window.innerWidth);
-
-    handleResize();
-
-    window.addEventListener("resize", handleResize);
-
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
-  const isLarge = width >= LARGE;
-  const isMedium = width >= MEDIUM && width < LARGE;
-  const isSmall = width < MEDIUM;
+  const { isLarge, isMedium, isSmall, width } = useResponsive();
 
   return (
     <div

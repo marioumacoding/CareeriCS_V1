@@ -1,5 +1,6 @@
 
 "use client";
+import { useResponsive } from "@/hooks/useResponsive";
 import React, { ReactNode } from "react";
 import { useMemo, useEffect, useState } from "react";
 
@@ -17,25 +18,8 @@ export const CareerCardsContainer = ({
     columns?: number;
 }) => {
 
-    const LARGE = 1024;
-    const MEDIUM = 640;
-
-    const [width, setWidth] = useState(0);
-
-    useEffect(() => {
-        const handleResize = () => setWidth(window.innerWidth);
-
-        handleResize();
-
-        window.addEventListener("resize", handleResize);
-
-        return () => window.removeEventListener("resize", handleResize);
-    }, []);
-
-    const isLarge = width >= LARGE;
-    const isMedium = width >= MEDIUM && width < LARGE;
-    const isSmall = width < MEDIUM;
-
+    const { isLarge, isMedium, isSmall, width } = useResponsive();
+    
     const [startIndex, setStartIndex] = useState(0);
 
     const cards = React.Children.toArray(children);

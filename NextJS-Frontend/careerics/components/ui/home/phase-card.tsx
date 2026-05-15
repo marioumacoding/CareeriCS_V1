@@ -2,6 +2,7 @@
 import React, { ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useResponsive } from "@/hooks/useResponsive";
 
 
 
@@ -25,24 +26,7 @@ export const PhaseCard = (props: PhaseCardProps) => {
     borderRadius: "var(--radius-lg)",
     color: "white",
   };
-  const LARGE = 1024;
-  const MEDIUM = 640;
-
-  const [width, setWidth] = useState(0);
-
-  useEffect(() => {
-    const handleResize = () => setWidth(window.innerWidth);
-
-    handleResize();
-
-    window.addEventListener("resize", handleResize);
-
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
-  const isLarge = width >= LARGE;
-  const isMedium = width >= MEDIUM && width < LARGE;
-  const isSmall = width < MEDIUM;
+  const { isLarge, isMedium, isSmall, width } = useResponsive();
 
   // --- CURRENT PHASE ---
   if (props.type === "current") {

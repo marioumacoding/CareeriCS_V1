@@ -4,6 +4,18 @@ import FeatureCard from "@/components/ui/feature-card";
 import type { CardType } from "@/components/ui/feature-card";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui";
+import { useResponsive } from "@/hooks/useResponsive";
+
+type LayoutItem = {
+  area: string;
+  type: CardType;
+};
+
+type Layout = {
+  gridTemplateColumns: string;
+  gridTemplateRows: string;
+  items: Record<string, LayoutItem>;
+};
 
 export default function LandingPage() {
   const router = useRouter();
@@ -60,40 +72,10 @@ export default function LandingPage() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const useBreakpoint = () => {
-    const [width, setWidth] = useState(
-      typeof window !== "undefined" ? window.innerWidth : 0
-    );
+  const { isLarge, isMedium, isSmall } = useResponsive();
 
-    useEffect(() => {
-      const handleResize = () => setWidth(window.innerWidth);
-
-      window.addEventListener("resize", handleResize);
-      handleResize();
-
-      return () => window.removeEventListener("resize", handleResize);
-    }, []);
-
-    return {
-      large: width >= 1024,
-      medium: width < 1024 && width >= 640,
-      small: width < 640,
-    };
-  };
-
-  type LayoutItem = {
-    area: string;
-    type: CardType;
-  };
-
-  type Layout = {
-    gridTemplateColumns: string;
-    gridTemplateRows: string;
-    items: Record<string, LayoutItem>;
-  };
-
-  const getLayout = (bp: any): Layout => {
-    if (bp.large) {
+  const getLayout = (): Layout => {
+    if (isLarge) {
       return {
         gridTemplateColumns: "repeat(5, 1fr)",
         gridTemplateRows: "repeat(3, 1fr)",
@@ -111,7 +93,7 @@ export default function LandingPage() {
       };
     }
 
-    if (bp.medium) {
+    if (isMedium) {
       return {
         gridTemplateColumns: "repeat(3, 1fr)",
         gridTemplateRows: "auto",
@@ -146,8 +128,7 @@ export default function LandingPage() {
     };
   };
 
-  const bp = useBreakpoint();
-  const layout = getLayout(bp);
+  const layout = getLayout();
 
   return (
     <div
@@ -179,7 +160,7 @@ export default function LandingPage() {
           whiteSpace: "nowrap"
         }}
       >
-        {!bp.small &&
+        {!isSmall &&
           <div
             style={{
               fontSize: "var(--text-lg)",
@@ -282,7 +263,7 @@ export default function LandingPage() {
             gap: "var(--space-md)",
             justifyContent: "flext-start",
             alignItems: "center",
-            paddingTop: bp.small ? "10vh" : "20vh",
+            paddingTop: isSmall ? "10vh" : "20vh",
           }}
         >
           <svg

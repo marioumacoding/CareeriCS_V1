@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import { ReactNode } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button"
+import { useResponsive } from "@/hooks/useResponsive";
 
 interface AuthLayoutProps {
   children: ReactNode;
@@ -69,27 +70,7 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
   }
 
 
-  const useBreakpoint = () => {
-    const [width, setWidth] = useState(
-      typeof window !== "undefined" ? window.innerWidth : 0
-    );
-
-    useEffect(() => {
-      const handleResize = () => setWidth(window.innerWidth);
-
-      window.addEventListener("resize", handleResize);
-      handleResize();
-
-      return () => window.removeEventListener("resize", handleResize);
-    }, []);
-
-    return {
-      large: width >= 1024,
-      medium: width < 1024 && width >= 640,
-      small: width < 640,
-    };
-  };
-
+  const { isLarge, isMedium, isSmall } = useResponsive();
 
   type Layout = {
     gridTemplateColumns: string;
@@ -97,8 +78,8 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
     RightArea: string;
   };
 
-  const getLayout = (bp: any): Layout => {
-    if (bp.large) {
+  const getLayout = (): Layout => {
+    if (isLarge) {
       return {
         gridTemplateColumns: "repeat(2, 1fr)",
         LeftArea: "1 / 1 / 2 / 2",
@@ -106,19 +87,14 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
       };
     }
 
-    else {
-      return {
-        gridTemplateColumns: "1fr",
-        LeftArea: "1 / 1 / 2 / 2",
-        RightArea: "1 / 1 / 2 / 2",
-      };
-    }
-
+    return {
+      gridTemplateColumns: "1fr",
+      LeftArea: "1 / 1 / 2 / 2",
+      RightArea: "1 / 1 / 2 / 2",
+    };
   };
 
-  const bp = useBreakpoint();
-  const layout = getLayout(bp);
-
+  const layout = getLayout();
 
 
   return (
@@ -173,7 +149,7 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
         </div>
 
         {
-          !bp.large &&
+          !isLarge &&
 
           <div
             style={{
@@ -283,7 +259,7 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
         <div
           style={{
             height: "fit-content",
-            maxWidth: bp.medium ? "50%" : "70%",
+            maxWidth: isMedium ? "50%" : "70%",
           }}
         >
           <img
@@ -294,109 +270,109 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
         </div>
       </div>
 
-{bp.large &&
-      <div
-      style={{
-        width: "100%",
-          height: "100vh",
-          gridArea: layout.LeftArea,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: "1rem",
-          boxSizing: "border-box",
-          zIndex: 999,
-        }}
-      >
+      {isLarge &&
         <div
           style={{
-            backgroundColor: "var(--form-grey)",
-            borderRadius: "var(--radius-xl)",
-            maxHeight: "90vh",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            paddingInline: "var(--space-2xl)",
-            paddingBlock: "var(--space-xl)",
-            textAlign: "center",
-            boxSizing: "border-box",
-          }}
-        >
-          <h1
-            style={{
-              color: "#fff",
-              fontSize: "var(--text-xl)",
-            }}
-          >
-            {CardTitle}
-          </h1>
-
-          {children}
-
-          {showDiv && (
-            <div
-              style={{
-                width: "100%",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-              }}
-            >
-              <div
-                style={{
-                  backgroundColor: "#fff",
-                  width: "100%",
-                  height: "0.1rem",
-                }}
-              />
-
-              <Button
-                variant="text"
-                textContent={{
-                  before: Message ?? "",
-                  buttonText: LinkText ?? "",
-                }}
-                onClick={() => router.push(Link ?? "/")}
-                />
-            </div>
-          )}
-        </div>
-
-        <button
-          onClick={() => router.push(BackPath ?? "/")}
-          style={{
-            position: "absolute",
-            top: "clamp(0.75rem, 2vw, 1.25rem)",
-            left: "clamp(0.75rem, 2vw, 1.25rem)",
-            width: "clamp(2.5rem, 6vw, 4rem)",
-            height: "clamp(2.5rem, 6vw, 4rem)",
-            backgroundColor: "transparent",
-            border: "none",
-            cursor: "pointer",
-            padding: 0,
+            width: "100%",
+            height: "100vh",
+            gridArea: layout.LeftArea,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
+            padding: "1rem",
+            boxSizing: "border-box",
+            zIndex: 999,
           }}
         >
-          <svg
-            preserveAspectRatio="none"
-            viewBox="0 0 78 78"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
+          <div
             style={{
-              width: "100%",
-              height: "100%",
+              backgroundColor: "var(--form-grey)",
+              borderRadius: "var(--radius-xl)",
+              maxHeight: "90vh",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              paddingInline: "var(--space-2xl)",
+              paddingBlock: "var(--space-xl)",
+              textAlign: "center",
+              boxSizing: "border-box",
             }}
+          >
+            <h1
+              style={{
+                color: "#fff",
+                fontSize: "var(--text-xl)",
+              }}
             >
-            <path
-              d="M34.8494 38.6795L49.5309 53.5142L45.016 57.9825L25.8662 38.6328L45.2159 19.483L49.6842 23.998L34.8494 38.6795Z"
-              fill="#E6E0E9"
-            />
-          </svg>
-        </button>
-      </div>
-          }
+              {CardTitle}
+            </h1>
+
+            {children}
+
+            {showDiv && (
+              <div
+                style={{
+                  width: "100%",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                }}
+              >
+                <div
+                  style={{
+                    backgroundColor: "#fff",
+                    width: "100%",
+                    height: "0.1rem",
+                  }}
+                />
+
+                <Button
+                  variant="text"
+                  textContent={{
+                    before: Message ?? "",
+                    buttonText: LinkText ?? "",
+                  }}
+                  onClick={() => router.push(Link ?? "/")}
+                />
+              </div>
+            )}
+          </div>
+
+          <button
+            onClick={() => router.push(BackPath ?? "/")}
+            style={{
+              position: "absolute",
+              top: "clamp(0.75rem, 2vw, 1.25rem)",
+              left: "clamp(0.75rem, 2vw, 1.25rem)",
+              width: "clamp(2.5rem, 6vw, 4rem)",
+              height: "clamp(2.5rem, 6vw, 4rem)",
+              backgroundColor: "transparent",
+              border: "none",
+              cursor: "pointer",
+              padding: 0,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <svg
+              preserveAspectRatio="none"
+              viewBox="0 0 78 78"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              style={{
+                width: "100%",
+                height: "100%",
+              }}
+            >
+              <path
+                d="M34.8494 38.6795L49.5309 53.5142L45.016 57.9825L25.8662 38.6328L45.2159 19.483L49.6842 23.998L34.8494 38.6795Z"
+                fill="#E6E0E9"
+              />
+            </svg>
+          </button>
+        </div>
+      }
     </div >
   );
 }

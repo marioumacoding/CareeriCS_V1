@@ -1,10 +1,8 @@
 "use client";
+
 import React, { ReactNode } from "react";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
-
-
-
+import { useResponsive } from "@/hooks/useResponsive";
 
 type FolderProps = {
   children?: ReactNode;
@@ -12,38 +10,60 @@ type FolderProps = {
 
 const Folder = ({ children }: FolderProps) => {
   const pathname = usePathname();
-  const LARGE = 1024;
-  const MEDIUM = 640;
 
-  const [width, setWidth] = useState(0);
+  const { isLarge, isMedium, isSmall } = useResponsive();
 
-  useEffect(() => {
-    const handleResize = () => setWidth(window.innerWidth);
-
-    handleResize();
-
-    window.addEventListener("resize", handleResize);
-
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
-  const isLarge = width >= LARGE;
-  const isMedium = width >= MEDIUM && width < LARGE;
-  const isSmall = width < MEDIUM;
-
-  const pageConfig: Record<string, { title: string; subtitle: string; tabwidth: string }> = {
-    "/features/home": { title: "Careeri's Journey", subtitle: "Welcome to CareeriCS", tabwidth: "27%" },
-    "/features/career": { title: "Career Exploration", subtitle: "Find your path", tabwidth: "28%" },
-    "/features/courses": { title: "Courses Hub", subtitle: "Expand your knowledge", tabwidth: "22%" },
-    "/features/roadmap": { title: "Roadmaps", subtitle: "Discover where you stand", tabwidth: "19%" },
-    "/features/skill": { title: "Skill Assessment", subtitle: "Discover where you stand", tabwidth: "26.5%" },
-    "/features/cv": { title: "CV Crafting", subtitle: "Turn experience into impact", tabwidth: "20%" },
-    "/features/interview": { title: "Interview Preparation", subtitle: "Practice makes perfect", tabwidth: "31%" },
-    "/features/job": { title: "Job Search", subtitle: "Your next opportunity is waiting", tabwidth: "20%" },
+  const pageConfig: Record<
+    string,
+    { title: string; subtitle: string; tabwidth: string }
+  > = {
+    "/features/home": {
+      title: "Careeri's Journey",
+      subtitle: "Welcome to CareeriCS",
+      tabwidth: "27%",
+    },
+    "/features/career": {
+      title: "Career Exploration",
+      subtitle: "Find your path",
+      tabwidth: "28%",
+    },
+    "/features/courses": {
+      title: "Courses Hub",
+      subtitle: "Expand your knowledge",
+      tabwidth: "22%",
+    },
+    "/features/roadmap": {
+      title: "Roadmaps",
+      subtitle: "Discover where you stand",
+      tabwidth: "19%",
+    },
+    "/features/skill": {
+      title: "Skill Assessment",
+      subtitle: "Discover where you stand",
+      tabwidth: "26.5%",
+    },
+    "/features/cv": {
+      title: "CV Crafting",
+      subtitle: "Turn experience into impact",
+      tabwidth: "20%",
+    },
+    "/features/interview": {
+      title: "Interview Preparation",
+      subtitle: "Practice makes perfect",
+      tabwidth: "31%",
+    },
+    "/features/job": {
+      title: "Job Search",
+      subtitle: "Your next opportunity is waiting",
+      tabwidth: "20%",
+    },
   };
 
   const current =
-    pageConfig[pathname] || { title: "CareeriCS", subtitle: "Loading..." };
+    pageConfig[pathname] || {
+      title: "CareeriCS",
+      subtitle: "Loading...",
+    };
 
   return (
     <div
@@ -57,7 +77,6 @@ const Folder = ({ children }: FolderProps) => {
         gap: 0,
       }}
     >
-
       {!isSmall && (
         <div
           id="header"
@@ -78,7 +97,6 @@ const Folder = ({ children }: FolderProps) => {
               position: "relative",
             }}
           >
-
             <div
               id="grey-tab-body"
               style={{
@@ -104,7 +122,7 @@ const Folder = ({ children }: FolderProps) => {
               </span>
             </div>
 
-            {/* The Slope*/}
+            {/* The Slope */}
             <svg
               viewBox="0 0 200 80"
               preserveAspectRatio="none"
@@ -123,14 +141,14 @@ const Folder = ({ children }: FolderProps) => {
               />
             </svg>
           </div>
-          {isLarge &&
+
+          {isLarge && (
             <div
               id="blue-tab"
               style={{
                 display: "grid",
                 flex: 1,
                 height: "clamp(2.15rem, 5vh, 3rem)",
-
               }}
             >
               <svg
@@ -151,6 +169,7 @@ const Folder = ({ children }: FolderProps) => {
                   fill="var(--medium-blue)"
                 />
               </svg>
+
               <span
                 style={{
                   zIndex: 2,
@@ -168,10 +187,9 @@ const Folder = ({ children }: FolderProps) => {
                 {current.subtitle}
               </span>
             </div>
-          }
+          )}
         </div>
-      )
-      }
+      )}
 
       <div
         id="folder-body"
@@ -182,7 +200,6 @@ const Folder = ({ children }: FolderProps) => {
           borderTopRightRadius: "30px",
           borderBottomLeftRadius: "30px",
           borderBottomRightRadius: "30px",
-
           overflow: "hidden",
           width: "100%",
           height: "100%",

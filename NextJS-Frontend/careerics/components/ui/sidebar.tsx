@@ -1,34 +1,22 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { authService } from "@/services/auth.service";
 import { useAuth } from "@/providers/auth-provider";
-
-const LARGE = 1024;
-const MEDIUM = 640;
+import { useResponsive } from "@/hooks/useResponsive";
 
 const Sidebar = () => {
   const pathname = usePathname();
   const router = useRouter();
   const { user, isLoading } = useAuth();
 
+  const { isLarge, isMedium, isSmall } = useResponsive();
+
   const [hoveredNav, setHoveredNav] = useState<number | null>(null);
   const [isOpen, setIsOpen] = useState(false);
-  const [width, setWidth] = useState<number>(0);
-
-  useEffect(() => {
-    const handleResize = () => setWidth(window.innerWidth);
-    handleResize();
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
-  const isLarge = width >= LARGE;
-  const isMedium = width >= MEDIUM && width < LARGE;
-  const isSmall = width < MEDIUM;
 
   async function handleLogout() {
     try {
@@ -44,24 +32,71 @@ const Sidebar = () => {
     : user?.displayName?.trim() || "Guest";
 
   const navItems = [
-    { text: "Home", image: "/sidebar/Home.svg", selectedImage: "/sidebar/home-selected.svg", path: "/features/home" },
-    { text: "Career Exploration", image: "/sidebar/Career.svg", selectedImage: "/sidebar/career-selected.svg", path: "/features/career" },
-    { text: "Roadmaps", image: "/sidebar/Roadmap.svg", selectedImage: "/sidebar/roadmap-selected.svg", path: "/features/roadmap" },
-    { text: "Courses Hub", image: "/sidebar/Courses.svg", selectedImage: "/sidebar/courses-selected.svg", path: "/features/courses" },
-    { text: "Skill Assessment", image: "/sidebar/Skill.svg", selectedImage: "/sidebar/skill-selected.svg", path: "/features/skill" },
-    { text: "CV Crafting", image: "/sidebar/CV.svg", selectedImage: "/sidebar/cv-selected.svg", path: "/features/cv" },
-    { text: "Interview Preparation", image: "/sidebar/Interview.svg", selectedImage: "/sidebar/interview-selected.svg", path: "/features/interview" },
-    { text: "Job Search", image: "/sidebar/Job.svg", selectedImage: "/sidebar/job-selected.svg", path: "/features/job" },
+    {
+      text: "Home",
+      image: "/sidebar/Home.svg",
+      selectedImage: "/sidebar/home-selected.svg",
+      path: "/features/home",
+    },
+    {
+      text: "Career Exploration",
+      image: "/sidebar/Career.svg",
+      selectedImage: "/sidebar/career-selected.svg",
+      path: "/features/career",
+    },
+    {
+      text: "Roadmaps",
+      image: "/sidebar/Roadmap.svg",
+      selectedImage: "/sidebar/roadmap-selected.svg",
+      path: "/features/roadmap",
+    },
+    {
+      text: "Courses Hub",
+      image: "/sidebar/Courses.svg",
+      selectedImage: "/sidebar/courses-selected.svg",
+      path: "/features/courses",
+    },
+    {
+      text: "Skill Assessment",
+      image: "/sidebar/Skill.svg",
+      selectedImage: "/sidebar/skill-selected.svg",
+      path: "/features/skill",
+    },
+    {
+      text: "CV Crafting",
+      image: "/sidebar/CV.svg",
+      selectedImage: "/sidebar/cv-selected.svg",
+      path: "/features/cv",
+    },
+    {
+      text: "Interview Preparation",
+      image: "/sidebar/Interview.svg",
+      selectedImage: "/sidebar/interview-selected.svg",
+      path: "/features/interview",
+    },
+    {
+      text: "Job Search",
+      image: "/sidebar/Job.svg",
+      selectedImage: "/sidebar/job-selected.svg",
+      path: "/features/job",
+    },
   ];
 
-  const renderNav = (iconOnly = false, iconSize: string = "var(--icon-sm)") =>
+  const renderNav = (
+    iconOnly = false,
+    iconSize: string = "var(--icon-sm)"
+  ) =>
     navItems.map((item, i) => {
       const isActive = pathname === item.path;
       const isHovered = hoveredNav === i;
       const activeState = isActive || isHovered;
 
       return (
-        <Link key={item.path} href={item.path} style={{ textDecoration: "none" }}>
+        <Link
+          key={item.path}
+          href={item.path}
+          style={{ textDecoration: "none" }}
+        >
           <div
             title={item.text}
             onMouseEnter={() => setHoveredNav(i)}
@@ -78,8 +113,8 @@ const Sidebar = () => {
               backgroundColor: isActive
                 ? "var(--primary-green)"
                 : isHovered
-                  ? "var(--light-green)"
-                  : "transparent",
+                ? "var(--light-green)"
+                : "transparent",
               color: activeState ? "#000" : "#fff",
             }}
           >
@@ -92,6 +127,7 @@ const Sidebar = () => {
                 flexShrink: 0,
               }}
             />
+
             {!iconOnly && item.text}
           </div>
         </Link>
@@ -113,11 +149,22 @@ const Sidebar = () => {
           color: "#fff",
         }}
       >
-        <div style={{ fontSize: "var(--text-lg)", fontFamily: "var(--font-nova-square)" }}>
+        <div
+          style={{
+            fontSize: "var(--text-lg)",
+            fontFamily: "var(--font-nova-square)",
+          }}
+        >
           CareeriCS
         </div>
 
-        <nav style={{ display: "flex", flexDirection: "column", gap: "var(--space-md)" }}>
+        <nav
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "var(--space-md)",
+          }}
+        >
           {renderNav(false, "var(--icon-sm)")}
         </nav>
 
@@ -131,7 +178,12 @@ const Sidebar = () => {
             borderTop: "2px solid #fff",
           }}
         >
-          <img src="/sidebar/profile.svg" alt="User" style={{ height: "var(--icon-md)" }} />
+          <img
+            src="/sidebar/profile.svg"
+            alt="User"
+            style={{ height: "var(--icon-md)" }}
+          />
+
           <div onClick={handleLogout} style={{ cursor: "pointer" }}>
             {profileName}
           </div>
@@ -160,18 +212,33 @@ const Sidebar = () => {
           scrollbarWidth: "none",
         }}
       >
-        <div style={{ fontSize: "var(--icon-lg)", fontFamily: "var(--font-nova-square)" }}>
+        <div
+          style={{
+            fontSize: "var(--icon-lg)",
+            fontFamily: "var(--font-nova-square)",
+          }}
+        >
           CS
         </div>
 
-        <nav style={{ display: "flex", flexDirection: "column", gap: "var(--space-md)" }}>
+        <nav
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "var(--space-md)",
+          }}
+        >
           {renderNav(true, "var(--icon-lg)")}
         </nav>
 
         <img
           src="/sidebar/profile.svg"
+          alt="User"
           onClick={handleLogout}
-          style={{ height: "var(--icon-lg)", cursor: "pointer" }}
+          style={{
+            height: "var(--icon-lg)",
+            cursor: "pointer",
+          }}
         />
       </aside>
     );
@@ -227,20 +294,40 @@ const Sidebar = () => {
               color: "#fff",
             }}
           >
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <div style={{ fontSize: "var(--text-lg)", fontFamily: "var(--font-nova-square)" }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "var(--text-lg)",
+                  fontFamily: "var(--font-nova-square)",
+                }}
+              >
                 CareeriCS
               </div>
 
               <button
                 onClick={() => setIsOpen(false)}
-                style={{ background: "transparent", border: "none", color: "#fff" }}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: "#fff",
+                }}
               >
                 ✕
               </button>
             </div>
 
-            <nav style={{ display: "flex", flexDirection: "column", gap: "var(--space-md)" }}>
+            <nav
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "var(--space-md)",
+              }}
+            >
               {renderNav(false, "var(--icon-sm)")}
             </nav>
 
@@ -256,9 +343,14 @@ const Sidebar = () => {
             >
               <img
                 src="/sidebar/profile.svg"
+                alt="User"
                 onClick={handleLogout}
-                style={{ height: "var(--icon-md)", cursor: "pointer" }}
+                style={{
+                  height: "var(--icon-md)",
+                  cursor: "pointer",
+                }}
               />
+
               <div onClick={handleLogout} style={{ cursor: "pointer" }}>
                 {profileName}
               </div>

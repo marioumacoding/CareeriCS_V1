@@ -147,11 +147,12 @@ export default function LastAnalysisPage() {
     const uploaded = await uploadToGoogleDrive(downloadBlob, {
       fileName: downloadName,
       mimeType: downloadBlob?.type || "application/pdf",
+      popupWindow: driveTab,
     });
 
     const nextDriveLink = uploaded?.webViewLink ?? uploaded?.webContentLink ?? null;
     if (nextDriveLink) {
-      if (driveTab) {
+      if (driveTab && !driveTab.closed) {
         driveTab.location.href = nextDriveLink;
       } else {
         window.open(nextDriveLink, "_blank", "noopener,noreferrer");
@@ -395,11 +396,9 @@ export default function LastAnalysisPage() {
                   <img src="/global/drive.svg" style={{ width: "20px" }} alt="Drive" />
                   {isSavingToDrive
                     ? "Opening Drive..."
-                    : driveOpenLink
-                      ? "Open in Google Drive"
-                      : uploadedDriveFile
-                        ? "Saved to Google Drive"
-                        : "Save to Google Drive"}
+                    : uploadedDriveFile
+                      ? "Saved to Google Drive"
+                      : "Save to Google Drive"}
                 </button>
                 {driveUploadError ? (
                   <p

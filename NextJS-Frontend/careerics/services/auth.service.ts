@@ -83,7 +83,7 @@ function mapSupabaseUserToAppUser(user: SupabaseAuthUser): User {
 
 
 // ── Service ─────────────────────────────────────────────────────
-const GOOGLE_OAUTH_SCOPES = "openid email profile https://www.googleapis.com/auth/drive.file";
+const GOOGLE_OAUTH_SCOPES = "openid email profile";
 
 const GOOGLE_OAUTH_QUERY_PARAMS = {
   access_type: "offline",

@@ -1,7 +1,13 @@
 ﻿"use client";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { authService } from "@/services/auth.service";
+import {
+  GOOGLE_DRIVE_AUTH_AUTO_QUERY_PARAM,
+  GOOGLE_DRIVE_AUTH_POPUP_QUERY_PARAM,
+  isGoogleDriveIntent,
+} from "@/lib/auth/google-drive-signin";
+import { formatGoogleOAuthErrorMessage } from "@/lib/auth/google-oauth-error";
 import { resolvePostAuthPath } from "@/lib/auth/post-auth-redirect";
 import InputField from "@/components/ui/input-field";
 import { Button } from "@/components/ui/button"
@@ -23,6 +29,10 @@ export default function Login() {
     redirect: searchParams.get("redirect"),
     callbackUrl: searchParams.get("callbackUrl"),
   });
+  const isGoogleDriveLogin = isGoogleDriveIntent(searchParams.get("intent"));
+  const autoGoogleSignIn = searchParams.get(GOOGLE_DRIVE_AUTH_AUTO_QUERY_PARAM) === "1";
+  const popupGoogleSignIn = searchParams.get(GOOGLE_DRIVE_AUTH_POPUP_QUERY_PARAM) === "1";
+  const hasAutoStartedGoogleRef = useRef(false);
 
   // -- Form state --
   const [email, setEmail] = useState("");
@@ -33,8 +43,14 @@ export default function Login() {
   // -- Handlers --
   useEffect(() => {
     const urlError = searchParams.get("error");
-    if (urlError) {
-      setError(urlError);
+    const oauthErrorDescription = searchParams.get("error_description");
+    if (urlError || oauthErrorDescription) {
+      setError(
+        formatGoogleOAuthErrorMessage({
+          error: urlError,
+          errorDescription: oauthErrorDescription,
+        }),
+      );
     }
   }, [searchParams]);
 
@@ -61,14 +77,23 @@ export default function Login() {
     }
   }
 
-  async function handleGoogleLogin() {
+  const handleGoogleLogin = useCallback(async () => {
     try {
-      await authService.signInWithGoogle(redirectTo);
+      await authService.signInWithGoogle(redirectTo, { popup: popupGoogleSignIn });
       // Supabase redirects to Google — no further code runs here
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Google login failed.");
     }
-  }
+  }, [popupGoogleSignIn, redirectTo]);
+
+  useEffect(() => {
+    if (!autoGoogleSignIn || hasAutoStartedGoogleRef.current) {
+      return;
+    }
+
+    hasAutoStartedGoogleRef.current = true;
+    void handleGoogleLogin();
+  }, [autoGoogleSignIn, handleGoogleLogin]);
 
   return (
       <form
@@ -76,6 +101,20 @@ export default function Login() {
       >
 
         <AlertMessage message={error} type="error" />
+
+        {isGoogleDriveLogin ? (
+          <p
+            style={{
+              marginTop: 0,
+              marginBottom: "2vh",
+              color: "#C1CBE6",
+              fontSize: "2vh",
+              lineHeight: 1.5,
+            }}
+          >
+            Continue with Google to save your generated file to Google Drive.
+          </p>
+        ) : null}
 
         <InputField
           label="Email"

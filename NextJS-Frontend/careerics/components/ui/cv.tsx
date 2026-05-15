@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 
+import { useGoogleDriveUpload } from "@/hooks";
 import { useAuth } from "@/providers/auth-provider";
 import { cvService } from "@/services";
 import { Button } from "@/components/ui/button";
@@ -26,9 +27,17 @@ export default function CV() {
   const [selectedFilePreviewUrl, setSelectedFilePreviewUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
+  const [downloadBlob, setDownloadBlob] = useState<Blob | null>(null);
   const [downloadName, setDownloadName] = useState("enhanced-cv.pdf");
-  const [isOpeningDrive, setIsOpeningDrive] = useState(false);
   const { user } = useAuth();
+  const {
+    isUploading: isSavingToDrive,
+    uploadError: driveUploadError,
+    uploadedFile: uploadedDriveFile,
+    resetUploadState,
+    uploadToGoogleDrive,
+  } = useGoogleDriveUpload();
+  const driveOpenLink = uploadedDriveFile?.webViewLink ?? uploadedDriveFile?.webContentLink ?? null;
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -92,12 +101,14 @@ export default function CV() {
 
         const url = URL.createObjectURL(pdfBlob);
         setDownloadUrl(url);
+        setDownloadBlob(pdfBlob);
         setDownloadName(
           toSafePdfFileName(
             `${selectedFile.name.replace(/\.[^.]+$/, "")}-enhanced`,
             "enhanced-cv",
           ),
         );
+        resetUploadState();
         setStatus("completed");
       } catch (enhanceError) {
         const message =
@@ -108,6 +119,10 @@ export default function CV() {
         setStatus("idle");
       }
     } else if (status === "completed") {
+      if (downloadUrl) {
+        URL.revokeObjectURL(downloadUrl);
+      }
+
       if (selectedFilePreviewUrl) {
         URL.revokeObjectURL(selectedFilePreviewUrl);
       }
@@ -115,28 +130,38 @@ export default function CV() {
       setSelectedFile(null);
       setSelectedFilePreviewUrl(null);
       setError(null);
+      setDownloadUrl(null);
+      setDownloadBlob(null);
+      setDownloadName("enhanced-cv.pdf");
+      resetUploadState();
       setStatus("idle");
       fileInputRef.current?.click();
     }
   };
 
-  const handleGoogleDriveQuickOpen = () => {
-    if (isOpeningDrive) return;
-
-    setIsOpeningDrive(true);
-
-    if (downloadUrl) {
-      const link = document.createElement("a");
-      link.href = downloadUrl;
-      link.download = downloadName;
-      link.click();
+  const handleSaveToGoogleDrive = async () => {
+    if (driveOpenLink) {
+      window.open(driveOpenLink, "_blank", "noopener,noreferrer");
+      return;
     }
 
-    window.open("https://drive.google.com/drive/my-drive", "_blank", "noopener,noreferrer");
+    const driveTab = window.open("", "_blank");
+    const uploaded = await uploadToGoogleDrive(downloadBlob, {
+      fileName: downloadName,
+      mimeType: downloadBlob?.type || "application/pdf",
+    });
 
-    window.setTimeout(() => {
-      setIsOpeningDrive(false);
-    }, 1400);
+    const nextDriveLink = uploaded?.webViewLink ?? uploaded?.webContentLink ?? null;
+    if (nextDriveLink) {
+      if (driveTab) {
+        driveTab.location.href = nextDriveLink;
+      } else {
+        window.open(nextDriveLink, "_blank", "noopener,noreferrer");
+      }
+      return;
+    }
+
+    driveTab?.close();
   };
 
   return (
@@ -303,8 +328,8 @@ export default function CV() {
                       <span style={{ color: "white", textAlign: "center", opacity: 0.6 }}>or</span>
                       <button
                         type="button"
-                        onClick={handleGoogleDriveQuickOpen}
-                        disabled={isOpeningDrive}
+                        onClick={() => void handleSaveToGoogleDrive()}
+                        disabled={isSavingToDrive || !downloadBlob}
                         style={{
                           backgroundColor: "white",
                           color: "#1a1a1a",
@@ -316,13 +341,29 @@ export default function CV() {
                           gap: "10px",
                           width: "240px",
                           justifyContent: "center",
-                          cursor: isOpeningDrive ? "default" : "pointer",
-                          opacity: isOpeningDrive ? 0.7 : 1,
+                          cursor: isSavingToDrive || !downloadBlob ? "default" : "pointer",
+                          opacity: isSavingToDrive || !downloadBlob ? 0.7 : 1,
                         }}
                       >
                         <img src="/global/drive.svg" style={{ width: "18px" }} alt="Drive" />
-                        {isOpeningDrive ? "Opening Drive..." : "Google Drive"}
+                        {isSavingToDrive
+                          ? "Opening Drive..."
+                          : driveOpenLink
+                            ? "Open in Google Drive"
+                            : uploadedDriveFile
+                              ? "Saved to Google Drive"
+                              : "Save to Google Drive"}
                       </button>
+                      {driveUploadError ? (
+                        <p style={{ color: "#ffb4b4", width: "240px", margin: 0, textAlign: "center" }}>
+                          {driveUploadError}
+                        </p>
+                      ) : null}
+                      {uploadedDriveFile ? (
+                        <p style={{ color: "#d4ff47", width: "240px", margin: 0, textAlign: "center" }}>
+                          Saved to Google Drive.
+                        </p>
+                      ) : null}
                     </div>
                   </div>
                 }

@@ -12,6 +12,11 @@ const GOOGLE_DRIVE_UPLOAD_PATH = "/api/google-drive/upload";
 const GOOGLE_PROVIDER = "google";
 const DEFAULT_FILE_MIME_TYPE = "application/pdf";
 
+export type GoogleDriveAuthStatus =
+  | "ready"
+  | "session_required"
+  | "google_sign_in_required";
+
 const KNOWN_UPLOAD_ERROR_CODES: readonly GoogleDriveUploadErrorCode[] = [
   "UNAUTHENTICATED",
   "GOOGLE_DRIVE_SCOPE_MISSING",
@@ -216,6 +221,29 @@ export class GoogleDriveUploadError extends Error {
 }
 
 export const googleDriveService = {
+  async getGoogleDriveAuthStatus(): Promise<GoogleDriveAuthStatus> {
+    const { data, error } = await supabase.auth.getSession();
+    if (error || !data.session?.user) {
+      return "session_required";
+    }
+
+    if (data.session.provider_token) {
+      return "ready";
+    }
+
+    const storedAccessToken = getStoredGoogleProviderAccessToken(data.session.user.id);
+    if (storedAccessToken) {
+      return "ready";
+    }
+
+    const refreshedSession = await supabase.auth.refreshSession();
+    if (refreshedSession.data.session?.provider_token) {
+      return "ready";
+    }
+
+    return "google_sign_in_required";
+  },
+
   async uploadGeneratedFile(
     file: Blob | null,
     fileName: string,

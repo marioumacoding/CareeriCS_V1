@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 
@@ -80,15 +80,69 @@ const CircleScoreSVG = ({
 
 export const RecentActivityCard = ({
   activities,
+  isLoading = false,
   style,
 }: {
   activities: ActivityItem[];
+  isLoading?: boolean;
   style?: React.CSSProperties;
 }) => {
   const router = useRouter();
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollUp, setCanScrollUp] = useState(false);
+  const [canScrollDown, setCanScrollDown] = useState(false);
+
+  const updateScrollState = () => {
+    const element = scrollRef.current;
+    if (!element || isLoading) {
+      setCanScrollUp(false);
+      setCanScrollDown(false);
+      return;
+    }
+
+    const hasScrollableContent = element.scrollHeight > element.clientHeight + 1;
+    if (!hasScrollableContent) {
+      setCanScrollUp(false);
+      setCanScrollDown(false);
+      return;
+    }
+
+    setCanScrollUp(element.scrollTop > 0);
+    setCanScrollDown(element.scrollTop + element.clientHeight < element.scrollHeight - 1);
+  };
+
+  useEffect(() => {
+    const element = scrollRef.current;
+    if (!element) {
+      setCanScrollUp(false);
+      setCanScrollDown(false);
+      return;
+    }
+
+    const handleScrollStateUpdate = () => {
+      updateScrollState();
+    };
+
+    updateScrollState();
+    element.addEventListener("scroll", handleScrollStateUpdate);
+    window.addEventListener("resize", handleScrollStateUpdate);
+
+    const frameId = requestAnimationFrame(() => {
+      updateScrollState();
+    });
+
+    return () => {
+      cancelAnimationFrame(frameId);
+      element.removeEventListener("scroll", handleScrollStateUpdate);
+      window.removeEventListener("resize", handleScrollStateUpdate);
+    };
+  }, [activities, isLoading]);
 
   const scrollDown = () => {
+    if (!canScrollDown) {
+      return;
+    }
+
     if (scrollRef.current) {
       scrollRef.current.scrollBy({
         top: 100,
@@ -98,6 +152,10 @@ export const RecentActivityCard = ({
   };
 
   const scrollUp = () => {
+    if (!canScrollUp) {
+      return;
+    }
+
     if (scrollRef.current) {
       scrollRef.current.scrollBy({
         top: -100,
@@ -154,26 +212,45 @@ export const RecentActivityCard = ({
           scrollBehavior: "smooth",
         }}
       >
-        {activities.map((act, i) => (
+        {isLoading ? (
           <div
-            key={i}
-            onClick={() => {
-              if (act.href) {
-                router.push(act.href);
-              }
-            }}
             style={{
-              backgroundColor: "#c1cbe6",
-              borderRadius: "12px",
-              padding: "1.5vh",
-              color: "black",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              flexShrink: 0,
-              cursor: act.href ? "pointer" : "default",
+              color: "#D7E3FF",
+              fontFamily: "var(--font-jura)",
+              fontSize: "0.95rem",
+              textAlign: "center",
+              paddingBlock: "1.2vh",
             }}
           >
+            Loading recent activity...
+          </div>
+        ) : null}
+
+        {!isLoading ? activities.map((act, i) => {
+          const activityId = String(act.id ?? "").trim().toLowerCase();
+          const isFeedbackItem =
+            activityId === "feedback" || activityId.includes("feedback");
+
+          return (
+            <div
+              key={i}
+              onClick={() => {
+                if (act.href) {
+                  router.push(act.href);
+                }
+              }}
+              style={{
+                backgroundColor: isFeedbackItem ? "transparent" : "#c1cbe6",
+                borderRadius: "12px",
+                padding: "1.5vh",
+                color: isFeedbackItem ? "white" : "black",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                flexShrink: 0,
+                cursor: act.href ? "pointer" : "default",
+              }}
+            >
             <div>
               <div style={{ fontWeight: "bold", fontSize: "12px" }}>
                 {act.id}
@@ -225,8 +302,9 @@ export const RecentActivityCard = ({
                 />
               </div>
             ) : null}
-          </div>
-        ))}
+            </div>
+          );
+        }) : null}
       </div>
 
       <div
@@ -240,9 +318,12 @@ export const RecentActivityCard = ({
         <div
           onClick={scrollUp}
           style={{
-            cursor: "pointer",
+            cursor: canScrollUp ? "pointer" : "not-allowed",
             transform: "rotate(-270deg)",
             marginRight: "auto",
+            opacity: canScrollUp ? 1 : 0.3,
+            pointerEvents: canScrollUp ? "auto" : "none",
+            transition: "opacity 0.2s ease",
           }}
         >
           <Image
@@ -258,8 +339,11 @@ export const RecentActivityCard = ({
           style={{
             display: "flex",
             justifyContent: "center",
-            cursor: "pointer",
+            cursor: canScrollDown ? "pointer" : "not-allowed",
             transform: "rotate(270deg)",
+            opacity: canScrollDown ? 1 : 0.3,
+            pointerEvents: canScrollDown ? "auto" : "none",
+            transition: "opacity 0.2s ease",
           }}
         >
           <Image

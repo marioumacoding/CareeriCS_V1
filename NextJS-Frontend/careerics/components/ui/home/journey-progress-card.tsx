@@ -1,4 +1,4 @@
-export const JourneyProgressCard = ({ percentage = 10, style }: any) => {
+export const JourneyProgressCard = ({ percentage = 0, isLoading = false, style }: any) => {
 
 
   return (
@@ -27,14 +27,28 @@ export const JourneyProgressCard = ({ percentage = 10, style }: any) => {
         Journey Progress
       </h3>
 
-      <img
-        src={`/home/journey-progress/${percentage}.svg`}
-        alt="Progress"
-        style={{
-          position: "relative",
-          height: "70%"
-        }}
-      />
+      {isLoading ? (
+        <div
+          style={{
+            color: "#D7E3FF",
+            fontFamily: "var(--font-jura)",
+            fontSize: "0.95rem",
+            marginTop: "auto",
+            marginBottom: "auto",
+          }}
+        >
+          Loading progress...
+        </div>
+      ) : (
+        <img
+          src={`/home/journey-progress/${percentage}.svg`}
+          alt="Progress"
+          style={{
+            position: "relative",
+            height: "70%"
+          }}
+        />
+      )}
 
     </div>
   );

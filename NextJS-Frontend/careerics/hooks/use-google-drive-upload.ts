@@ -2,13 +2,7 @@
 
 import { useCallback, useState } from "react";
 import type { GoogleDriveUploadedFile } from "@/types";
-import {
-  GOOGLE_DRIVE_AUTH_COMPLETED_MESSAGE,
-  GOOGLE_DRIVE_AUTH_RESULT_STORAGE_KEY,
-  type GoogleDriveAuthResultMessage,
-} from "@/lib/auth/google-drive-signin";
-import { clearGoogleProviderToken } from "@/lib/auth/google-provider-token";
-import { authService } from "@/services/auth.service";
+import { googleDriveAuthService } from "@/services/google-drive-auth.service";
 import {
   GoogleDriveUploadError,
   googleDriveService,
@@ -31,147 +25,6 @@ type UseGoogleDriveUploadResult = {
   ) => Promise<GoogleDriveUploadedFile | null>;
 };
 
-const GOOGLE_DRIVE_LOGIN_POPUP_FEATURES =
-  "popup=yes,width=520,height=760";
-
-function getCurrentPathWithSearch(): string {
-  if (typeof window === "undefined") {
-    return "/";
-  }
-
-  return `${window.location.pathname}${window.location.search}`;
-}
-
-function readGoogleDriveAuthMessage(rawValue: string | null): GoogleDriveAuthResultMessage | null {
-  if (!rawValue) {
-    return null;
-  }
-
-  try {
-    const parsed = JSON.parse(rawValue) as Partial<GoogleDriveAuthResultMessage>;
-    if (
-      parsed.type !== GOOGLE_DRIVE_AUTH_COMPLETED_MESSAGE ||
-      typeof parsed.success !== "boolean"
-    ) {
-      return null;
-    }
-
-    return {
-      type: GOOGLE_DRIVE_AUTH_COMPLETED_MESSAGE,
-      success: parsed.success,
-      error: typeof parsed.error === "string" ? parsed.error : undefined,
-      timestamp: typeof parsed.timestamp === "number" ? parsed.timestamp : Date.now(),
-    };
-  } catch {
-    return null;
-  }
-}
-
-function waitForGoogleDriveSignIn(popup: Window): Promise<void> {
-  return new Promise((resolve, reject) => {
-    let finished = false;
-    let isCheckingAuthStatus = false;
-
-    const cleanup = () => {
-      window.removeEventListener("message", handleMessage);
-      window.removeEventListener("storage", handleStorage);
-      window.clearInterval(closeWatcherId);
-      window.clearInterval(authWatcherId);
-    };
-
-    const complete = (callback: () => void) => {
-      if (finished) {
-        return;
-      }
-
-      finished = true;
-      cleanup();
-      callback();
-    };
-
-    const handleAuthResult = (data: GoogleDriveAuthResultMessage) => {
-      if (data.success === false) {
-        complete(() => {
-          reject(new Error(data.error || "Google sign-in could not grant Drive access."));
-        });
-        return;
-      }
-
-      complete(resolve);
-    };
-
-    const checkAuthStatus = async () => {
-      if (finished || isCheckingAuthStatus) {
-        return;
-      }
-
-      isCheckingAuthStatus = true;
-      try {
-        const authStatus = await googleDriveService.getGoogleDriveAuthStatus();
-        if (authStatus === "ready") {
-          complete(resolve);
-        }
-      } catch {
-        // Keep waiting for the explicit callback/storage signal.
-      } finally {
-        isCheckingAuthStatus = false;
-      }
-    };
-
-    const handleMessage = (event: MessageEvent) => {
-      if (event.origin !== window.location.origin) {
-        return;
-      }
-
-      const data = event.data as GoogleDriveAuthResultMessage | null;
-      if (data?.type !== GOOGLE_DRIVE_AUTH_COMPLETED_MESSAGE) {
-        return;
-      }
-
-      handleAuthResult(data);
-    };
-
-    const handleStorage = (event: StorageEvent) => {
-      if (event.key !== GOOGLE_DRIVE_AUTH_RESULT_STORAGE_KEY) {
-        return;
-      }
-
-      const data = readGoogleDriveAuthMessage(event.newValue);
-      if (data) {
-        handleAuthResult(data);
-      }
-    };
-
-    const closeWatcherId = window.setInterval(() => {
-      if (!popup.closed) {
-        return;
-      }
-
-      complete(() => {
-        reject(new Error("Google sign-in was cancelled before Drive access was granted."));
-      });
-    }, 400);
-    const authWatcherId = window.setInterval(() => {
-      void checkAuthStatus();
-    }, 800);
-
-    window.addEventListener("message", handleMessage);
-    window.addEventListener("storage", handleStorage);
-    void checkAuthStatus();
-
-    try {
-      const existingResult = readGoogleDriveAuthMessage(
-        window.localStorage.getItem(GOOGLE_DRIVE_AUTH_RESULT_STORAGE_KEY),
-      );
-      if (existingResult) {
-        handleAuthResult(existingResult);
-      }
-    } catch {
-      // Storage is only a fallback; postMessage and popup-close detection remain active.
-    }
-  });
-}
-
 function isRecoverableGoogleAuthError(error: unknown): boolean {
   return (
     error instanceof GoogleDriveUploadError &&
@@ -184,60 +37,8 @@ function isRecoverableGoogleAuthError(error: unknown): boolean {
   );
 }
 
-async function openGoogleDriveSignInWindow(reservedWindow?: Window | null): Promise<Window | null> {
-  const popup = reservedWindow && !reservedWindow.closed
-    ? reservedWindow
-    : window.open(
-        "",
-        "careerics-google-drive-login",
-        GOOGLE_DRIVE_LOGIN_POPUP_FEATURES,
-      );
-
-  if (!popup) {
-    return null;
-  }
-
-  popup.focus();
-
-  try {
-    const googleOAuthUrl = await authService.createGoogleOAuthUrl(
-      getCurrentPathWithSearch(),
-      {
-        popup: true,
-        googleDriveAuth: true,
-      },
-    );
-
-    if (popup.closed) {
-      return null;
-    }
-
-    popup.location.href = googleOAuthUrl;
-    popup.focus();
-  } catch (error) {
-    if (!popup.closed) {
-      popup.close();
-    }
-    throw error;
-  }
-
-  return popup;
-}
-
-async function requestGoogleDriveSignIn(reservedWindow?: Window | null): Promise<void> {
-  clearGoogleProviderToken();
-  try {
-    window.localStorage.removeItem(GOOGLE_DRIVE_AUTH_RESULT_STORAGE_KEY);
-  } catch {
-    // Storage is only a fallback; postMessage still handles the normal popup path.
-  }
-
-  const loginPopup = await openGoogleDriveSignInWindow(reservedWindow);
-  if (!loginPopup) {
-    throw new Error("Please allow the sign-in popup to continue saving to Google Drive.");
-  }
-
-  await waitForGoogleDriveSignIn(loginPopup);
+async function requestGoogleDriveSignIn(forceConsent = false): Promise<void> {
+  await googleDriveAuthService.requestAccessToken({ forceConsent });
 }
 
 export function useGoogleDriveUpload(): UseGoogleDriveUploadResult {
@@ -265,7 +66,7 @@ export function useGoogleDriveUpload(): UseGoogleDriveUploadResult {
     try {
       const authStatus = await googleDriveService.getGoogleDriveAuthStatus();
       if (authStatus !== "ready") {
-        await requestGoogleDriveSignIn(options.popupWindow);
+        await requestGoogleDriveSignIn();
       }
 
       const upload = () =>
@@ -283,7 +84,7 @@ export function useGoogleDriveUpload(): UseGoogleDriveUploadResult {
           throw uploadError;
         }
 
-        await requestGoogleDriveSignIn(options.popupWindow);
+        await requestGoogleDriveSignIn(true);
         uploaded = await upload();
       }
 

@@ -10,6 +10,7 @@ import {
 import {
   GOOGLE_DRIVE_AUTH_CALLBACK_QUERY_PARAM,
   GOOGLE_DRIVE_AUTH_COMPLETED_MESSAGE,
+  GOOGLE_DRIVE_AUTH_PENDING_STORAGE_KEY,
   GOOGLE_DRIVE_AUTH_RESULT_STORAGE_KEY,
   type GoogleDriveAuthResultMessage,
   isGoogleDriveAuthCallback,
@@ -124,6 +125,7 @@ export default function AuthCallback() {
           GOOGLE_DRIVE_AUTH_RESULT_STORAGE_KEY,
           JSON.stringify(message),
         );
+        window.localStorage.removeItem(GOOGLE_DRIVE_AUTH_PENDING_STORAGE_KEY);
       } catch {
         // postMessage is the primary path; localStorage is only a popup fallback.
       }

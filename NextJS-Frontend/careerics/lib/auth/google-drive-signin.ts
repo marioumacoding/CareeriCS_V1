@@ -3,7 +3,13 @@ export const GOOGLE_DRIVE_AUTH_CALLBACK_QUERY_PARAM = "driveAuth";
 export const GOOGLE_DRIVE_AUTH_POPUP_QUERY_PARAM = "popup";
 export const GOOGLE_DRIVE_AUTH_AUTO_QUERY_PARAM = "autoGoogle";
 export const GOOGLE_DRIVE_AUTH_COMPLETED_MESSAGE = "careerics:google-drive-auth-completed";
+export const GOOGLE_DRIVE_AUTH_PENDING_STORAGE_KEY = "careerics:google-drive-auth-pending";
 export const GOOGLE_DRIVE_AUTH_RESULT_STORAGE_KEY = "careerics:google-drive-auth-result";
+
+export type GoogleDriveAuthPendingState = {
+  startedAt: number;
+  previousAccessToken?: string | null;
+};
 
 export type GoogleDriveAuthResultMessage = {
   type: typeof GOOGLE_DRIVE_AUTH_COMPLETED_MESSAGE;

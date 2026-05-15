@@ -5,31 +5,39 @@ import { useEffect, useState } from "react";
 const LARGE = 1024;
 const MEDIUM = 640;
 
-export const useResponsive = () => {
-  const [width, setWidth] = useState(0);
-
-  useEffect(() => {
-    const handleResize = () => {
-      setWidth(window.innerWidth);
+function getSnapshot() {
+  if (typeof window === "undefined") {
+    return {
+      isLarge: true,
+      isMedium: false,
+      isSmall: false,
+      width: LARGE,
     };
+  }
 
-    handleResize();
-
-    window.addEventListener("resize", handleResize);
-
-    return () => {
-      window.removeEventListener("resize", handleResize);
-    };
-  }, []);
-
-  const isLarge = width >= LARGE;
-  const isMedium = width >= MEDIUM && width < LARGE;
-  const isSmall = width < MEDIUM;
+  const width = window.innerWidth;
 
   return {
     width,
-    isLarge,
-    isMedium,
-    isSmall,
+    isLarge: width >= LARGE,
+    isMedium: width >= MEDIUM && width < LARGE,
+    isSmall: width < MEDIUM,
   };
+}
+
+export const useResponsive = () => {
+  const [state, setState] = useState(getSnapshot);
+
+  useEffect(() => {
+    const update = () => setState(getSnapshot());
+
+    // instant sync (no delay)
+    update();
+
+    window.addEventListener("resize", update);
+
+    return () => window.removeEventListener("resize", update);
+  }, []);
+
+  return state;
 };

@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { Jura, Nova_Square } from "next/font/google";
 import { Providers } from "@/providers";
-import "../styles/globals.scss"; 
-import "../styles/variables.css"; 
+import "../styles/globals.scss";
+import "../styles/variables.css";
+import { AppReadyProvider } from "@/components/AppReadyProvider";
 
 const jura = Jura({
   subsets: ["latin"],
@@ -34,9 +35,11 @@ export default function RootLayout({
         className={`${jura.variable} ${novaSquare.variable} antialiased`}
         style={{ backgroundColor: "var(--bg-color)" }}
       >
-        <Providers>
-          {children}
-        </Providers>
+        <AppReadyProvider>
+          <Providers>
+            {children}
+          </Providers>
+        </AppReadyProvider>
       </body>
     </html>
   );

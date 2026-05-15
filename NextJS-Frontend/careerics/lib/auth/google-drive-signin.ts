@@ -1,9 +1,20 @@
-"use client";
-
 export const GOOGLE_DRIVE_AUTH_INTENT = "google-drive";
+export const GOOGLE_DRIVE_AUTH_CALLBACK_QUERY_PARAM = "driveAuth";
 export const GOOGLE_DRIVE_AUTH_POPUP_QUERY_PARAM = "popup";
 export const GOOGLE_DRIVE_AUTH_AUTO_QUERY_PARAM = "autoGoogle";
 export const GOOGLE_DRIVE_AUTH_COMPLETED_MESSAGE = "careerics:google-drive-auth-completed";
+export const GOOGLE_DRIVE_AUTH_RESULT_STORAGE_KEY = "careerics:google-drive-auth-result";
+
+export type GoogleDriveAuthResultMessage = {
+  type: typeof GOOGLE_DRIVE_AUTH_COMPLETED_MESSAGE;
+  success: boolean;
+  error?: string;
+  timestamp: number;
+};
+
+export function isGoogleDriveAuthCallback(value?: string | null): boolean {
+  return value === "1";
+}
 
 export function isGoogleDrivePopupAuth(value?: string | null): boolean {
   return value === "1";

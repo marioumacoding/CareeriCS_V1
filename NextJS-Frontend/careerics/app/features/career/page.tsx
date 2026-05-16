@@ -109,18 +109,11 @@ export default function CareerDiscoveryPage() {
   const safeStartIndex = Math.min(startIndex, maxStartIndex);
 
   const visibleCards = useMemo(
-    () => careerTracks.slice(safeStartIndex, safeStartIndex + VISIBLE_TRACKS_COUNT),
+    () => careerTracks,
     [careerTracks, safeStartIndex],
   );
 
-  const handleNext = () => {
-    setStartIndex(Math.min(safeStartIndex + 4, maxStartIndex));
-  };
-
-  const handlePrev = () => {
-    setStartIndex(Math.max(safeStartIndex - 4, 0));
-  };
-
+  
   const closeReplacePopup = useCallback(() => {
     if (isReplacingBookmark) {
       return;
@@ -339,4 +332,4 @@ export default function CareerDiscoveryPage() {
       }
     </div >
   );
-}``
+}

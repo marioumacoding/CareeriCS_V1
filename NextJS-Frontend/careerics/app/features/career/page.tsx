@@ -6,12 +6,20 @@ import { useRouter } from "next/navigation";
 import ChoiceCard from "@/components/ui/choice-card-career";
 import BookmarkReplacePopup from "@/components/ui/bookmarkReplacePopup";
 import { useAuth } from "@/providers/auth-provider";
-import { careerService } from "@/services";
+import { careerService, roadmapService } from "@/services";
 import {
   buildCareerQuizSelectionHref,
   startCareerQuizSession,
 } from "@/lib/career-quiz";
-import { createCareerUnifiedBookmark } from "@/lib/bookmark-targets";
+import {
+  createCareerUnifiedBookmark,
+  createRoadmapUnifiedBookmark,
+} from "@/lib/bookmark-targets";
+import { normalizeRoadmapListPayload, syncBackendRoadmapBookmarksToUnifiedList } from "@/lib/roadmap-bookmark-sync";
+import {
+  registerTrackRoadmapLink,
+  resolveRoadmapLinkForTrack,
+} from "@/lib/track-roadmap-links";
 import { removeBookmarkEntryFromUnifiedList } from "@/lib/unified-bookmark-actions";
 import {
   addOrMoveUnifiedBookmark,
@@ -19,7 +27,12 @@ import {
   MAX_UNIFIED_BOOKMARKS,
 } from "@/lib/unified-bookmarks";
 
-import type { APICareerTrack, UnifiedBookmarkDraft, UnifiedBookmarkEntry } from "@/types";
+import type {
+  APICareerTrack,
+  RoadmapListItem,
+  UnifiedBookmarkDraft,
+  UnifiedBookmarkEntry,
+} from "@/types";
 import { useResponsive } from "@/hooks/useResponsive";
 import { CareerCardsContainer } from "@/components/ui/career-cards-container";
 import TipCard from "@/components/ui/3ateyat";
@@ -45,6 +58,7 @@ export default function CareerDiscoveryPage() {
   const [isStartingQuiz, setIsStartingQuiz] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
   const [careerTracks, setCareerTracks] = useState<APICareerTrack[]>([]);
+  const [roadmaps, setRoadmaps] = useState<RoadmapListItem[]>([]);
   const [isLoadingTracks, setIsLoadingTracks] = useState(true);
   const [tracksError, setTracksError] = useState<string | null>(null);
   const [bookmarkError, setBookmarkError] = useState<string | null>(null);
@@ -83,17 +97,24 @@ export default function CareerDiscoveryPage() {
     const load = async () => {
       setIsLoadingTracks(true);
 
-      const res = await careerService.listTracks();
+      const [tracksResponse, roadmapsResponse] = await Promise.all([
+        careerService.listTracks(),
+        roadmapService.listRoadmaps(),
+      ]);
       if (!alive) return;
 
-      if (!res.success || !res.data) {
+      if (!tracksResponse.success || !tracksResponse.data) {
         setCareerTracks([]);
-        setTracksError(res.message || "Failed to load tracks.");
+        setTracksError(tracksResponse.message || "Failed to load tracks.");
+        setRoadmaps([]);
         setIsLoadingTracks(false);
         return;
       }
 
-      setCareerTracks(res.data);
+      setCareerTracks(tracksResponse.data);
+      setRoadmaps(
+        roadmapsResponse.success ? normalizeRoadmapListPayload(roadmapsResponse.data) : [],
+      );
       setTracksError(null);
       setIsLoadingTracks(false);
     };
@@ -130,12 +151,54 @@ export default function CareerDiscoveryPage() {
 
     setBookmarkError(null);
 
-    const existingBookmark = unifiedBookmarks.find((bookmark) => {
+    const resolvedRoadmapLink = resolveRoadmapLinkForTrack({
+      trackId: track.id,
+      trackTitle: track.name,
+      roadmaps,
+    });
+    const resolvedRoadmapId = resolvedRoadmapLink?.roadmapId?.trim() || "";
+
+    if (resolvedRoadmapId) {
+      registerTrackRoadmapLink({
+        trackId: track.id,
+        roadmapId: resolvedRoadmapId,
+        trackName: track.name,
+        roadmapTitle: resolvedRoadmapLink?.roadmapTitle || null,
+      });
+    }
+
+    let latestBookmarks = unifiedBookmarks;
+    let backendRoadmapIds = new Set<string>();
+    let backendBookmarksLoaded = !userId;
+
+    if (userId && roadmaps.length) {
+      const backendBookmarksResponse = await roadmapService.getUserRoadmapBookmarks(userId);
+
+      if (backendBookmarksResponse.success && backendBookmarksResponse.data?.bookmarks) {
+        backendBookmarksLoaded = true;
+        backendRoadmapIds = new Set(
+          backendBookmarksResponse.data.bookmarks.map((bookmark) => String(bookmark.roadmap_id)),
+        );
+        latestBookmarks = syncBackendRoadmapBookmarksToUnifiedList({
+          userId,
+          backendBookmarks: backendBookmarksResponse.data.bookmarks,
+          roadmaps,
+        });
+      }
+    }
+
+    const existingBookmark = latestBookmarks.find((bookmark) => {
       if (bookmark.kind === "career") {
-        return bookmark.entity_id === track.id;
+        return (
+          bookmark.entity_id === track.id ||
+          (resolvedRoadmapId ? bookmark.metadata?.roadmap_id === resolvedRoadmapId : false)
+        );
       }
 
-      return bookmark.kind === "roadmap" && bookmark.metadata?.track_id === track.id;
+      return bookmark.kind === "roadmap" && (
+        bookmark.metadata?.track_id === track.id ||
+        bookmark.entity_id === resolvedRoadmapId
+      );
     });
 
     if (existingBookmark) {
@@ -148,17 +211,39 @@ export default function CareerDiscoveryPage() {
       return;
     }
 
-    const candidate = createCareerUnifiedBookmark({
-      trackId: track.id,
-      title: track.name,
-      description: track.description ?? null,
-      savedAt: new Date().toISOString(),
-    });
-
-    if (unifiedBookmarks.length >= MAX_UNIFIED_BOOKMARKS) {
-      setPendingCareerBookmark(candidate);
-      setReplaceCandidates(unifiedBookmarks);
+    if (resolvedRoadmapId && userId && !backendBookmarksLoaded) {
+      setBookmarkError("Unable to sync roadmap bookmarks right now. Please try again.");
       return;
+    }
+
+    const candidate = resolvedRoadmapId
+      ? createRoadmapUnifiedBookmark({
+          roadmapId: resolvedRoadmapId,
+          title: resolvedRoadmapLink?.roadmapTitle || track.name,
+          description: track.description ?? null,
+          savedAt: new Date().toISOString(),
+          trackId: track.id,
+          trackName: track.name,
+        })
+      : createCareerUnifiedBookmark({
+          trackId: track.id,
+          title: track.name,
+          description: track.description ?? null,
+          savedAt: new Date().toISOString(),
+        });
+
+    if (latestBookmarks.length >= MAX_UNIFIED_BOOKMARKS) {
+      setPendingCareerBookmark(candidate);
+      setReplaceCandidates(latestBookmarks);
+      return;
+    }
+
+    if (resolvedRoadmapId && userId && !backendRoadmapIds.has(resolvedRoadmapId)) {
+      const addResponse = await roadmapService.toggleRoadmapBookmark(resolvedRoadmapId, userId);
+      if (!addResponse.success || !addResponse.data?.bookmarked) {
+        setBookmarkError(addResponse.message || "Unable to save bookmark right now. Please try again.");
+        return;
+      }
     }
 
     const next = addOrMoveUnifiedBookmark(candidate, userId);
@@ -179,6 +264,43 @@ export default function CareerDiscoveryPage() {
         setBookmarkError(removal.message || "Unable to replace bookmark right now. Please try again.");
         setIsReplacingBookmark(false);
         return;
+      }
+
+      if (pendingCareerBookmark.kind === "roadmap" && userId) {
+        const backendBookmarksResponse = await roadmapService.getUserRoadmapBookmarks(userId);
+        if (!backendBookmarksResponse.success || !backendBookmarksResponse.data?.bookmarks) {
+          if (bookmarkToReplace.kind === "roadmap") {
+            await roadmapService.toggleRoadmapBookmark(bookmarkToReplace.entity_id, userId);
+          }
+
+          const restored = addOrMoveUnifiedBookmark(bookmarkToReplace, userId);
+          setUnifiedBookmarks(restored);
+          setBookmarkError("Unable to sync roadmap bookmarks right now. Please try again.");
+          setIsReplacingBookmark(false);
+          return;
+        }
+
+        const alreadyInBackend = backendBookmarksResponse.data.bookmarks.some((bookmark) => {
+          return String(bookmark.roadmap_id) === pendingCareerBookmark.entity_id;
+        });
+
+        if (!alreadyInBackend) {
+          const addResponse = await roadmapService.toggleRoadmapBookmark(
+            pendingCareerBookmark.entity_id,
+            userId,
+          );
+          if (!addResponse.success || !addResponse.data?.bookmarked) {
+            if (bookmarkToReplace.kind === "roadmap") {
+              await roadmapService.toggleRoadmapBookmark(bookmarkToReplace.entity_id, userId);
+            }
+
+            const restored = addOrMoveUnifiedBookmark(bookmarkToReplace, userId);
+            setUnifiedBookmarks(restored);
+            setBookmarkError(addResponse.message || "Unable to save the new bookmark right now.");
+            setIsReplacingBookmark(false);
+            return;
+          }
+        }
       }
 
       const next = addOrMoveUnifiedBookmark(pendingCareerBookmark, userId);
@@ -215,7 +337,7 @@ export default function CareerDiscoveryPage() {
     }
   };
 
-  const { isLarge, isMedium, isSmall, width } = useResponsive();
+  const { isLarge, isMedium, isSmall } = useResponsive();
   // ---------------- UI ----------------
   return (
     <div

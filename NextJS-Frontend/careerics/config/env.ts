@@ -21,14 +21,6 @@ function requireEnv(name: string): string {
   return value ?? "";
 }
 
-function requirePublicEnv(name: string): string {
-  const value = process.env[name];
-  if (!value && process.env.NODE_ENV === "production") {
-    throw new Error(`Missing required environment variable: ${name}`);
-  }
-  return value ?? "";
-}
-
 function trimTrailingSlash(value: string): string {
   return value.replace(/\/+$/, "");
 }
@@ -42,14 +34,12 @@ function toFastApiGraphqlUrl(baseUrl: string): string {
   return `${rootBaseUrl}/graphql`;
 }
 
-const publicFastApiUrl = requirePublicEnv("NEXT_PUBLIC_API_URL");
-
 // ──────────────────────────────────────────────
 // Public (client-safe) config
 // ──────────────────────────────────────────────
 export const publicConfig = {
-  fastapiUrl: publicFastApiUrl,
-  fastapiGraphqlUrl: toFastApiGraphqlUrl(publicFastApiUrl),
+  fastapiUrl: "/api/fastapi",
+  fastapiGraphqlUrl: "/api/fastapi/graphql",
   enableGraphql: process.env.NEXT_PUBLIC_ENABLE_GRAPHQL === "true",
 
   // ── Supabase (client-safe — protected by RLS on the server) ──

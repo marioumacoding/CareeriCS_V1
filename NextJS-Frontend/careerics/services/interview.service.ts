@@ -11,7 +11,6 @@
 
 import { fastapiApi } from "@/lib/api";
 import { normalizeInterviewAudioUrl } from "@/lib/interview-media";
-import { publicConfig } from "@/config";
 import type {
   ApiResponse,
   APISession,
@@ -162,12 +161,7 @@ export const interviewService = {
    * Use as an <a href> download link or window.open() — the browser will handle streaming.
    */
   getSessionReportUrl(sessionId: string): string {
-    if (typeof window !== "undefined") {
-      return `${window.location.origin}/api/fastapi/sessions/${sessionId}/report`;
-    }
-
-    const base = publicConfig.fastapiUrl.replace(/\/+$/, "");
-    return `${base}/sessions/${sessionId}/report`;
+    return `/api/fastapi/sessions/${sessionId}/report`;
   },
 
   // ── Questions ────────────────────────────────────────────────────────────────

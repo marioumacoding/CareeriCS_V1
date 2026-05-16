@@ -6,25 +6,6 @@ function isAbsoluteUrl(value: string): boolean {
   return /^https?:\/\//i.test(value);
 }
 
-function resolveFastApiOrigin(): string {
-  const configured = process.env.NEXT_PUBLIC_API_URL || "";
-  if (!configured) {
-    return "";
-  }
-
-  const trimmed = configured.replace(/\/+$/, "");
-
-  if (trimmed.endsWith("/api")) {
-    return trimmed.slice(0, -4);
-  }
-
-  if (trimmed.endsWith("/graphql")) {
-    return trimmed.slice(0, -8);
-  }
-
-  return trimmed;
-}
-
 function toProxyPath(value: string, kind: InterviewAudioKind): string {
   if (isAbsoluteUrl(value)) {
     try {
@@ -103,17 +84,13 @@ export function buildInterviewAudioCandidates(
       const parsed = new URL(value);
       if (parsed.pathname.startsWith("/api/fastapi/")) {
         const directPath = parsed.pathname.replace("/api/fastapi", "");
-        candidates.push(`${resolveFastApiOrigin()}${directPath}${parsed.search}`);
+        candidates.push(`${FASTAPI_PROXY_PREFIX}${directPath}${parsed.search}`);
       }
     } catch {
       // Keep the absolute candidate only.
     }
   } else {
-    const directPath = toDirectPath(value, kind);
-    const fastApiOrigin = resolveFastApiOrigin();
-    if (fastApiOrigin) {
-      candidates.push(`${fastApiOrigin}${directPath}`);
-    }
+    candidates.push(toDirectPath(value, kind));
   }
 
   return Array.from(new Set(candidates.filter(Boolean)));

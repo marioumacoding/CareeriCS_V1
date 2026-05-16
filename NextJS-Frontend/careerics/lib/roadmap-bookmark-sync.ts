@@ -1,4 +1,5 @@
 import { createRoadmapUnifiedBookmark } from "@/lib/bookmark-targets";
+import { resolveStoredTrackRoadmapLink } from "@/lib/track-roadmap-links";
 import {
   createUnifiedBookmarkEntry,
   getUnifiedBookmarks,
@@ -52,6 +53,10 @@ export function syncBackendRoadmapBookmarksToUnifiedList(options: {
     const roadmapId = String(bookmark.roadmap_id);
     const roadmap = roadmapsById.get(roadmapId);
     const existingBookmark = existingRoadmapBookmarksById.get(roadmapId);
+    const storedLink = resolveStoredTrackRoadmapLink({
+      roadmapId,
+      roadmapTitle: roadmap?.title || existingBookmark?.title || null,
+    });
 
     return createUnifiedBookmarkEntry(
       createRoadmapUnifiedBookmark({
@@ -59,8 +64,13 @@ export function syncBackendRoadmapBookmarksToUnifiedList(options: {
         title: roadmap?.title || existingBookmark?.title || "Roadmap",
         description: roadmap?.description ?? existingBookmark?.description ?? null,
         savedAt: bookmark.created_at || existingBookmark?.saved_at,
-        trackId: existingBookmark?.metadata?.track_id ?? null,
-        trackName: existingBookmark?.metadata?.track_name ?? existingBookmark?.title ?? roadmap?.title ?? null,
+        trackId: existingBookmark?.metadata?.track_id ?? storedLink?.trackId ?? null,
+        trackName:
+          existingBookmark?.metadata?.track_name ??
+          storedLink?.trackName ??
+          existingBookmark?.title ??
+          roadmap?.title ??
+          null,
       }),
     );
   });

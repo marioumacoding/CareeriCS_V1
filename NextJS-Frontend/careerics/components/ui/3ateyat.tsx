@@ -3,6 +3,7 @@
 import { useResponsive } from "@/hooks/useResponsive";
 import { Columns } from "lucide-react";
 import React, { CSSProperties } from "react";
+import { normalizeBackendAssetUrl } from "@/lib/asset-url";
 
 interface TipCardProps {
     icon: string;
@@ -16,6 +17,7 @@ interface TipCardProps {
 export default function TipCard({ icon, title, description, style, variant = "tip", onclick }: TipCardProps) {
 
     const { isLarge, isMedium, isSmall, width } = useResponsive();
+    const displayIcon = normalizeBackendAssetUrl(icon);
     return (
         <div
             onClick={variant === "feature" ? onclick : undefined}
@@ -45,7 +47,7 @@ export default function TipCard({ icon, title, description, style, variant = "ti
                     gap: "var(--space-md)",
                 }}
             >
-                <img src={icon} alt={title} style={{ height: "var(--icon-2xl)" }} />
+                <img src={displayIcon} alt={title} style={{ height: "var(--icon-2xl)" }} />
 
                 <div
                     style={{

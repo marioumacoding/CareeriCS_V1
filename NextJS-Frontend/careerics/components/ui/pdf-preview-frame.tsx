@@ -1,12 +1,14 @@
 "use client";
 
 import React from "react";
+import { normalizeBackendAssetUrl } from "@/lib/asset-url";
 
 const EMBEDDED_SCROLLBAR_GUTTER_PX = 18;
 
 export function buildPdfPreviewSrc(src: string): string {
-  const separator = src.includes("#") ? "&" : "#";
-  return `${src}${separator}toolbar=0&navpanes=0&scrollbar=0&view=FitH&zoom=page-fit&pagemode=none`;
+  const normalizedSrc = normalizeBackendAssetUrl(src);
+  const separator = normalizedSrc.includes("#") ? "&" : "#";
+  return `${normalizedSrc}${separator}toolbar=0&navpanes=0&scrollbar=0&view=FitH&zoom=page-fit&pagemode=none`;
 }
 
 export function PdfPreviewFrame({

@@ -2,6 +2,7 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
+import { normalizeBackendAssetUrl } from "@/lib/asset-url";
 
 type LevelCardProps = {
   title?: string;
@@ -16,6 +17,8 @@ const LevelCard: React.FC<LevelCardProps> = ({
   onClick,
   style,
 }) => {
+  const displayIconSrc = normalizeBackendAssetUrl(iconSrc);
+
   return (
     <div
       style={{
@@ -44,7 +47,7 @@ const LevelCard: React.FC<LevelCardProps> = ({
         }}
       >
         <img
-          src={iconSrc}
+          src={displayIconSrc}
           alt="Level Icon"
           style={{ width: "60px", height: "60px", flexShrink: 0 }}
         />

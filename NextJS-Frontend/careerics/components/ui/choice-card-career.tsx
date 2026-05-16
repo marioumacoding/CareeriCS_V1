@@ -18,7 +18,7 @@ interface ChoiceCardProps {
   onBookmark?: () => void;
   disabled?: boolean;
   buttonLabel?: string;
-  buttonVariant?: any;
+  buttonVariant?: "primary" | "secondary" | "primary-inverted" | "popup-inverted";
   isBookmarked?: boolean;
 }
 

@@ -1,5 +1,6 @@
 "use client";
 import React from "react";
+import { normalizeBackendAssetUrl } from "@/lib/asset-url";
 
 type JourneyButtonProps = {
   course?: string;
@@ -18,6 +19,7 @@ export default function JourneyButton({
 }) {
   const isSA = variant === "sA";
   const icon = isSA ? "/sidebar/Skill.svg" : "/courses/course-icon.svg";
+  const displayIcon = normalizeBackendAssetUrl(icon);
 
   return (
     <button
@@ -40,7 +42,7 @@ export default function JourneyButton({
 
       {/* Icon */}
       <img
-        src={icon}
+        src={displayIcon}
         alt={course}
         style={{
           height: "2rem",

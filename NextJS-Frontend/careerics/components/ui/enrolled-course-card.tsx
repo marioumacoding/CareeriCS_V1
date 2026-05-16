@@ -1,6 +1,7 @@
 "use client";
 
 import type { CSSProperties } from "react";
+import { normalizeBackendAssetUrl } from "@/lib/asset-url";
 
 type EnrolledCourseCardStatus = "default" | "enrolled" | "completed";
 
@@ -31,7 +32,9 @@ export function EnrolledCourseCard({
       : "var(--light-blue)";
   const foregroundColor = isCompleted ? "var(--light-blue)" : "#0B0B0B";
   const dividerColor = isCompleted ? "rgba(193, 203, 230, 0.85)" : "rgba(11, 11, 11, 0.8)";
-  const iconSrc = isCompleted ? "/courses/course-completed.svg" : "/courses/course-icon.svg";
+  const iconSrc = normalizeBackendAssetUrl(
+    isCompleted ? "/courses/course-completed.svg" : "/courses/course-icon.svg",
+  );
 
   return (
     <button

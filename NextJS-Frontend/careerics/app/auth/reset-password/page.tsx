@@ -45,15 +45,18 @@ export default function ResetPassword() {
         <AlertMessage message={error} type="error" />
         <AlertMessage message={success} type="success" />
 
+        {!success &&
         <p
-          style={{
-            whiteSpace: "pre-line",
+        style={{
+          whiteSpace: "pre-line",
             color: "#c5c5c5",
-            fontSize: "2.5vh",
+            fontSize: "var(--text-base)",
+            marginBottom:"var(--space-md)",
           }}
-        >
-          Enter your email and we’ll send you link to {"\n"} reset your password
+          >
+          Enter your email and we’ll send you <br/> link to reset your password
         </p>
+        }
 
         <InputField
           label="Email"
@@ -64,11 +67,10 @@ export default function ResetPassword() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
-          isMargin={false}
         />
        
         <Button
-          style={{ marginTop: "2vh", paddingInline: "12vh" }}
+        size="lg"
         >
           {loading ? "Sending..." : "Send Reset Link"}
         </Button>

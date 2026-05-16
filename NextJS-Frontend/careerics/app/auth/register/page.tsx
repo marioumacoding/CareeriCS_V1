@@ -164,8 +164,10 @@ export default function Register() {
   return (
     <form
       onSubmit={handleRegister}
+      style={{
+        width: "100%",
+      }}
     >
-
       <AlertMessage message={error} type="error" />
       <AlertMessage message={success} type="success" />
 
@@ -177,9 +179,6 @@ export default function Register() {
         value={displayName}
         onChange={(e) => setDisplayName(e.target.value)}
         required
-        style={{
-          width: "100%"
-        }}
       />
 
       <InputField
@@ -191,9 +190,6 @@ export default function Register() {
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         required
-        style={{
-          width: "100%"
-        }}
       />
 
       <InputField
@@ -210,27 +206,23 @@ export default function Register() {
           validateConfirmPassword(value, confirmPassword);
         }}
         required
-        style={{
-          width: "100%"
-        }}
-        isMargin={passwordError ? false : true}
+        isMargin={!passwordError}
       />
 
-      {passwordError && (<p
-        style={{
-          marginTop: "0px",
-          marginRight: "auto",
-          position: "relative",
-          maxWidth: "35ch",
-          fontSize: "2vh",
-          fontFamily: "var(--font-nova-square)",
-          textAlign: "left",
-          color: passwordError ? "#ff7979" : "white",
-          marginBlock: "1vh",
-        }}
-      >
-        {passwordError ? passwordError : ""}
-      </p>)}
+      {passwordError && (
+        <p
+          style={{
+             maxWidth: "35ch",
+            fontSize: "var(--text-sm)",
+            fontFamily: "var(--font-nova-square)",
+            textAlign: "left",
+            color: "#ff7979",
+            marginTop: "var(--space-xxs)",
+          }}
+        >
+          {passwordError}
+        </p>
+      )}
 
       <InputField
         label="Confirm Password"
@@ -239,46 +231,46 @@ export default function Register() {
         type="password"
         placeholder="Confirm your password"
         value={confirmPassword}
-        isMargin={confirmPasswordError ? false : true}
+        isMargin={!confirmPasswordError}
         onChange={(e) => {
           const value = e.target.value;
           setConfirmPassword(value);
           validateConfirmPassword(password, value);
         }}
-
         required
-        style={{
-          width: "100%",
-        }}
       />
 
-      {confirmPasswordError && (<p
-        style={{
-          marginTop: "0px",
-          marginRight: "auto",
-          position: "relative",
-          maxWidth: "35ch",
-          fontSize: "2vh",
-          fontFamily: "var(--font-nova-square)",
-          textAlign: "left",
-          color: confirmPasswordError ? "#ff7979" : "white",
-          marginBlock: "1vh",
-        }}
-      >
-        {confirmPasswordError ? confirmPasswordError : ""}
-      </p>)}
+      {confirmPasswordError && (
+        <p
+          style={{
+            maxWidth: "35ch",
+            fontSize: "var(--text-sm)",
+            fontFamily: "var(--font-nova-square)",
+            textAlign: "left",
+            color: "#ff7979",
+            marginBlock: "var(--space-xxs)",
+          }}
+        >
+          {confirmPasswordError}
+        </p>
+      )}
 
       <div
         style={{
           display: "flex",
-          marginBottom: "3vh",
+          flexWrap: "wrap",
+          gap: "var(--space-xs)",
+          marginBottom: "1.5rem",
           alignItems: "center",
           justifyContent: "center",
-        }}>
+        }}
+      >
         <Button
           type="submit"
           variant="primary"
-          style={{ whiteSpace: "nowrap" }}
+          style={{
+            whiteSpace: "nowrap",
+          }}
         >
           {loading ? "Registering..." : "Register"}
         </Button>
@@ -286,24 +278,33 @@ export default function Register() {
         <div
           style={{
             textAlign: "center",
-            marginInline: "1vh",
             color: "var(--text-grey)",
-            fontFamily: "var(--font-nova-square",
-            fontSize: "3vh",
+            fontFamily: "var(--font-nova-square)",
+            fontSize: "clamp(0.8rem, 1.8vw, 1rem)",
           }}
-        >or</div>
+        >
+          or
+        </div>
 
         <Button
           type="button"
           variant="secondary"
           onClick={handleGoogleRegister}
-          style={{ whiteSpace: "nowrap" }}
+          style={{
+            whiteSpace: "nowrap",
+          }}
         >
-          <img src="/auth/google.svg" alt="Google" style={{ height: "3vh" }} />
+          <img
+            src="/auth/google.svg"
+            alt="Google"
+            style={{
+              height: "1rem",
+              width: "1rem",
+            }}
+          />
           Continue with Google
         </Button>
       </div>
-
     </form>
   );
 }

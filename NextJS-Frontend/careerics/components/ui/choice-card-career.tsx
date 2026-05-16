@@ -50,21 +50,20 @@ export default function ChoiceCard({
       style={{
         position: "relative",
         backgroundColor: "#16213e",
-        borderRadius: "9px",
+        borderRadius: "var(--radius-md)",
         display: "flex",
         flexDirection: "column",
         alignItems: "flex-start",
-        justifyContent: "space-between",
-        padding: "1.2rem",
+        padding: "var(--space-md)",
+        gap: "var(--space-md)",
         width: "100%",
-        maxHeight: "100%",
+        height: "100%",
         ...style
       }}
     >
       {/* 1. Icon Section */}
       <div
         style={{
-          marginBottom: "1vh",
           display: "flex",
           justifyContent: "space-between",
           alignItems: "flex-start",
@@ -75,10 +74,9 @@ export default function ChoiceCard({
           src={image || icon || ""}
           alt={title || "career icon"}
           style={{
-            width: "2.5rem",
+            width: "var(--icon-xl)",
             height: "auto",
             display: "block",
-            marginBottom: "0.5rem",
           }}
         />
         <img
@@ -86,10 +84,10 @@ export default function ChoiceCard({
           alt={"bookmark"}
           onClick={onBookmark}
           style={{
-            height: "1.5rem",
+            width: "var(--icon-sm)",
+            height: "auto",
             display: "block",
-            marginBottom: "0.5rem",
-            cursor: "pointer",
+            cursor:"pointer",
           }}
         />
       </div>
@@ -97,11 +95,9 @@ export default function ChoiceCard({
       {/* 2. Title Section */}
       <h3
         style={{
-          color: "white",
-          fontSize: "1.2rem",
-          fontFamily: "var(--font-nova-square)",
+          fontSize: "var(--text-base)",
           textAlign: "left",
-          maxWidth: "20ch",
+          marginRight: "auto",
         }}
       >
         {title}
@@ -110,15 +106,9 @@ export default function ChoiceCard({
       {/* 3. Description Section */}
       <p
         style={{
-          color: "rgba(255,255,255,0.7)",
+          fontSize: "var(--text-sm)",
           textAlign: "left",
-          fontSize: "0.8rem",
-          margin: "0 0 1vh 0",
-          lineHeight: "1",
-          flexGrow: 1,
-          display: "flex",
-          alignItems: "center",
-          width: "100%",
+          marginRight: "auto",
         }}
       >
         {description}
@@ -131,11 +121,8 @@ export default function ChoiceCard({
         onClick={handleButtonClick}
         disabled={disabled}
         style={{
-          flexGrow: 0,
-          flexShrink: 0,
           width: "100%",
           marginTop: "auto",
-          paddingBlock: "2.3vh"
         }}
       >
         {buttonLabel}

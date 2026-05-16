@@ -18,7 +18,14 @@ export default function InputField({
   return (
     <div
       style={{
-        ...(isMargin && { marginBottom: "2vh" }),
+        width: "100%",
+        textAlign: "left",
+        display:"flex",
+        flexDirection:"column",
+        gap:"var(--space-xxs)",
+        ...(isMargin && {
+          marginBottom: "var(--space-md)",
+        }),
       }}
     >
       <label
@@ -26,10 +33,8 @@ export default function InputField({
         style={{
           fontFamily: "var(--font-nova-square)",
           display: "block",
-          fontSize: "2.5vh",
+          fontSize: "var(--text-base)",
           color: "white",
-          marginBottom: "1vh",
-          textAlign: "left",
         }}
       >
         {label}
@@ -39,14 +44,16 @@ export default function InputField({
         id={id}
         {...inputProps}
         style={{
-          width: "24vw",
+          width: "100%",
           fontFamily: "var(--font-nova-square)",
-          padding: "1.5vh",
-          borderRadius: "1.2vh",
+          padding: "var(--space-sm)",
+          borderRadius: "var(--radius-md)",
           border: "none",
           backgroundColor: "white",
           display: "block",
-          fontSize: "2vh",
+          fontSize: "var(--text-sm)",
+          boxSizing: "border-box",
+          outline: "none",
           ...style,
         }}
       />

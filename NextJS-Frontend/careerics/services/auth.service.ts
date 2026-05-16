@@ -12,6 +12,10 @@ import {
   getSafePostAuthPath,
   rememberPendingPostAuthPath,
 } from "@/lib/auth/post-auth-redirect";
+import {
+  GOOGLE_DRIVE_AUTH_CALLBACK_QUERY_PARAM,
+  GOOGLE_DRIVE_AUTH_POPUP_QUERY_PARAM,
+} from "@/lib/auth/google-drive-signin";
 import type { ApiResponse, User } from "@/types";
 import type { User as SupabaseAuthUser } from "@supabase/supabase-js";
 
@@ -27,6 +31,11 @@ export interface RegisterPayload {
   displayName: string;
 }
 
+type GoogleSignInOptions = {
+  popup?: boolean;
+  googleDriveAuth?: boolean;
+};
+
 export interface AuthService {
   signUp: (payload: RegisterPayload) => Promise<{
     user: import("@supabase/supabase-js").User | null;
@@ -39,7 +48,8 @@ export interface AuthService {
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   updatePassword: (newPassword: string) => Promise<void>;
-  signInWithGoogle: (callbackUrl?: string) => Promise<void>;
+  signInWithGoogle: (callbackUrl?: string, options?: GoogleSignInOptions) => Promise<void>;
+  createGoogleOAuthUrl: (callbackUrl?: string, options?: GoogleSignInOptions) => Promise<string>;
   me: () => Promise<ApiResponse<User>>;
 }
 
@@ -73,6 +83,35 @@ function mapSupabaseUserToAppUser(user: SupabaseAuthUser): User {
 
 
 // ── Service ─────────────────────────────────────────────────────
+const GOOGLE_OAUTH_SCOPES = "openid email profile";
+
+const GOOGLE_OAUTH_QUERY_PARAMS = {
+  access_type: "offline",
+  include_granted_scopes: "true",
+  prompt: "consent",
+} as const;
+
+function buildGoogleOAuthRedirectUrl(
+  callbackPath: string,
+  options?: GoogleSignInOptions,
+): string {
+  const redirectUrl = new URL(`${window.location.origin}/auth/callback`);
+
+  if (!options?.popup && callbackPath !== DEFAULT_POST_AUTH_PATH) {
+    redirectUrl.searchParams.set("callbackUrl", callbackPath);
+  }
+
+  if (options?.popup) {
+    redirectUrl.searchParams.set(GOOGLE_DRIVE_AUTH_POPUP_QUERY_PARAM, "1");
+  }
+
+  if (options?.googleDriveAuth) {
+    redirectUrl.searchParams.set(GOOGLE_DRIVE_AUTH_CALLBACK_QUERY_PARAM, "1");
+  }
+
+  return redirectUrl.toString();
+}
+
 export const authService: AuthService = {
   /**
    * Sign up a new user with Supabase.
@@ -161,23 +200,44 @@ export const authService: AuthService = {
    * Sign in with Google OAuth via Supabase.
    * Redirects the browser to Google's consent screen.
    */
-  async signInWithGoogle(callbackUrl?: string) {
+  async signInWithGoogle(callbackUrl?: string, options?: GoogleSignInOptions) {
     const callbackPath =
       getSafePostAuthPath(callbackUrl) ?? DEFAULT_POST_AUTH_PATH;
-    rememberPendingPostAuthPath(callbackPath);
-
-    const redirectUrl = new URL(`${window.location.origin}/auth/callback`);
-    if (callbackPath !== DEFAULT_POST_AUTH_PATH) {
-      redirectUrl.searchParams.set("callbackUrl", callbackPath);
+    if (!options?.popup) {
+      rememberPendingPostAuthPath(callbackPath);
     }
 
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: redirectUrl.toString(),
+        redirectTo: buildGoogleOAuthRedirectUrl(callbackPath, options),
+        scopes: GOOGLE_OAUTH_SCOPES,
+        queryParams: GOOGLE_OAUTH_QUERY_PARAMS,
       },
     });
     if (error) throw error;
+  },
+
+  async createGoogleOAuthUrl(callbackUrl?: string, options?: GoogleSignInOptions) {
+    const callbackPath =
+      getSafePostAuthPath(callbackUrl) ?? DEFAULT_POST_AUTH_PATH;
+
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: buildGoogleOAuthRedirectUrl(callbackPath, options),
+        scopes: GOOGLE_OAUTH_SCOPES,
+        queryParams: GOOGLE_OAUTH_QUERY_PARAMS,
+        skipBrowserRedirect: true,
+      },
+    });
+
+    if (error) throw error;
+    if (!data.url) {
+      throw new Error("Google sign-in could not be started. Please try again.");
+    }
+
+    return data.url;
   },
 
   /**

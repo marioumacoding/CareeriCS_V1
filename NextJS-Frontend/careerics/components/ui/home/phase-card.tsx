@@ -1,66 +1,94 @@
+"use client";
+import React, { ReactNode } from "react";
+import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useResponsive } from "@/hooks/useResponsive";
+
+
+
 type BaseProps = {
   style?: React.CSSProperties;
   phaseNumber: string;
+  isLoading?: boolean;
 };
 
 type PhaseCardProps =
   | {
-      type: "current";
-    } & BaseProps
+    type: "current";
+  } & BaseProps
   | {
-      type: "next";
-      desc: string;
-    } & BaseProps;
+    type: "next";
+    desc: string;
+  } & BaseProps;
 
 export const PhaseCard = (props: PhaseCardProps) => {
   const baseStyle: React.CSSProperties = {
     backgroundColor: "var(--dark-blue)",
-    borderRadius: "3vh",
+    borderRadius: "var(--radius-lg)",
     color: "white",
   };
+  const { isLarge, isMedium, isSmall, width } = useResponsive();
 
   // --- CURRENT PHASE ---
   if (props.type === "current") {
-    const { style, phaseNumber } = props;
+    const { style, phaseNumber, isLoading } = props;
 
     return (
       <div
         style={{
           ...baseStyle,
-          paddingTop: "3vh",
+          paddingTop: isLarge ? "var(--space-md)" : "var(--space-lg)",
+          gap: isLarge?"var(--space-md)":"var(--space-lg)",
           overflow: "hidden",
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          justifyItems: "center",
+          justifyContent: "flex-start",
           ...style,
         }}
       >
         <h3
           style={{
-            fontSize: "1.1rem",
+            fontSize: "var(--text-md)",
             fontFamily: "var(--font-nova-square)",
-            marginBottom: "auto",
           }}
         >
-          Current Phase
+          {!isSmall ? "Current Phase" : "Next Phase"}
         </h3>
 
-        <img
-          src={`/home/current-phase/${phaseNumber}.svg`}
-          alt="Current Phase"
+
+        <div
           style={{
-            position: "relative",
-            marginLeft: "auto",
             width: "100%",
+            flex: 1,
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            overflow: "hidden",
           }}
-        />
+        >
+          <img
+            src={`/home/next-phase/${phaseNumber}.svg`}
+            alt="Current Phase"
+            style={{
+              marginTop: "auto",
+              maxWidth: "100%",
+              maxHeight: "100%",
+              width: "auto",
+              height: "auto",
+              objectFit: "contain",
+              display: "block",
+            }}
+          />
+        </div>
       </div>
     );
   }
 
+
+
   // --- NEXT PHASE ---
-  const { style, phaseNumber, desc } = props;
+  const { style, phaseNumber, desc, isLoading } = props;
 
   return (
     <div
@@ -68,26 +96,28 @@ export const PhaseCard = (props: PhaseCardProps) => {
         ...baseStyle,
         display: "flex",
         justifyContent: "space-between",
-        height: "100%",
-        paddingLeft: "3vw",
-        overflow: "clip",
+        alignItems: "stretch",
+        overflow: "hidden",
         ...style,
       }}
     >
+      {/* LEFT SIDE */}
       <div
         style={{
+          padding: "var(--space-md)",
           display: "flex",
           flexDirection: "column",
           justifyContent: "flex-start",
-          width: "fit-content",
+          alignItems: "flex-start",
+          gap: "var(--space-md)",
+          flex: 1,
+          minWidth: 0,
         }}
       >
         <h3
           style={{
-            fontSize: "1.1rem",
-            marginBottom: "10px",
+            fontSize: "var(--text-md)",
             fontFamily: "var(--font-nova-square)",
-            marginTop: "3vh",
           }}
         >
           Next Phase
@@ -95,44 +125,41 @@ export const PhaseCard = (props: PhaseCardProps) => {
 
         <p
           style={{
-            fontSize: "0.9rem",
+            fontSize: "var(--text-base)",
             opacity: 0.7,
-            lineHeight: "1.4",
             margin: 0,
-            width: "25ch",
           }}
         >
           {desc}
         </p>
       </div>
 
+      {/* RIGHT SIDE IMAGE */}
       <div
         style={{
-          height: "100%",
-          position: "relative",
-          width: "fit-content",
+          flex: 1,
           display: "flex",
+          justifyContent: "center",
           alignItems: "center",
+          overflow: "hidden",
+          minWidth: 0,
+          borderLeft: "1px solid white"
         }}
       >
-        <div
-          style={{
-            backgroundColor: "white",
-            height: "100%",
-            width: "0.4vh",
-          }}
-        />
-
         <img
           src={`/home/next-phase/${phaseNumber}.svg`}
           alt="Next Phase"
           style={{
-            position: "relative",
-            height: "100%",
             marginLeft: "auto",
+            maxWidth: "100%",
+            maxHeight: "100%",
+            width: "auto",
+            height: "auto",
+            objectFit: "contain",
+            display: "block",
           }}
         />
       </div>
     </div>
   );
-};
+}

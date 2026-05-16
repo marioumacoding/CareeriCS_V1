@@ -223,6 +223,19 @@ function getJourneyPhaseStateStorageKey(
   return `${JOURNEY_PHASE_STATE_STORAGE_KEY}:${userId ?? "guest"}:${trackId}`;
 }
 
+export function hasJourneyPhaseState(
+  trackId?: string | null,
+  userId?: string | null,
+): boolean {
+  if (typeof window === "undefined" || !trackId) {
+    return false;
+  }
+
+  return Boolean(
+    window.localStorage.getItem(getJourneyPhaseStateStorageKey(trackId, userId)),
+  );
+}
+
 function normalizeJourneyPhaseState(raw: unknown): JourneyPhaseState {
   if (!raw || typeof raw !== "object") {
     return { maxReached: 1 };

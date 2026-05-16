@@ -11,6 +11,10 @@ import {
   normalizeRoadmapListPayload,
   syncBackendRoadmapBookmarksToUnifiedList,
 } from "@/lib/roadmap-bookmark-sync";
+import {
+  registerTrackRoadmapLinksFromRecommendations,
+  resolveStoredTrackRoadmapLink,
+} from "@/lib/track-roadmap-links";
 import { getUnifiedBookmarks } from "@/lib/unified-bookmarks";
 import type {
   APICareerTrackScore,
@@ -350,27 +354,55 @@ function normalizeTrackKey(value?: string | null): string {
 function createJourneyTrackCardFromBookmark(
   bookmark: UnifiedBookmarkEntry,
   roadmapTitleById: Map<string, string>,
+  recommendationsByTrackId: Map<string, APICareerTrackScore>,
+  recommendationsByRoadmapId: Map<string, APICareerTrackScore>,
 ): JourneyTrackCard | null {
   if (bookmark.kind !== "career" && bookmark.kind !== "roadmap") {
     return null;
   }
 
+  const bookmarkRoadmapId =
+    bookmark.kind === "roadmap"
+      ? normalizeTrackKey(bookmark.entity_id || bookmark.metadata?.roadmap_id || null)
+      : normalizeTrackKey(bookmark.metadata?.roadmap_id || null);
+  const storedLink = resolveStoredTrackRoadmapLink({
+    trackId: bookmark.metadata?.track_id || (bookmark.kind === "career" ? bookmark.entity_id : null),
+    trackTitle: bookmark.metadata?.track_name || bookmark.title,
+    roadmapId: bookmarkRoadmapId || null,
+    roadmapTitle: (bookmarkRoadmapId && roadmapTitleById.get(bookmarkRoadmapId)) || bookmark.title,
+  });
+  const recommendedTrack =
+    (bookmarkRoadmapId && recommendationsByRoadmapId.get(bookmarkRoadmapId)) || null;
   const trackId =
     bookmark.kind === "career"
       ? normalizeTrackKey(bookmark.entity_id)
-      : normalizeTrackKey(bookmark.metadata?.track_id || bookmark.entity_id);
+      : normalizeTrackKey(
+          bookmark.metadata?.track_id ||
+            recommendedTrack?.track_id ||
+            storedLink?.trackId ||
+            bookmark.entity_id,
+        );
 
   if (!trackId) {
     return null;
   }
 
+  const recommendedRoadmap = recommendationsByTrackId.get(trackId) || null;
   const roadmapId =
     bookmark.kind === "roadmap"
-      ? normalizeTrackKey(bookmark.entity_id) || null
-      : normalizeTrackKey(bookmark.metadata?.roadmap_id || null) || null;
+      ? bookmarkRoadmapId || normalizeTrackKey(storedLink?.roadmapId || null) || null
+      : normalizeTrackKey(
+          bookmark.metadata?.roadmap_id ||
+            recommendedRoadmap?.roadmap_id ||
+            storedLink?.roadmapId ||
+            null,
+        ) || null;
 
   const titleFallback =
     (bookmark.kind === "roadmap" && roadmapId && roadmapTitleById.get(roadmapId)) ||
+    recommendedRoadmap?.track_name ||
+    recommendedTrack?.track_name ||
+    storedLink?.trackName ||
     bookmark.metadata?.track_name ||
     bookmark.title ||
     "Career Track";
@@ -414,11 +446,32 @@ function normalizeTrackCards(
   roadmaps: RoadmapListItem[],
 ): JourneyTrackCard[] {
   const roadmapTitleById = new Map(roadmaps.map((roadmap) => [roadmap.id, roadmap.title] as const));
+  registerTrackRoadmapLinksFromRecommendations(recommendations, roadmaps);
+  const recommendationsByTrackId = new Map<string, APICareerTrackScore>();
+  const recommendationsByRoadmapId = new Map<string, APICareerTrackScore>();
+
+  for (const recommendation of recommendations) {
+    const trackId = normalizeTrackKey(recommendation.track_id);
+    if (trackId) {
+      recommendationsByTrackId.set(trackId, recommendation);
+    }
+
+    const roadmapId = normalizeTrackKey(recommendation.roadmap_id);
+    if (roadmapId) {
+      recommendationsByRoadmapId.set(roadmapId, recommendation);
+    }
+  }
+
   const byTrackId = new Map<string, JourneyTrackCard>();
   const order: string[] = [];
 
   for (const bookmark of bookmarks) {
-    const candidate = createJourneyTrackCardFromBookmark(bookmark, roadmapTitleById);
+    const candidate = createJourneyTrackCardFromBookmark(
+      bookmark,
+      roadmapTitleById,
+      recommendationsByTrackId,
+      recommendationsByRoadmapId,
+    );
     if (!candidate) {
       continue;
     }

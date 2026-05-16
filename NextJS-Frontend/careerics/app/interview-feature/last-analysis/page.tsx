@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import InterviewLayout from "@/components/ui/interview";
 import InterviewContainer from "@/components/ui/interview-card";
-import { useInterviewFlow } from "@/hooks";
+import { useGoogleDriveUpload, useInterviewFlow } from "@/hooks";
 import { interviewService } from "@/services/interview.service";
 import { reportsService } from "@/services/reports.service";
 
@@ -18,14 +18,25 @@ export default function LastAnalysisPage() {
 
   const [isPreparing, setIsPreparing] = useState(true);
   const [reportError, setReportError] = useState("");
-  const [isOpeningDrive, setIsOpeningDrive] = useState(false);
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
+  const [downloadBlob, setDownloadBlob] = useState<Blob | null>(null);
   const [downloadName, setDownloadName] = useState("interview-analysis.pdf");
+  const {
+    isUploading: isSavingToDrive,
+    uploadError: driveUploadError,
+    uploadedFile: uploadedDriveFile,
+    resetUploadState,
+    uploadToGoogleDrive,
+  } = useGoogleDriveUpload();
+  const driveOpenLink = uploadedDriveFile?.webViewLink ?? uploadedDriveFile?.webContentLink ?? null;
 
   useEffect(() => {
     let alive = true;
 
     const finalizeInterview = async () => {
+      resetUploadState();
+      setDownloadBlob(null);
+
       if (!sessionId) {
         if (alive) {
           setReportError("Session is missing. Please retry the interview flow.");
@@ -42,6 +53,7 @@ export default function LastAnalysisPage() {
       if (!response.success || !response.data?.report?.id) {
         setReportError(response.message || "Report is not ready yet. Please retry download below.");
         setDownloadUrl(null);
+        setDownloadBlob(null);
         setIsPreparing(false);
         return;
       }
@@ -57,6 +69,7 @@ export default function LastAnalysisPage() {
         if (!reportResponse.ok) {
           setReportError("Completed report was saved, but preview download failed. Please retry.");
           setDownloadUrl(null);
+          setDownloadBlob(null);
           setIsPreparing(false);
           return;
         }
@@ -68,6 +81,7 @@ export default function LastAnalysisPage() {
 
         const objectUrl = URL.createObjectURL(blob);
         setDownloadName(response.data.report.filename || "interview-analysis.pdf");
+        setDownloadBlob(blob);
         setDownloadUrl((previous) => {
           if (previous) {
             URL.revokeObjectURL(previous);
@@ -84,6 +98,7 @@ export default function LastAnalysisPage() {
 
         setReportError("Completed report was saved, but preview download failed. Please retry.");
         setDownloadUrl(null);
+        setDownloadBlob(null);
         setIsPreparing(false);
       }
     };
@@ -93,7 +108,7 @@ export default function LastAnalysisPage() {
     return () => {
       alive = false;
     };
-  }, [sessionId]);
+  }, [resetUploadState, sessionId]);
 
   useEffect(() => {
     return () => {
@@ -122,25 +137,30 @@ export default function LastAnalysisPage() {
     link.click();
   };
 
-  const handleGoogleDriveQuickOpen = () => {
-    if (isOpeningDrive) {
+  const handleSaveToGoogleDrive = async () => {
+    if (driveOpenLink) {
+      window.open(driveOpenLink, "_blank", "noopener,noreferrer");
       return;
     }
 
-    setIsOpeningDrive(true);
+    const driveTab = window.open("", "_blank");
+    const uploaded = await uploadToGoogleDrive(downloadBlob, {
+      fileName: downloadName,
+      mimeType: downloadBlob?.type || "application/pdf",
+      popupWindow: driveTab,
+    });
 
-    if (downloadUrl) {
-      const link = document.createElement("a");
-      link.href = downloadUrl;
-      link.download = downloadName;
-      link.click();
+    const nextDriveLink = uploaded?.webViewLink ?? uploaded?.webContentLink ?? null;
+    if (nextDriveLink) {
+      if (driveTab && !driveTab.closed) {
+        driveTab.location.href = nextDriveLink;
+      } else {
+        window.open(nextDriveLink, "_blank", "noopener,noreferrer");
+      }
+      return;
     }
 
-    window.open("https://drive.google.com/drive/my-drive", "_blank", "noopener,noreferrer");
-
-    window.setTimeout(() => {
-      setIsOpeningDrive(false);
-    }, 1400);
+    driveTab?.close();
   };
 
   if (isPreparing) {
@@ -354,8 +374,8 @@ export default function LastAnalysisPage() {
 
                 <button
                   type="button"
-                  onClick={handleGoogleDriveQuickOpen}
-                  disabled={isOpeningDrive}
+                  onClick={() => void handleSaveToGoogleDrive()}
+                  disabled={isSavingToDrive || !downloadBlob}
                   style={{
                     backgroundColor: "white",
                     color: "#1a1a1a",
@@ -367,15 +387,47 @@ export default function LastAnalysisPage() {
                     gap: "12px",
                     width: "260px",
                     justifyContent: "center",
-                    cursor: isOpeningDrive ? "default" : "pointer",
+                    cursor: isSavingToDrive || !downloadBlob ? "default" : "pointer",
                     fontSize: "14px",
                     fontWeight: 600,
-                    opacity: isOpeningDrive ? 0.7 : downloadUrl ? 1 : 0.55,
+                    opacity: isSavingToDrive || !downloadBlob ? 0.7 : 1,
                   }}
                 >
                   <img src="/global/drive.svg" style={{ width: "20px" }} alt="Drive" />
-                  {isOpeningDrive ? "Opening Drive..." : "Google Drive"}
+                  {isSavingToDrive
+                    ? "Opening Drive..."
+                    : uploadedDriveFile
+                      ? "Saved to Google Drive"
+                      : "Save to Google Drive"}
                 </button>
+                {driveUploadError ? (
+                  <p
+                    style={{
+                      color: "#fca5a5",
+                      fontSize: "13px",
+                      margin: 0,
+                      width: "260px",
+                      textAlign: "center",
+                      fontFamily: "var(--font-nova-square)",
+                    }}
+                  >
+                    {driveUploadError}
+                  </p>
+                ) : null}
+                {uploadedDriveFile ? (
+                  <p
+                    style={{
+                      color: "#d4ff47",
+                      fontSize: "13px",
+                      margin: 0,
+                      width: "260px",
+                      textAlign: "center",
+                      fontFamily: "var(--font-nova-square)",
+                    }}
+                  >
+                    Saved to Google Drive.
+                  </p>
+                ) : null}
               </div>
             </div>
           }

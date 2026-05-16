@@ -9,6 +9,7 @@ import { useResponsive } from "@/hooks/useResponsive";
 type BaseProps = {
   style?: React.CSSProperties;
   phaseNumber: string;
+  isLoading?: boolean;
 };
 
 type PhaseCardProps =
@@ -30,7 +31,7 @@ export const PhaseCard = (props: PhaseCardProps) => {
 
   // --- CURRENT PHASE ---
   if (props.type === "current") {
-    const { style, phaseNumber } = props;
+    const { style, phaseNumber, isLoading } = props;
 
     return (
       <div
@@ -87,7 +88,7 @@ export const PhaseCard = (props: PhaseCardProps) => {
 
 
   // --- NEXT PHASE ---
-  const { style, phaseNumber, desc } = props;
+  const { style, phaseNumber, desc, isLoading } = props;
 
   return (
     <div

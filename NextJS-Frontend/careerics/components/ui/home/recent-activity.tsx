@@ -18,13 +18,16 @@ type ActivityItem = {
 
 export const RecentActivityCard = ({
   activities,
+  isLoading = false,
   style,
 }: {
   activities: ActivityItem[];
+  isLoading?: boolean;
   style?: React.CSSProperties;
 }) => {
   const router = useRouter();
   const scrollRef = useRef<HTMLDivElement>(null);
+  
 
   const scrollDown = () => {
     scrollRef.current?.scrollBy({ top: 100, behavior: "smooth" });
@@ -186,8 +189,8 @@ export const RecentActivityCard = ({
                 />
               </div>
             ) : null}
-          </div>
-        ))}
+            </div>
+          ))}
       </div>
 
       <div

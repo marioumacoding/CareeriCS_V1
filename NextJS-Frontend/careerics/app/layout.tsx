@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { Jura, Nova_Square } from "next/font/google";
 import { Providers } from "@/providers";
 import "../styles/globals.scss";
@@ -35,6 +36,7 @@ export default function RootLayout({
         className={`${jura.variable} ${novaSquare.variable} antialiased`}
         style={{ backgroundColor: "var(--bg-color)" }}
       >
+        <Script src="https://accounts.google.com/gsi/client" strategy="afterInteractive" />
         <AppReadyProvider>
           <Providers>
             {children}

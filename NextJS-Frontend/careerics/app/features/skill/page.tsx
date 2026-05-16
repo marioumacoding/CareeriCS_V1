@@ -50,7 +50,7 @@ type SessionTitleLookup = {
 };
 
 const LAST_ACTIVE_ROADMAP_STORAGE_KEY = "roadmap:last-active-id";
-const GENERAL_SKILLS_TRACK_ID = "__general-skills__";
+const COMPUTER_SCIENCE_TRACK_TITLE = "computer science";
 const GENERAL_SKILLS_TRACK_LABEL = "General Skills";
 const CURRENT_LEARNING_CACHE_TTL_MS = 15_000;
 const ROADMAP_DETAILS_CACHE_TTL_MS = 60_000;
@@ -76,6 +76,10 @@ function normalizeRoadmapListPayload(payload: unknown): RoadmapListItem[] {
   }
 
   return [];
+}
+
+function isComputerScienceTrackTitle(title?: string | null): boolean {
+  return normalizeTextForMatch(title || "") === COMPUTER_SCIENCE_TRACK_TITLE;
 }
 
 function normalizeSessionType(sessionType?: string | null): APIAssessmentSessionType {
@@ -195,7 +199,7 @@ export default function SkillAssessment() {
   const [skills, setSkills] = useState<APISkill[]>([]);
   const [sessions, setSessions] = useState<APIAssessmentSessionSummary[]>([]);
   const [roadmapTracks, setRoadmapTracks] = useState<RoadmapListItem[]>([]);
-  const [selectedTrackId, setSelectedTrackId] = useState(GENERAL_SKILLS_TRACK_ID);
+  const [selectedTrackId, setSelectedTrackId] = useState("");
   const [trackHelperText, setTrackHelperText] = useState("");
   const [selectedSkillType, setSelectedSkillType] = useState<SkillFilterType>("general");
 
@@ -219,7 +223,7 @@ export default function SkillAssessment() {
     useRef<Map<string, CachedApiRequest<CurrentRoadmapLearning>>>(new Map());
   const roadmapByIdRequestCacheRef = useRef<Map<string, CachedApiRequest<RoadmapRead>>>(new Map());
 
-  const isGeneralSkillsMode = selectedTrackId === GENERAL_SKILLS_TRACK_ID || !selectedTrackId;
+  const isGeneralSkillsMode = !selectedTrackId;
   const getCurrentLearningCached = useCallback((roadmapId?: string) => {
     if (!user?.id) {
       return Promise.resolve({
@@ -396,7 +400,7 @@ export default function SkillAssessment() {
         setSkills(skillsRes.data);
         setSessions([]);
         setRoadmapTracks([]);
-        setSelectedTrackId(GENERAL_SKILLS_TRACK_ID);
+        setSelectedTrackId("");
         setTrackHelperText("Roadmaps unavailable. Showing all skills from the database.");
         setIsLoading(false);
         return;
@@ -409,14 +413,16 @@ export default function SkillAssessment() {
       setSessions(resolvedSessions);
 
       if (!tracks.length) {
-        setSelectedTrackId(GENERAL_SKILLS_TRACK_ID);
+        setSelectedTrackId("");
         setTrackHelperText("No roadmap tracks found. Showing all skills from the database.");
         setIsLoading(false);
         return;
       }
 
-      setSelectedTrackId(GENERAL_SKILLS_TRACK_ID);
-      setTrackHelperText("General Skills mode: showing all skills from the database.");
+      const defaultTrack =
+        tracks.find((track) => isComputerScienceTrackTitle(track.title)) || tracks[0];
+      setSelectedTrackId(defaultTrack?.id || "");
+      setTrackHelperText("");
 
       setIsLoading(false);
     };
@@ -429,11 +435,7 @@ export default function SkillAssessment() {
   }, [isAuthLoading, user?.id]);
 
   useEffect(() => {
-    if (
-      !selectedTrackId ||
-      selectedTrackId === GENERAL_SKILLS_TRACK_ID ||
-      typeof window === "undefined"
-    ) {
+    if (!selectedTrackId || typeof window === "undefined") {
       return;
     }
 
@@ -442,11 +444,6 @@ export default function SkillAssessment() {
 
   const handleTrackChange = (trackId: string) => {
     setSelectedTrackId(trackId);
-    if (trackId === GENERAL_SKILLS_TRACK_ID) {
-      setTrackHelperText("General Skills mode: showing all skills from the database.");
-      return;
-    }
-
     setTrackHelperText("");
   };
 
@@ -454,7 +451,7 @@ export default function SkillAssessment() {
     let alive = true;
 
     const loadTrackContext = async () => {
-      if (!selectedTrackId || selectedTrackId === GENERAL_SKILLS_TRACK_ID) {
+      if (!selectedTrackId) {
         setSelectedRoadmap(null);
         setCurrentLearning(null);
         setSelectedSectionId("");
@@ -605,8 +602,12 @@ export default function SkillAssessment() {
           if (current?.step_id) {
             const roadmapTitle = current.roadmap_title || fallbackRoadmapTitle;
             const stepTitle = current.step_title?.trim();
-            const displayLabel = stepTitle ? `${stepTitle}` : roadmapTitle;
-            const displaySubLabel = stepTitle ? `${roadmapTitle}` : roadmapTitle;
+            const sectionTitle = current.section_title?.trim();
+            const displayLabel = stepTitle || sectionTitle || roadmapTitle;
+            const displaySubLabel =
+              normalizeTextForMatch(displayLabel) === normalizeTextForMatch(roadmapTitle)
+                ? undefined
+                : roadmapTitle;
 
             return {
               id: current.step_id,
@@ -631,11 +632,9 @@ export default function SkillAssessment() {
 
           const orderedSections = roadmap.sections.slice().sort((a, b) => a.order - b.order);
           const firstSection = orderedSections[0];
-          const firstStep = firstSection?.steps
-            ?.slice()
-            .sort((a, b) => a.order - b.order)[0];
+          const firstSectionTitle = firstSection?.title?.trim();
 
-          if (!firstSection || !firstStep) {
+          if (!firstSection) {
             return {
               id: roadmapId,
               label: roadmap.title || fallbackRoadmapTitle,
@@ -645,10 +644,10 @@ export default function SkillAssessment() {
           }
 
           return {
-            id: firstStep.id,
-            label: `${firstStep.title || fallbackRoadmapTitle}`,
-            subLabel: `${roadmap.title}:`,
-            sessionType: "step" as const,
+            id: firstSection.id,
+            label: firstSectionTitle || fallbackRoadmapTitle,
+            subLabel: firstSectionTitle ? roadmap.title : undefined,
+            sessionType: "section" as const,
             sectionId: firstSection.id,
             isCurrent: false,
           };
@@ -763,10 +762,13 @@ export default function SkillAssessment() {
   }, [selectedRoadmap, sessionRoadmapsById]);
 
   const trackOptions: SkillFilterTrackOption[] = useMemo(
-    () => [
-      { id: GENERAL_SKILLS_TRACK_ID, title: GENERAL_SKILLS_TRACK_LABEL },
-      ...roadmapTracks.map((track) => ({ id: track.id, title: track.title })),
-    ],
+    () =>
+      roadmapTracks.map((track) => ({
+        id: track.id,
+        title: isComputerScienceTrackTitle(track.title)
+          ? GENERAL_SKILLS_TRACK_LABEL
+          : track.title,
+      })),
     [roadmapTracks],
   );
 
@@ -1032,29 +1034,46 @@ export default function SkillAssessment() {
             gridArea: "1 / 3 / 3 / 5",
           }}
         >
-          {learningItems.map((item) => (
-            <RectangularCard
-              key={item.id}
-              Title={item.subLabel}
-              isSubtextVisible
-              subtext={item.label}
-              theme="light"
-              selectable
-              selected={selectedLearningTargetId === item.id}
-              onSelect={() => {
-                const target = learningTargets.find(
-                  (t) => t.id === item.id
-                );
+          {learningItems.length ? (
+            learningItems.map((item) => (
+              <RectangularCard
+                key={item.id}
+                Title={item.subLabel}
+                isSubtextVisible
+                subtext={item.label}
+                theme="light"
+                selectable
+                selected={selectedLearningTargetId === item.id}
+                onSelect={() => {
+                  const target = learningTargets.find(
+                    (t) => t.id === item.id
+                  );
 
-                if (target) {
-                  openConfirmForTarget(target);
-                }
-              }}
+                  if (target) {
+                    openConfirmForTarget(target);
+                  }
+                }}
+                style={{
+                  height: "fit-content",
+                }}
+              />
+            ))
+          ) : (
+            <div
               style={{
-                height: "fit-content",
+                width: "100%",
+                height: "100%",
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                fontFamily: "var(--font-jura)",
+                fontSize: "0.95rem",
+                opacity: 0.8,
               }}
-            />
-          ))}
+            >
+              There are no skills you are currently learning.
+            </div>
+          )}
         </CardsContainer>
 
         <CardsContainer

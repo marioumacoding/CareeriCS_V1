@@ -479,6 +479,23 @@ export interface APIReport {
   type: APIReportType;
 }
 
+export interface GoogleDriveUploadedFile {
+  id: string;
+  name: string;
+  mimeType: string;
+  webViewLink?: string | null;
+  webContentLink?: string | null;
+}
+
+export type GoogleDriveUploadErrorCode =
+  | "UNAUTHENTICATED"
+  | "GOOGLE_DRIVE_SCOPE_MISSING"
+  | "GOOGLE_DRIVE_API_DISABLED"
+  | "GOOGLE_DRIVE_TOKEN_MISSING"
+  | "GOOGLE_DRIVE_TOKEN_EXPIRED"
+  | "GENERATED_FILE_MISSING"
+  | "GOOGLE_DRIVE_UPLOAD_FAILED";
+
 // ── FastAPI Career quiz domain ──────────────────────────
 
 export type APICareerCardType = "hobby" | "technical";

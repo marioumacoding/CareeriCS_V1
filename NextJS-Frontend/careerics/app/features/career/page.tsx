@@ -1,24 +1,31 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import ChoiceCard from "@/components/ui/choice-card-career";
-import TipCard from "@/components/ui/3ateyat";
-import { CareerCardsContainer } from "@/components/ui/career-cards-container";
-
+import BookmarkReplacePopup from "@/components/ui/bookmarkReplacePopup";
 import { useAuth } from "@/providers/auth-provider";
 import { careerService } from "@/services";
 import {
   buildCareerQuizSelectionHref,
   startCareerQuizSession,
 } from "@/lib/career-quiz";
+import { createCareerUnifiedBookmark } from "@/lib/bookmark-targets";
+import { removeBookmarkEntryFromUnifiedList } from "@/lib/unified-bookmark-actions";
+import {
+  addOrMoveUnifiedBookmark,
+  getUnifiedBookmarks,
+  MAX_UNIFIED_BOOKMARKS,
+} from "@/lib/unified-bookmarks";
 
-import type { APICareerTrack } from "@/types";
+import type { APICareerTrack, UnifiedBookmarkDraft, UnifiedBookmarkEntry } from "@/types";
 import { useResponsive } from "@/hooks/useResponsive";
+import { CareerCardsContainer } from "@/components/ui/career-cards-container";
+import TipCard from "@/components/ui/3ateyat";
 
-
-const TRACK_FALLBACK =
+const VISIBLE_TRACKS_COUNT = 4;
+const TRACK_DESCRIPTION_FALLBACK =
   "Explore this path and see what the day-to-day work, opportunities, and growth can look like.";
 
 function buildTrackBlogPath(track: APICareerTrack) {
@@ -33,36 +40,62 @@ function buildTrackBlogPath(track: APICareerTrack) {
 export default function CareerDiscoveryPage() {
   const router = useRouter();
   const { user, isLoading: isAuthLoading } = useAuth();
+  const userId = user?.id ?? null;
 
-  const [tracks, setTracks] = useState<APICareerTrack[]>([]);
-  const [loadingTracks, setLoadingTracks] = useState(true);
+  const [isStartingQuiz, setIsStartingQuiz] = useState(false);
+  const [startError, setStartError] = useState<string | null>(null);
+  const [careerTracks, setCareerTracks] = useState<APICareerTrack[]>([]);
+  const [isLoadingTracks, setIsLoadingTracks] = useState(true);
   const [tracksError, setTracksError] = useState<string | null>(null);
+  const [bookmarkError, setBookmarkError] = useState<string | null>(null);
+  const [pendingCareerBookmark, setPendingCareerBookmark] = useState<UnifiedBookmarkDraft | null>(null);
+  const [replaceCandidates, setReplaceCandidates] = useState<UnifiedBookmarkEntry[]>([]);
+  const [isReplacingBookmark, setIsReplacingBookmark] = useState(false);
+  const [unifiedBookmarks, setUnifiedBookmarks] = useState<UnifiedBookmarkEntry[]>([]);
 
   const [startIndex, setStartIndex] = useState(0);
+  useEffect(() => {
+    if (isAuthLoading) {
+      setUnifiedBookmarks([]);
+      return;
+    }
 
-  const [startingQuiz, setStartingQuiz] = useState(false);
-  const [quizError, setQuizError] = useState<string | null>(null);
+    setUnifiedBookmarks(getUnifiedBookmarks(userId));
+  }, [isAuthLoading, userId]);
 
-  // ---------------- FETCH TRACKS ----------------
+  const bookmarkedTrackIds = useMemo(() => {
+    return unifiedBookmarks.flatMap((bookmark) => {
+      if (bookmark.kind === "career") {
+        return [bookmark.entity_id];
+      }
+
+      if (bookmark.kind === "roadmap") {
+        return [bookmark.metadata?.track_id].filter((value): value is string => Boolean(value));
+      }
+
+      return [];
+    });
+  }, [unifiedBookmarks]);
+
   useEffect(() => {
     let alive = true;
 
     const load = async () => {
-      setLoadingTracks(true);
+      setIsLoadingTracks(true);
 
       const res = await careerService.listTracks();
       if (!alive) return;
 
       if (!res.success || !res.data) {
-        setTracks([]);
+        setCareerTracks([]);
         setTracksError(res.message || "Failed to load tracks.");
-        setLoadingTracks(false);
+        setIsLoadingTracks(false);
         return;
       }
 
-      setTracks(res.data);
+      setCareerTracks(res.data);
       setTracksError(null);
-      setLoadingTracks(false);
+      setIsLoadingTracks(false);
     };
 
     void load();
@@ -72,15 +105,100 @@ export default function CareerDiscoveryPage() {
     };
   }, []);
 
+  const maxStartIndex = Math.max(0, careerTracks.length - VISIBLE_TRACKS_COUNT);
+  const safeStartIndex = Math.min(startIndex, maxStartIndex);
 
-  const visibleTracks = useMemo(() => {
-    return tracks;
-  }, [tracks, startIndex]);
+  const visibleCards = useMemo(
+    () => careerTracks.slice(safeStartIndex, safeStartIndex + VISIBLE_TRACKS_COUNT),
+    [careerTracks, safeStartIndex],
+  );
 
+  const handleNext = () => {
+    setStartIndex(Math.min(safeStartIndex + 4, maxStartIndex));
+  };
 
-  // ---------------- QUIZ ----------------
+  const handlePrev = () => {
+    setStartIndex(Math.max(safeStartIndex - 4, 0));
+  };
+
+  const closeReplacePopup = useCallback(() => {
+    if (isReplacingBookmark) {
+      return;
+    }
+
+    setPendingCareerBookmark(null);
+    setReplaceCandidates([]);
+  }, [isReplacingBookmark]);
+
+  const handleToggleBookmark = async (track: APICareerTrack) => {
+    if (isAuthLoading || isReplacingBookmark) {
+      return;
+    }
+
+    setBookmarkError(null);
+
+    const existingBookmark = unifiedBookmarks.find((bookmark) => {
+      if (bookmark.kind === "career") {
+        return bookmark.entity_id === track.id;
+      }
+
+      return bookmark.kind === "roadmap" && bookmark.metadata?.track_id === track.id;
+    });
+
+    if (existingBookmark) {
+      const removal = await removeBookmarkEntryFromUnifiedList(existingBookmark, userId);
+      if (!removal.success) {
+        setBookmarkError(removal.message || "Unable to update bookmark right now. Please try again.");
+        return;
+      }
+      setUnifiedBookmarks(removal.bookmarks);
+      return;
+    }
+
+    const candidate = createCareerUnifiedBookmark({
+      trackId: track.id,
+      title: track.name,
+      description: track.description ?? null,
+      savedAt: new Date().toISOString(),
+    });
+
+    if (unifiedBookmarks.length >= MAX_UNIFIED_BOOKMARKS) {
+      setPendingCareerBookmark(candidate);
+      setReplaceCandidates(unifiedBookmarks);
+      return;
+    }
+
+    const next = addOrMoveUnifiedBookmark(candidate, userId);
+    setUnifiedBookmarks(next);
+  };
+
+  const handleReplaceBookmark = useCallback(
+    async (bookmarkToReplace: UnifiedBookmarkEntry) => {
+      if (!pendingCareerBookmark) {
+        return;
+      }
+
+      setBookmarkError(null);
+      setIsReplacingBookmark(true);
+
+      const removal = await removeBookmarkEntryFromUnifiedList(bookmarkToReplace, userId);
+      if (!removal.success) {
+        setBookmarkError(removal.message || "Unable to replace bookmark right now. Please try again.");
+        setIsReplacingBookmark(false);
+        return;
+      }
+
+      const next = addOrMoveUnifiedBookmark(pendingCareerBookmark, userId);
+      setUnifiedBookmarks(next);
+      setPendingCareerBookmark(null);
+      setReplaceCandidates([]);
+      setIsReplacingBookmark(false);
+    },
+    [pendingCareerBookmark, userId],
+  );
+
   const handleStartQuiz = async () => {
-    if (startingQuiz || isAuthLoading) return;
+    if (isStartingQuiz || isAuthLoading) return;
 
     if (!user?.id) {
       router.push("/auth/login?redirect=/features/career");
@@ -88,15 +206,15 @@ export default function CareerDiscoveryPage() {
     }
 
     try {
-      setQuizError(null);
-      setStartingQuiz(true);
+      setStartError(null);
+      setIsStartingQuiz(true);
 
       const sessionId = await startCareerQuizSession(user.id);
 
       router.push(buildCareerQuizSelectionHref(sessionId));
     } catch (e) {
-      setStartingQuiz(false);
-      setQuizError(
+      setIsStartingQuiz(false);
+      setStartError(
         e instanceof Error
           ? e.message
           : "Failed to start quiz. Try again."
@@ -117,7 +235,7 @@ export default function CareerDiscoveryPage() {
         gridColumnGap: "var(--space-lg)",
         display: "grid",
         gridTemplateColumns: "1fr",
-        gridTemplateRows: !isLarge?"1fr 4fr":"1fr 2fr",
+        gridTemplateRows: !isLarge ? "1fr 4fr" : "1fr 2fr",
         overflow: "hidden",
       }}
     >
@@ -148,38 +266,77 @@ export default function CareerDiscoveryPage() {
           backgroundColor: "var(--medium-blue)",
         }}
       >
-        {loadingTracks && (
+        {isLoadingTracks && (
           <div style={{ color: "#D7E3FF" }}>Loading tracks...</div>
         )}
 
-        {!loadingTracks && tracksError && (
+        {!isLoadingTracks && tracksError && (
           <div style={{ color: "#FFD3D3" }}>{tracksError}</div>
         )}
 
-        {!loadingTracks &&
+        {!isLoadingTracks &&
           !tracksError &&
-          visibleTracks.length === 0 && (
+          visibleCards.length === 0 && (
             <div style={{ color: "#d7ffdd" }}>
               No career tracks available.
             </div>
           )}
 
-        {!loadingTracks &&
-          !tracksError &&
-          visibleTracks.map((track) => (
-            <ChoiceCard
-              key={track.id}
-              title={track.name}
-              description={track.description || TRACK_FALLBACK}
-              image={`/tracks/${track.id}.svg`}
-              buttonVariant="primary-inverted"
-              buttonLabel="Learn More"
-              onClick={() =>
-                router.push(buildTrackBlogPath(track))
-              }
-            />
-          ))}
+        {!isLoadingTracks && !tracksError && !visibleCards.length ? (
+          <div
+            style={{
+              gridColumn: "1 / -1",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#d7ffdd",
+              fontFamily: "var(--font-jura)",
+              fontSize: "1rem",
+            }}
+          >
+            No career tracks are available yet.
+          </div>
+        ) : null}
+
+        {!isLoadingTracks && !tracksError
+          ? visibleCards.map((track) => {
+            const blogPath = buildTrackBlogPath(track);
+
+            return (
+              <ChoiceCard
+                key={track.id}
+                title={track.name}
+                description={track.description || TRACK_DESCRIPTION_FALLBACK}
+                image={`/tracks/${track.id}.svg`}
+                buttonVariant="primary-inverted"
+                buttonLabel="Learn More"
+                onClick={() => router.push(blogPath)}
+                onBookmark={() => {
+                  void handleToggleBookmark(track);
+                }}
+                isBookmarked={bookmarkedTrackIds.includes(track.id)}
+              />
+            );
+          })
+          : null}
+
+
       </CareerCardsContainer>
-    </div>
+
+
+      {
+        pendingCareerBookmark ? (
+          <BookmarkReplacePopup
+            incomingTitle={pendingCareerBookmark.title}
+            bookmarks={replaceCandidates}
+            isLoading={isReplacingBookmark}
+            onReplace={(bookmark) => {
+              void handleReplaceBookmark(bookmark);
+            }}
+            onCancel={closeReplacePopup}
+          />
+        ) : null
+      }
+    </div >
   );
-}
+}``

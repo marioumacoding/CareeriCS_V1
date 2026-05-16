@@ -93,9 +93,38 @@ const HOP_BY_HOP_HEADERS = new Set([
 ]);
 
 function getFastApiBaseUrl(): string {
-  const configured = process.env.FASTAPI_URL || "http://127.0.0.1:8000";
-  return configured.replace(/\/+$/, "");
+  const configured = process.env.FASTAPI_URL?.trim();
+  if (!configured) {
+    console.error("[fastapi-proxy] FASTAPI_URL is missing in environment variables");
+    throw new Error("FASTAPI_URL is missing in environment variables");
+  }
+
+  const normalized = configured.replace(/\/+$/, "");
+
+  try {
+    const parsed = new URL(normalized);
+    const isLocalHost = parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1";
+
+    if (!isDevelopment && isLocalHost) {
+      console.error("[fastapi-proxy] FASTAPI_URL points to localhost in production", {
+        fastapiUrl: normalized,
+      });
+      throw new Error("FASTAPI_URL must not point to localhost in production");
+    }
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("Invalid URL")) {
+      console.error("[fastapi-proxy] FASTAPI_URL is not a valid URL", {
+        fastapiUrl: normalized,
+      });
+      throw new Error("FASTAPI_URL must be a valid absolute URL");
+    }
+    throw error;
+  }
+
+  return normalized;
 }
+
+const FASTAPI_BASE_URL = getFastApiBaseUrl();
 
 function buildTargetUrl(
   baseUrl: string,
@@ -193,11 +222,9 @@ function rewriteLocationHeader(location: string, req: NextRequest, upstreamBase:
   try {
     const loc = new URL(location);
     const upstream = new URL(upstreamBase);
-    const localUpstreamHosts = new Set(["localhost", "127.0.0.1"]);
     const sameUpstreamHostPort = loc.hostname === upstream.hostname && loc.port === upstream.port;
-    const localhost8000 = localUpstreamHosts.has(loc.hostname) && loc.port === "8000";
 
-    if (sameUpstreamHostPort || localhost8000) {
+    if (sameUpstreamHostPort) {
       return `${proxyPrefix}${loc.pathname}${loc.search}`;
     }
   } catch {
@@ -212,7 +239,7 @@ async function handleProxy(
   context: { params: Promise<{ path: string[] }> },
 ): Promise<Response> {
   const { path } = await context.params;
-  const upstreamBase = getFastApiBaseUrl();
+  const upstreamBase = FASTAPI_BASE_URL;
   const url = buildTargetUrl(upstreamBase, path, req.nextUrl.search, req.nextUrl.pathname);
 
   const method = req.method;

@@ -21,6 +21,14 @@ function requireEnv(name: string): string {
   return value ?? "";
 }
 
+function requirePublicEnv(name: string): string {
+  const value = process.env[name];
+  if (!value && process.env.NODE_ENV === "production") {
+    throw new Error(`Missing required environment variable: ${name}`);
+  }
+  return value ?? "";
+}
+
 function trimTrailingSlash(value: string): string {
   return value.replace(/\/+$/, "");
 }
@@ -34,8 +42,7 @@ function toFastApiGraphqlUrl(baseUrl: string): string {
   return `${rootBaseUrl}/graphql`;
 }
 
-const publicFastApiUrl =
-  process.env.NEXT_PUBLIC_FASTAPI_URL ?? "http://localhost:8000/api";
+const publicFastApiUrl = requirePublicEnv("NEXT_PUBLIC_API_URL");
 
 // ──────────────────────────────────────────────
 // Public (client-safe) config

@@ -6,6 +6,7 @@ import React, { CSSProperties, ReactNode } from "react";
 import { X } from "lucide-react";
 import { useMemo, useEffect, useState } from "react";
 import { useResponsive } from "@/hooks/useResponsive";
+import { normalizeBackendAssetUrl } from "@/lib/asset-url";
 
 interface ChoiceCardProps {
   icon?: string;
@@ -45,6 +46,7 @@ export default function ChoiceCard({
   const router = useRouter();
   const [isRemoveHovered, setIsRemoveHovered] = React.useState(false);
   const [isRemoveFocused, setIsRemoveFocused] = React.useState(false);
+  const displayImage = normalizeBackendAssetUrl(image || icon || "");
 
 
   const isBookmark = type === "bookmark";
@@ -145,7 +147,7 @@ export default function ChoiceCard({
       {/* img */}
       {!isBookmark && !isMedium &&
         <img
-          src={image || icon || ""}
+          src={displayImage}
           alt={title || "career icon"}
           style={{
             width: "var(--icon-xl)",

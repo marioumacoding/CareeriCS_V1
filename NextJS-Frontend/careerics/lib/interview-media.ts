@@ -7,7 +7,11 @@ function isAbsoluteUrl(value: string): boolean {
 }
 
 function resolveFastApiOrigin(): string {
-  const configured = process.env.NEXT_PUBLIC_FASTAPI_URL || "http://localhost:8000/api";
+  const configured = process.env.NEXT_PUBLIC_API_URL || "";
+  if (!configured) {
+    return "";
+  }
+
   const trimmed = configured.replace(/\/+$/, "");
 
   if (trimmed.endsWith("/api")) {
@@ -23,7 +27,17 @@ function resolveFastApiOrigin(): string {
 
 function toProxyPath(value: string, kind: InterviewAudioKind): string {
   if (isAbsoluteUrl(value)) {
-    return value;
+    try {
+      const parsed = new URL(value);
+      if (parsed.pathname.startsWith("/api/fastapi/")) {
+        const directPath = parsed.pathname.replace("/api/fastapi", "");
+        return `${FASTAPI_PROXY_PREFIX}${directPath}${parsed.search}`;
+      }
+
+      return `${FASTAPI_PROXY_PREFIX}${parsed.pathname}${parsed.search}`;
+    } catch {
+      return value;
+    }
   }
 
   if (value.startsWith(`${FASTAPI_PROXY_PREFIX}/`)) {
@@ -96,7 +110,10 @@ export function buildInterviewAudioCandidates(
     }
   } else {
     const directPath = toDirectPath(value, kind);
-    candidates.push(`${resolveFastApiOrigin()}${directPath}`);
+    const fastApiOrigin = resolveFastApiOrigin();
+    if (fastApiOrigin) {
+      candidates.push(`${fastApiOrigin}${directPath}`);
+    }
   }
 
   return Array.from(new Set(candidates.filter(Boolean)));

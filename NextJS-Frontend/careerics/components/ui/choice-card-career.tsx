@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import React, { CSSProperties, ReactNode } from "react";
+import { normalizeBackendAssetUrl } from "@/lib/asset-url";
 
 interface ChoiceCardProps {
   icon?: string;
@@ -36,6 +37,7 @@ export default function ChoiceCard({
   isBookmarked = false,
 }: ChoiceCardProps) {
   const router = useRouter();
+  const displayImage = normalizeBackendAssetUrl(image || icon || "");
 
   const handleButtonClick = () => {
     if (onClick) {
@@ -71,7 +73,7 @@ export default function ChoiceCard({
         }}
       >
         <img
-          src={image || icon || ""}
+          src={displayImage}
           alt={title || "career icon"}
           style={{
             width: "var(--icon-xl)",

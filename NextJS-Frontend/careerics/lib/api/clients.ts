@@ -7,17 +7,21 @@
  * outgoing call automatically includes the current auth token.
  */
 
-import { publicConfig } from "@/config";
+import { publicConfig, serverConfig } from "@/config";
 import { HttpClient } from "./http-client";
 import { GraphQLClient } from "./graphql-client";
 import { getAuthToken } from "@/lib/auth/token";
 
-function resolveFastApiBaseUrl(baseUrl: string, proxyPath: string): string {
+function resolveFastApiBaseUrl(
+  publicBaseUrl: string,
+  serverBaseUrl: string | undefined,
+  proxyPath: string,
+): string {
   if (typeof window !== "undefined") {
     return `${window.location.origin}${proxyPath}`;
   }
 
-  return baseUrl;
+  return serverBaseUrl || publicBaseUrl;
 }
 
 // Shared interceptor that injects the bearer token.
@@ -45,13 +49,17 @@ async function withFastApiProxyAuth(init: RequestInit): Promise<RequestInit> {
 }
 
 export const fastapiApi = new HttpClient({
-  baseUrl: resolveFastApiBaseUrl(publicConfig.fastapiUrl, "/api/fastapi"),
+  baseUrl: resolveFastApiBaseUrl(publicConfig.fastapiUrl, serverConfig?.fastapiUrl, "/api/fastapi"),
   onRequest: withFastApiProxyAuth,
   timeout: 150000, // 150s timeout for ML calls
   next: { revalidate: 0 },
 });
 
 export const fastapiGraphql = new GraphQLClient({
-  baseUrl: resolveFastApiBaseUrl(publicConfig.fastapiGraphqlUrl, "/api/fastapi/graphql"),
+  baseUrl: resolveFastApiBaseUrl(
+    publicConfig.fastapiGraphqlUrl,
+    serverConfig?.fastapiGraphqlUrl,
+    "/api/fastapi/graphql",
+  ),
   onRequest: withFastApiProxyAuth,
 });

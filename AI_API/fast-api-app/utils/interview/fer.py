@@ -1,4 +1,3 @@
-import cv2
 from fastapi import HTTPException
 
 DeepFace = None
@@ -20,6 +19,8 @@ def _get_deepface():
     return DeepFace
 
 def extract_frames_per_second(video_path: str, target_fps: int = 2):
+    import cv2
+
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
         raise RuntimeError("Cannot open video")

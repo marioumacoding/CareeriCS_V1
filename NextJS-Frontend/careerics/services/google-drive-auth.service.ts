@@ -1,102 +1,291 @@
 "use client";
 
+import { createClient } from "@supabase/supabase-js";
 import {
   clearStoredGoogleDriveAccessToken,
   getStoredGoogleDriveAccessToken,
   persistGoogleDriveAccessToken,
 } from "@/lib/auth/google-drive-token";
+import {
+  GOOGLE_DRIVE_AUTH_COMPLETED_MESSAGE,
+  GOOGLE_DRIVE_AUTH_RESULT_STORAGE_KEY,
+  type GoogleDriveAuthResultMessage,
+} from "@/lib/auth/google-drive-signin";
 
-const GOOGLE_IDENTITY_SCRIPT_SRC = "https://accounts.google.com/gsi/client";
-const GOOGLE_DRIVE_FILE_SCOPE = "https://www.googleapis.com/auth/drive.file";
+const GOOGLE_DRIVE_AUTH_TIMEOUT_MS = 120_000;
+const GOOGLE_DRIVE_RESULT_POLL_MS = 400;
+const GOOGLE_DRIVE_POPUP_NAME = "careerics-google-drive-auth";
 
-type GoogleTokenResponse = {
-  access_token?: string;
-  expires_in?: number;
-  error?: string;
-  error_description?: string;
-};
+const GOOGLE_DRIVE_AUTH_LOADING_HTML = `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Opening Google sign-in...</title>
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        background: #0f172a;
+        color: white;
+        font-family: Arial, sans-serif;
+      }
 
-type GoogleTokenClient = {
-  requestAccessToken: (overrideConfig?: { prompt?: string }) => void;
-};
+      main {
+        width: min(420px, calc(100vw - 48px));
+        padding: 28px 24px;
+        border-radius: 18px;
+        background: rgba(15, 23, 42, 0.88);
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        text-align: center;
+        box-shadow: 0 18px 44px rgba(15, 23, 42, 0.36);
+      }
 
-type GoogleIdentityServices = {
-  accounts?: {
-    oauth2?: {
-      initTokenClient: (config: {
-        client_id: string;
-        scope: string;
-        prompt?: string;
-        callback: (response: GoogleTokenResponse) => void;
-      }) => GoogleTokenClient;
-    };
-  };
-};
+      .spinner {
+        width: 40px;
+        height: 40px;
+        margin: 0 auto 18px;
+        border: 4px solid rgba(255, 255, 255, 0.14);
+        border-top-color: #bfff4f;
+        border-radius: 999px;
+        animation: spin 0.8s linear infinite;
+      }
 
-declare global {
-  interface Window {
-    google?: GoogleIdentityServices;
-  }
-}
+      h1 {
+        margin: 0 0 10px;
+        font-size: 21px;
+      }
 
-let googleIdentityScriptPromise: Promise<void> | null = null;
+      p {
+        margin: 0;
+        line-height: 1.6;
+        color: rgba(226, 232, 240, 0.88);
+        font-size: 14px;
+      }
 
-function getGoogleClientId(): string {
-  const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID?.trim();
-  if (!clientId) {
-    const isLocalhost =
-      typeof window !== "undefined" &&
-      (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
-    const setupHint = isLocalhost
-      ? "Add NEXT_PUBLIC_GOOGLE_CLIENT_ID to NextJS-Frontend/careerics/.env.local and authorize http://localhost:3000 in Google Cloud."
-      : "Add NEXT_PUBLIC_GOOGLE_CLIENT_ID in Vercel and authorize this site in Google Cloud.";
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="spinner" aria-hidden="true"></div>
+      <h1>Opening Google sign-in...</h1>
+      <p>Please wait while we request Google Drive access.</p>
+    </main>
+  </body>
+</html>`;
 
+function getSupabaseConfig() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
+
+  if (!supabaseUrl || !supabaseAnonKey) {
     throw new Error(
-      `Google Drive is not configured yet. ${setupHint}`,
+      "Google Drive is not configured yet. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to NextJS-Frontend/careerics/.env.local.",
     );
   }
 
-  return clientId;
+  return {
+    supabaseUrl,
+    supabaseAnonKey,
+  };
 }
 
-function loadGoogleIdentityScript(): Promise<void> {
-  if (window.google?.accounts?.oauth2) {
-    return Promise.resolve();
-  }
+function createGoogleDrivePopupClient() {
+  const { supabaseUrl, supabaseAnonKey } = getSupabaseConfig();
 
-  if (googleIdentityScriptPromise) {
-    return googleIdentityScriptPromise;
-  }
+  return createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+    },
+  });
+}
 
-  googleIdentityScriptPromise = new Promise((resolve, reject) => {
-    const existingScript = document.querySelector<HTMLScriptElement>(
-      `script[src="${GOOGLE_IDENTITY_SCRIPT_SRC}"]`,
-    );
+async function buildGoogleDriveOAuthUrl(forceConsent = false): Promise<string> {
+  const redirectTo = new URL(`${window.location.origin}/auth/callback`);
+  redirectTo.searchParams.set("popup", "1");
+  redirectTo.searchParams.set("driveAuth", "1");
 
-    if (existingScript) {
-      existingScript.addEventListener("load", () => resolve(), { once: true });
-      existingScript.addEventListener("error", () => reject(new Error("Google sign-in could not load.")), { once: true });
-      return;
-    }
-
-    const script = document.createElement("script");
-    script.src = GOOGLE_IDENTITY_SCRIPT_SRC;
-    script.async = true;
-    script.defer = true;
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error("Google sign-in could not load."));
-    document.head.appendChild(script);
+  const popupClient = createGoogleDrivePopupClient();
+  const { data, error } = await popupClient.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo: redirectTo.toString(),
+      scopes: "openid email profile https://www.googleapis.com/auth/drive.file",
+      queryParams: {
+        access_type: "offline",
+        include_granted_scopes: "true",
+        prompt: forceConsent ? "consent" : "consent",
+      },
+      skipBrowserRedirect: true,
+    },
   });
 
-  return googleIdentityScriptPromise;
-}
-
-function formatGoogleTokenError(response: GoogleTokenResponse): string {
-  if (response.error === "popup_closed") {
-    return "Google Drive sign-in was closed before permission was granted.";
+  if (error) {
+    throw error;
   }
 
-  return response.error_description || response.error || "Google Drive permission was not granted.";
+  if (!data.url) {
+    throw new Error("Google sign-in could not be started. Please try again.");
+  }
+
+  return data.url;
+}
+
+function readStoredDriveAuthResult(): GoogleDriveAuthResultMessage | null {
+  try {
+    const rawValue = window.localStorage.getItem(GOOGLE_DRIVE_AUTH_RESULT_STORAGE_KEY);
+    if (!rawValue) {
+      return null;
+    }
+
+    const parsed = JSON.parse(rawValue) as Partial<GoogleDriveAuthResultMessage>;
+    if (
+      parsed.type !== GOOGLE_DRIVE_AUTH_COMPLETED_MESSAGE ||
+      typeof parsed.success !== "boolean" ||
+      typeof parsed.timestamp !== "number"
+    ) {
+      return null;
+    }
+
+    return {
+      type: GOOGLE_DRIVE_AUTH_COMPLETED_MESSAGE,
+      success: parsed.success,
+      error: typeof parsed.error === "string" ? parsed.error : undefined,
+      accessToken: typeof parsed.accessToken === "string" ? parsed.accessToken : undefined,
+      timestamp: parsed.timestamp,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function clearStoredDriveAuthResult(): void {
+  try {
+    window.localStorage.removeItem(GOOGLE_DRIVE_AUTH_RESULT_STORAGE_KEY);
+  } catch {
+    // Ignore storage cleanup failures.
+  }
+}
+
+function openGoogleDriveAuthPopup(): Window | null {
+  const popupWindow = window.open("", GOOGLE_DRIVE_POPUP_NAME, "width=520,height=720");
+  if (!popupWindow) {
+    return null;
+  }
+
+  try {
+    popupWindow.document.open();
+    popupWindow.document.write(GOOGLE_DRIVE_AUTH_LOADING_HTML);
+    popupWindow.document.close();
+  } catch {
+    // Ignore document write failures and continue with popup navigation.
+  }
+
+  return popupWindow;
+}
+
+function waitForGoogleDrivePopupResult(
+  popupWindow: Window | null,
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    let finished = false;
+    let timeoutId: number | null = null;
+    let pollIntervalId: number | null = null;
+
+    const cleanup = () => {
+      window.removeEventListener("message", handleMessage);
+
+      if (timeoutId !== null) {
+        window.clearTimeout(timeoutId);
+      }
+
+      if (pollIntervalId !== null) {
+        window.clearInterval(pollIntervalId);
+      }
+
+      clearStoredDriveAuthResult();
+    };
+
+    const finishError = (message: string) => {
+      if (finished) {
+        return;
+      }
+
+      finished = true;
+      cleanup();
+      reject(new Error(message));
+    };
+
+    const finishSuccess = (accessToken: string | undefined) => {
+      if (finished) {
+        return;
+      }
+
+      if (!accessToken) {
+        finishError("Google Drive permission was granted, but no Drive token was returned. Please try again.");
+        return;
+      }
+
+      finished = true;
+      cleanup();
+      persistGoogleDriveAccessToken({
+        accessToken,
+      });
+      resolve(accessToken);
+    };
+
+    const handleAuthResult = (result: GoogleDriveAuthResultMessage | null) => {
+      if (!result) {
+        return;
+      }
+
+      if (result.success) {
+        finishSuccess(result.accessToken);
+        return;
+      }
+
+      finishError(result.error || "Google Drive permission was not granted.");
+    };
+
+    const handleMessage = (event: MessageEvent<GoogleDriveAuthResultMessage>) => {
+      if (event.origin !== window.location.origin) {
+        return;
+      }
+
+      if (event.data?.type !== GOOGLE_DRIVE_AUTH_COMPLETED_MESSAGE) {
+        return;
+      }
+
+      handleAuthResult(event.data);
+    };
+
+    window.addEventListener("message", handleMessage);
+
+    timeoutId = window.setTimeout(() => {
+      finishError("Google Drive sign-in timed out. Please try again.");
+    }, GOOGLE_DRIVE_AUTH_TIMEOUT_MS);
+
+    pollIntervalId = window.setInterval(() => {
+      handleAuthResult(readStoredDriveAuthResult());
+
+      if (finished) {
+        return;
+      }
+
+      if (popupWindow && popupWindow.closed) {
+        finishError("Google Drive sign-in was closed before permission was granted.");
+      }
+    }, GOOGLE_DRIVE_RESULT_POLL_MS);
+  });
 }
 
 export const googleDriveAuthService = {
@@ -108,42 +297,37 @@ export const googleDriveAuthService = {
     clearStoredGoogleDriveAccessToken();
   },
 
-  async requestAccessToken(options?: { forceConsent?: boolean }): Promise<string> {
+  preload(): Promise<void> {
+    return Promise.resolve();
+  },
+
+  async requestAccessToken(options?: { forceConsent?: boolean; popupWindow?: Window | null }): Promise<string> {
     const existingToken = getStoredGoogleDriveAccessToken();
     if (existingToken && !options?.forceConsent) {
       return existingToken;
     }
 
     clearStoredGoogleDriveAccessToken();
-    const clientId = getGoogleClientId();
-    await loadGoogleIdentityScript();
+    clearStoredDriveAuthResult();
 
-    if (!window.google?.accounts?.oauth2) {
-      throw new Error("Google sign-in is not available. Please try again.");
+    const popupWindow =
+      options?.popupWindow && !options.popupWindow.closed
+        ? options.popupWindow
+        : openGoogleDriveAuthPopup();
+    if (!popupWindow) {
+      throw new Error("Google sign-in popup was blocked. Allow popups for this site and click Save to Google Drive again.");
     }
 
-    return new Promise((resolve, reject) => {
-      const tokenClient = window.google?.accounts?.oauth2?.initTokenClient({
-        client_id: clientId,
-        scope: GOOGLE_DRIVE_FILE_SCOPE,
-        prompt: options?.forceConsent ? "consent" : "",
-        callback: (response) => {
-          if (!response.access_token) {
-            reject(new Error(formatGoogleTokenError(response)));
-            return;
-          }
+    try {
+      const oauthUrl = await buildGoogleDriveOAuthUrl(options?.forceConsent);
+      popupWindow.location.replace(oauthUrl);
+    } catch (error) {
+      popupWindow.close();
+      throw error;
+    }
 
-          persistGoogleDriveAccessToken({
-            accessToken: response.access_token,
-            expiresInSeconds: response.expires_in,
-          });
-          resolve(response.access_token);
-        },
-      });
+    const accessToken = await waitForGoogleDrivePopupResult(popupWindow);
 
-      tokenClient?.requestAccessToken({
-        prompt: options?.forceConsent ? "consent" : "",
-      });
-    });
+    return accessToken;
   },
 } as const;

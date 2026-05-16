@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { GoogleDriveUploadedFile } from "@/types";
 import { googleDriveAuthService } from "@/services/google-drive-auth.service";
 import {
@@ -11,6 +11,10 @@ import {
 type UploadGeneratedFileOptions = {
   fileName: string;
   mimeType?: string;
+};
+
+type EnsureGoogleDriveAccessOptions = {
+  forceConsent?: boolean;
   popupWindow?: Window | null;
 };
 
@@ -18,6 +22,7 @@ type UseGoogleDriveUploadResult = {
   isUploading: boolean;
   uploadError: string | null;
   uploadedFile: GoogleDriveUploadedFile | null;
+  ensureGoogleDriveAccess: (options?: EnsureGoogleDriveAccessOptions) => Promise<boolean>;
   resetUploadState: () => void;
   uploadToGoogleDrive: (
     file: Blob | null,
@@ -37,8 +42,11 @@ function isRecoverableGoogleAuthError(error: unknown): boolean {
   );
 }
 
-async function requestGoogleDriveSignIn(forceConsent = false): Promise<void> {
-  await googleDriveAuthService.requestAccessToken({ forceConsent });
+async function requestGoogleDriveSignIn(options?: EnsureGoogleDriveAccessOptions): Promise<void> {
+  await googleDriveAuthService.requestAccessToken({
+    forceConsent: options?.forceConsent,
+    popupWindow: options?.popupWindow,
+  });
 }
 
 export function useGoogleDriveUpload(): UseGoogleDriveUploadResult {
@@ -50,6 +58,35 @@ export function useGoogleDriveUpload(): UseGoogleDriveUploadResult {
     setIsUploading(false);
     setUploadError(null);
     setUploadedFile(null);
+  }, []);
+
+  useEffect(() => {
+    void googleDriveAuthService.preload().catch(() => undefined);
+  }, []);
+
+  const ensureGoogleDriveAccess = useCallback(async (options?: EnsureGoogleDriveAccessOptions): Promise<boolean> => {
+    const forceConsent = options?.forceConsent ?? false;
+    const authStatus = googleDriveService.getGoogleDriveAuthStatus();
+    if (authStatus === "ready" && !forceConsent) {
+      return true;
+    }
+
+    setUploadError(null);
+
+    try {
+      await requestGoogleDriveSignIn({
+        forceConsent,
+        popupWindow: options?.popupWindow,
+      });
+      return true;
+    } catch (error) {
+      setUploadError(
+        error instanceof Error
+          ? error.message
+          : "Google Drive permission was not granted.",
+      );
+      return false;
+    }
   }, []);
 
   const uploadToGoogleDrive = useCallback(async (
@@ -64,9 +101,12 @@ export function useGoogleDriveUpload(): UseGoogleDriveUploadResult {
     setUploadError(null);
 
     try {
-      const authStatus = await googleDriveService.getGoogleDriveAuthStatus();
+      const authStatus = googleDriveService.getGoogleDriveAuthStatus();
       if (authStatus !== "ready") {
-        await requestGoogleDriveSignIn();
+        const hasAccess = await ensureGoogleDriveAccess();
+        if (!hasAccess) {
+          return null;
+        }
       }
 
       const upload = () =>
@@ -84,8 +124,11 @@ export function useGoogleDriveUpload(): UseGoogleDriveUploadResult {
           throw uploadError;
         }
 
-        await requestGoogleDriveSignIn(true);
-        uploaded = await upload();
+        googleDriveAuthService.clearAccessToken();
+        throw new GoogleDriveUploadError(
+          "GOOGLE_DRIVE_TOKEN_EXPIRED",
+          "Google Drive access needs to be refreshed. Please click Save to Google Drive again.",
+        );
       }
 
       setUploadedFile(uploaded);
@@ -107,6 +150,7 @@ export function useGoogleDriveUpload(): UseGoogleDriveUploadResult {
     isUploading,
     uploadError,
     uploadedFile,
+    ensureGoogleDriveAccess,
     resetUploadState,
     uploadToGoogleDrive,
   };

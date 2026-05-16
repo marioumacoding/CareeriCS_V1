@@ -15,6 +15,7 @@ export type GoogleDriveAuthResultMessage = {
   type: typeof GOOGLE_DRIVE_AUTH_COMPLETED_MESSAGE;
   success: boolean;
   error?: string;
+  accessToken?: string;
   timestamp: number;
 };
 

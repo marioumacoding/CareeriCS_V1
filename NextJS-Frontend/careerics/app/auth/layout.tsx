@@ -263,7 +263,7 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
           }}
         >
           <img
-            src="/landing/Robot.svg"
+            src="/landing/robot.svg"
             alt="Our Robot"
             style={{ width: "100%", display: "block" }}
           />

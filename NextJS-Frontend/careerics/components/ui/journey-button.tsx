@@ -18,7 +18,7 @@ export default function JourneyButton({
   style = {} as React.CSSProperties,
 }) {
   const isSA = variant === "sA";
-  const icon = isSA ? "/sidebar/Skill.svg" : "/courses/course-icon.svg";
+  const icon = isSA ? "/sidebar/skill.svg" : "/courses/course-icon.svg";
   const displayIcon = normalizeBackendAssetUrl(icon);
 
   return (

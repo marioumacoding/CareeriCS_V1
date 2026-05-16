@@ -382,7 +382,7 @@ export default function LandingPage() {
         >
           {/* Landing Robot */}
           <img
-            src="/landing/Robot.svg"
+            src="/landing/robot.svg"
             alt="Our Robot"
             style={{
               marginTop: "auto",
@@ -602,7 +602,7 @@ export default function LandingPage() {
           }}
         >
           <img
-            src="/landing/Journey.svg"
+            src="/landing/journey.svg"
             alt="Career Journey Roadmap"
             style={{ width: "100%", height: "auto" }}
           />

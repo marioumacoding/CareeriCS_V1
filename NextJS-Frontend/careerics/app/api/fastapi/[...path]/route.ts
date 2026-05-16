@@ -95,8 +95,12 @@ const HOP_BY_HOP_HEADERS = new Set([
 function getFastApiBaseUrl(): string {
   const configured = process.env.FASTAPI_URL?.trim();
   if (!configured) {
-    console.error("[fastapi-proxy] FASTAPI_URL is missing in environment variables");
-    throw new Error("FASTAPI_URL is missing in environment variables");
+    if (process.env.VERCEL === "1") {
+      console.error("[fastapi-proxy] FASTAPI_URL is missing in environment variables");
+      throw new Error("FASTAPI_URL is missing in environment variables");
+    }
+
+    return "http://127.0.0.1:8000";
   }
 
   const normalized = configured.replace(/\/+$/, "");
@@ -105,7 +109,7 @@ function getFastApiBaseUrl(): string {
     const parsed = new URL(normalized);
     const isLocalHost = parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1";
 
-    if (!isDevelopment && isLocalHost) {
+    if (process.env.VERCEL === "1" && isLocalHost) {
       console.error("[fastapi-proxy] FASTAPI_URL points to localhost in production", {
         fastapiUrl: normalized,
       });

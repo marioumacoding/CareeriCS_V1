@@ -40,6 +40,7 @@ export function createCareerUnifiedBookmark(options: {
   description?: string | null;
   score?: number | null;
   savedAt?: string;
+  roadmapId?: string | null;
 }): UnifiedBookmarkDraft {
   const {
     trackId,
@@ -47,6 +48,7 @@ export function createCareerUnifiedBookmark(options: {
     description = null,
     score = null,
     savedAt,
+    roadmapId = null,
   } = options;
 
   return {
@@ -61,6 +63,7 @@ export function createCareerUnifiedBookmark(options: {
       trackName: title,
     }),
     metadata: {
+      roadmap_id: roadmapId,
       track_id: trackId,
       track_name: title,
       source: "career_quiz",

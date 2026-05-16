@@ -17,7 +17,11 @@ from schemas import (
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_IMPORT_BASE = Path(__file__).resolve().parents[5] / "developer-roadmap" / "roadmaps-structuerd"
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve()
+
+DEFAULT_IMPORT_BASE = BASE_DIR.parents[2] / "developer-roadmap" / "roadmaps-structuerd"
 
 
 def _import_base_dir() -> Path:

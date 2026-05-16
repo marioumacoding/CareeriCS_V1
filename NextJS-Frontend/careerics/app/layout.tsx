@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
-import Script from "next/script";
 import { Jura, Nova_Square } from "next/font/google";
+import { AppReadyProvider } from "@/components/AppReadyProvider";
 import { Providers } from "@/providers";
 import "../styles/globals.scss";
 import "../styles/variables.css";
-import { AppReadyProvider } from "@/components/AppReadyProvider";
 
 const jura = Jura({
   subsets: ["latin"],
@@ -22,7 +21,7 @@ export const metadata: Metadata = {
     default: "CareeriCS",
     template: "%s | CareeriCS",
   },
-  description: "CareeriCS — your career in computer science starts here.",
+  description: "CareeriCS - your career in computer science starts here.",
 };
 
 export default function RootLayout({
@@ -36,11 +35,8 @@ export default function RootLayout({
         className={`${jura.variable} ${novaSquare.variable} antialiased`}
         style={{ backgroundColor: "var(--bg-color)" }}
       >
-        <Script src="https://accounts.google.com/gsi/client" strategy="afterInteractive" />
         <AppReadyProvider>
-          <Providers>
-            {children}
-          </Providers>
+          <Providers>{children}</Providers>
         </AppReadyProvider>
       </body>
     </html>

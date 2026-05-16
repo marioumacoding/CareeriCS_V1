@@ -1,9 +1,6 @@
 "use client";
 
-import Script from "next/script";
 import CV from "@/components/ui/cv";
-
-const GOOGLE_IDENTITY_SCRIPT_SRC = "https://accounts.google.com/gsi/client";
 
 export default function Page() {
   return (
@@ -22,7 +19,6 @@ export default function Page() {
         zIndex: 100,
       }}
     >
-      <Script src={GOOGLE_IDENTITY_SCRIPT_SRC} strategy="afterInteractive" />
       <CV />
     </div>
   );

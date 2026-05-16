@@ -4,6 +4,12 @@ import { useRouter } from "next/navigation";
 import InterviewLayout from "@/components/ui/interview";
 import InterviewContainer from "@/components/ui/interview-card";
 import { useGoogleDriveUpload, useInterviewFlow } from "@/hooks";
+import {
+  closeGoogleDriveWindow,
+  navigateGoogleDriveWindow,
+  openGoogleDriveLoadingWindow,
+  renderGoogleDriveLoadingWindow,
+} from "@/lib/google-drive-popup";
 import { interviewService } from "@/services/interview.service";
 import { reportsService } from "@/services/reports.service";
 
@@ -25,6 +31,7 @@ export default function LastAnalysisPage() {
     isUploading: isSavingToDrive,
     uploadError: driveUploadError,
     uploadedFile: uploadedDriveFile,
+    ensureGoogleDriveAccess,
     resetUploadState,
     uploadToGoogleDrive,
   } = useGoogleDriveUpload();
@@ -143,24 +150,28 @@ export default function LastAnalysisPage() {
       return;
     }
 
-    const driveTab = window.open("", "_blank");
+    const driveTab = openGoogleDriveLoadingWindow();
+    const hasDriveAccess = await ensureGoogleDriveAccess({
+      popupWindow: driveTab,
+    });
+    if (!hasDriveAccess) {
+      closeGoogleDriveWindow(driveTab);
+      return;
+    }
+
+    renderGoogleDriveLoadingWindow(driveTab);
     const uploaded = await uploadToGoogleDrive(downloadBlob, {
       fileName: downloadName,
       mimeType: downloadBlob?.type || "application/pdf",
-      popupWindow: driveTab,
     });
 
     const nextDriveLink = uploaded?.webViewLink ?? uploaded?.webContentLink ?? null;
     if (nextDriveLink) {
-      if (driveTab && !driveTab.closed) {
-        driveTab.location.href = nextDriveLink;
-      } else {
-        window.open(nextDriveLink, "_blank", "noopener,noreferrer");
-      }
+      navigateGoogleDriveWindow(driveTab, nextDriveLink);
       return;
     }
 
-    driveTab?.close();
+    closeGoogleDriveWindow(driveTab);
   };
 
   if (isPreparing) {

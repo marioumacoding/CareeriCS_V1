@@ -1,8 +1,11 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useRef,ReactNode } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { CircleScore } from "../circle-score";
+import { useEffect, useState } from "react";
+import { useResponsive } from "@/hooks/useResponsive";
 
 type ActivityItem = {
   id: string;
@@ -12,71 +15,6 @@ type ActivityItem = {
   downloadUrl?: string | null;
 };
 
-const CircleScoreSVG = ({
-  score,
-  size = 30,
-}: {
-  score: number;
-  size?: number;
-}) => {
-  const radius = size / 2 - 3;
-  const circumference = 2 * Math.PI * radius;
-  const offset = circumference - (score / 100) * circumference;
-
-  return (
-    <div
-      style={{
-        position: "relative",
-        width: `${size + 10}px`,
-        height: `${size + 10}px`,
-        backgroundColor: "var(--medium-blue)",
-        borderRadius: "10px",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        flexShrink: 0,
-      }}
-    >
-      <svg
-        width={size}
-        height={size}
-        style={{ transform: "rotate(-90deg)" }}
-      >
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          stroke="rgba(212, 255, 71, 0.1)"
-          strokeWidth="2.5"
-        />
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          stroke="#d4ff47"
-          strokeWidth="2.5"
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-          strokeLinecap="round"
-          style={{ transition: "stroke-dashoffset 0.5s ease" }}
-        />
-      </svg>
-
-      <span
-        style={{
-          position: "absolute",
-          color: "white",
-          fontSize: "8px",
-          fontFamily: "var(--font-nova-square)",
-        }}
-      >
-        {score}%
-      </span>
-    </div>
-  );
-};
 
 export const RecentActivityCard = ({
   activities,
@@ -89,79 +27,14 @@ export const RecentActivityCard = ({
 }) => {
   const router = useRouter();
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [canScrollUp, setCanScrollUp] = useState(false);
-  const [canScrollDown, setCanScrollDown] = useState(false);
-
-  const updateScrollState = () => {
-    const element = scrollRef.current;
-    if (!element || isLoading) {
-      setCanScrollUp(false);
-      setCanScrollDown(false);
-      return;
-    }
-
-    const hasScrollableContent = element.scrollHeight > element.clientHeight + 1;
-    if (!hasScrollableContent) {
-      setCanScrollUp(false);
-      setCanScrollDown(false);
-      return;
-    }
-
-    setCanScrollUp(element.scrollTop > 0);
-    setCanScrollDown(element.scrollTop + element.clientHeight < element.scrollHeight - 1);
-  };
-
-  useEffect(() => {
-    const element = scrollRef.current;
-    if (!element) {
-      setCanScrollUp(false);
-      setCanScrollDown(false);
-      return;
-    }
-
-    const handleScrollStateUpdate = () => {
-      updateScrollState();
-    };
-
-    updateScrollState();
-    element.addEventListener("scroll", handleScrollStateUpdate);
-    window.addEventListener("resize", handleScrollStateUpdate);
-
-    const frameId = requestAnimationFrame(() => {
-      updateScrollState();
-    });
-
-    return () => {
-      cancelAnimationFrame(frameId);
-      element.removeEventListener("scroll", handleScrollStateUpdate);
-      window.removeEventListener("resize", handleScrollStateUpdate);
-    };
-  }, [activities, isLoading]);
+  
 
   const scrollDown = () => {
-    if (!canScrollDown) {
-      return;
-    }
-
-    if (scrollRef.current) {
-      scrollRef.current.scrollBy({
-        top: 100,
-        behavior: "smooth",
-      });
-    }
+    scrollRef.current?.scrollBy({ top: 100, behavior: "smooth" });
   };
 
   const scrollUp = () => {
-    if (!canScrollUp) {
-      return;
-    }
-
-    if (scrollRef.current) {
-      scrollRef.current.scrollBy({
-        top: -100,
-        behavior: "smooth",
-      });
-    }
+    scrollRef.current?.scrollBy({ top: -100, behavior: "smooth" });
   };
 
   const handleDownload = (downloadUrl?: string | null) => {
@@ -174,94 +47,106 @@ export const RecentActivityCard = ({
     link.click();
   };
 
+  const [canScrollUp, setCanScrollUp] = React.useState(false);
+  const [canScrollDown, setCanScrollDown] = React.useState(true);
+
+  const updateScrollState = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+
+    const { scrollTop, scrollHeight, clientHeight } = el;
+
+    setCanScrollUp(scrollTop > 0);
+    setCanScrollDown(scrollTop + clientHeight < scrollHeight - 1);
+  };
+
+
+  React.useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+
+    updateScrollState();
+
+    el.addEventListener("scroll", updateScrollState);
+    return () => el.removeEventListener("scroll", updateScrollState);
+  }, [activities]);
+
+  const { isLarge, isMedium, isSmall, width } = useResponsive();
+
   return (
     <div
       style={{
         backgroundColor: "var(--dark-blue)",
-        borderRadius: "3vh",
+        borderRadius: "var(--radius-xl)",
         color: "white",
         display: "flex",
         flexDirection: "column",
         height: "100%",
         boxSizing: "border-box",
-        paddingTop: "3vh",
-        paddingBottom: "1vh",
-        paddingInline: "5vh",
+        padding: isLarge?"var(--space-md)":"var(--space-lg)",
+        gap: isLarge?"var(--space-md)":"var(--space-lg)",
         fontFamily: "var(--font-nova-square)",
         ...style,
       }}
     >
+      {/* title */}
       <h3
         style={{
-          fontSize: "18px",
+          fontSize: "var(--text-md)",
           textAlign: "center",
-          marginBottom: "2vh",
         }}
       >
         Recent Activity
       </h3>
 
+      {/* scroll area */}
       <div
         ref={scrollRef}
         style={{
           display: "flex",
           flexDirection: "column",
-          gap: "1.5vh",
+          gap: "var(--space-md)",
           overflowY: "auto",
           scrollbarWidth: "none",
           scrollBehavior: "smooth",
         }}
       >
-        {isLoading ? (
+        {/* activities */}
+        {activities.map((act, i) => (
           <div
+            key={i}
+            onClick={() => {
+              if (act.href) {
+                router.push(act.href);
+              }
+            }}
             style={{
-              color: "#D7E3FF",
-              fontFamily: "var(--font-jura)",
-              fontSize: "0.95rem",
-              textAlign: "center",
-              paddingBlock: "1.2vh",
+              backgroundColor: "#c1cbe6",
+              borderRadius: "var(--radius-md)",
+              padding: "var(--space-xxs)",
+              color: "black",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexShrink: 0,
+              cursor: act.href ? "pointer" : "default",
             }}
           >
-            Loading recent activity...
-          </div>
-        ) : null}
-
-        {!isLoading ? activities.map((act, i) => {
-          const activityId = String(act.id ?? "").trim().toLowerCase();
-          const isFeedbackItem =
-            activityId === "feedback" || activityId.includes("feedback");
-
-          return (
-            <div
-              key={i}
-              onClick={() => {
-                if (act.href) {
-                  router.push(act.href);
-                }
-              }}
-              style={{
-                backgroundColor: isFeedbackItem ? "transparent" : "#c1cbe6",
-                borderRadius: "12px",
-                padding: "1.5vh",
-                color: isFeedbackItem ? "white" : "black",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                flexShrink: 0,
-                cursor: act.href ? "pointer" : "default",
-              }}
-            >
+            {/* activity */}
             <div>
-              <div style={{ fontWeight: "bold", fontSize: "12px" }}>
+              <div style={{ fontWeight: "bold", fontSize: "var(--text-sm)" }}>
                 {act.id}
               </div>
-              <div style={{ fontSize: "10px" }}>
+
+              {isLarge &&
+                <div style={{ fontSize: "var(--text-xs)" }}>
                 {act.date || `On ${act.id}`}
               </div>
+              }
             </div>
 
             {act.score !== undefined ? (
-              <CircleScoreSVG score={act.score} size={30} />
+              <CircleScore score={act.score} />
             ) : act.downloadUrl ? (
               <button
                 type="button"
@@ -271,8 +156,8 @@ export const RecentActivityCard = ({
                 }}
                 style={{
                   position: "relative",
-                  width: "20px",
-                  height: "20px",
+                  width: "var(--icon-2xl)",
+                  height: "var(--icon-2xl)",
                   cursor: "pointer",
                   background: "transparent",
                   border: "none",
@@ -286,12 +171,14 @@ export const RecentActivityCard = ({
                   style={{ objectFit: "contain" }}
                 />
               </button>
+
+
             ) : act.href ? (
               <div
                 style={{
                   position: "relative",
-                  width: "20px",
-                  height: "20px",
+                  width: "var(--icon-2xl)",
+                  height: "var(--icon-2xl)",
                 }}
               >
                 <Image
@@ -303,57 +190,73 @@ export const RecentActivityCard = ({
               </div>
             ) : null}
             </div>
-          );
-        }) : null}
+          ))}
       </div>
 
       <div
-        style={{
-          display: "flex",
-          width: "fit-content",
-          marginLeft: "auto",
-          marginTop: "auto",
-        }}
-      >
-        <div
-          onClick={scrollUp}
-          style={{
-            cursor: canScrollUp ? "pointer" : "not-allowed",
-            transform: "rotate(-270deg)",
-            marginRight: "auto",
-            opacity: canScrollUp ? 1 : 0.3,
-            pointerEvents: canScrollUp ? "auto" : "none",
-            transition: "opacity 0.2s ease",
-          }}
-        >
-          <Image
-            src="/auth/Back Arrow.svg"
-            alt="Scroll"
-            width={30}
-            height={30}
-          />
-        </div>
-
-        <div
-          onClick={scrollDown}
-          style={{
+        style={
+          {
             display: "flex",
+            flexDirection: "row",
+            userSelect: "none",
+            width: "fit-content",
+            marginLeft: "auto",
+            marginTop: "auto",
+            height: "fit-content",
             justifyContent: "center",
-            cursor: canScrollDown ? "pointer" : "not-allowed",
-            transform: "rotate(270deg)",
-            opacity: canScrollDown ? 1 : 0.3,
-            pointerEvents: canScrollDown ? "auto" : "none",
-            transition: "opacity 0.2s ease",
-          }}
-        >
-          <Image
-            src="/auth/Back Arrow.svg"
-            alt="Scroll"
-            width={30}
-            height={30}
-          />
-        </div>
+            gap: "var(--space-md)",
+          }
+        }
+      >
+        <Arrow
+          direction="prev"
+          onClick={scrollUp}
+          disabled={!canScrollUp}
+        />
+
+        <Arrow
+          direction="next"
+          onClick={scrollDown}
+          disabled={!canScrollDown}
+        />
       </div>
+    </div>
+  );
+};
+
+
+const Arrow = ({
+  direction,
+  onClick,
+  disabled,
+}: {
+  direction: "prev" | "next";
+  onClick: () => void;
+  disabled?: boolean;
+}) => {
+  const rotation =
+    direction === "prev"
+      ? "rotate(-90deg)"
+      : "rotate(90deg)";
+
+  return (
+    <div
+      onClick={!disabled ? onClick : undefined}
+      style={{
+        fontSize: "var(--icon-xs)",
+        fontFamily: "var(--font-jura)",
+        transform: rotation,
+        opacity: disabled ? 0.3 : 1,
+        cursor: disabled
+          ? "not-allowed"
+          : "pointer",
+        pointerEvents: disabled
+          ? "none"
+          : "auto",
+        transition: "0.2s ease",
+      }}
+    >
+      ❯
     </div>
   );
 };

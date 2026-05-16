@@ -1,11 +1,34 @@
-import React from "react";
+"use client";
+import React, { ReactNode } from "react";
+import { useEffect, useState } from "react";
+
 
 type CircleScoreProps = {
     score: number;
 };
 
 export const CircleScore = ({ score }: CircleScoreProps) => {
-    const radius = 20;
+
+    const LARGE = 1024;
+    const MEDIUM = 640;
+
+    const [width, setWidth] = useState(0);
+
+    useEffect(() => {
+        const handleResize = () => setWidth(window.innerWidth);
+
+        handleResize();
+
+        window.addEventListener("resize", handleResize);
+
+        return () => window.removeEventListener("resize", handleResize);
+    }, []);
+
+    const isLarge = width >= LARGE;
+    const isMedium = width >= MEDIUM && width < LARGE;
+    const isSmall = width < MEDIUM;
+
+    const radius = isLarge?18:15;
     const circumference = 2 * Math.PI * radius;
     const offset = circumference - (score / 100) * circumference;
 
@@ -21,8 +44,8 @@ export const CircleScore = ({ score }: CircleScoreProps) => {
         <div
             style={{
                 position: "relative",
-                width: "55px",
-                height: "55px",
+                width: "var(--icon-2xl)",
+                height: "var(--icon-2xl)",
                 backgroundColor: "#1A2E5A",
                 borderRadius: "12px",
                 display: "flex",
@@ -61,7 +84,7 @@ export const CircleScore = ({ score }: CircleScoreProps) => {
                 style={{
                     position: "absolute",
                     color: "white",
-                    fontSize: "11px",
+                    fontSize: isLarge?"var(--text-xs)":"var(--text-xxs)",
                     fontFamily: "var(--font-nova-square)",
                 }}
             >

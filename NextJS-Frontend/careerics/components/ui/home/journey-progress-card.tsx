@@ -1,55 +1,61 @@
-export const JourneyProgressCard = ({ percentage = 0, isLoading = false, style }: any) => {
+import React, { ReactNode } from "react";
+import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useResponsive } from "@/hooks/useResponsive";
 
+
+export const JourneyProgressCard = ({ percentage = 10, style }: any) => {
+
+  const { isLarge, isMedium, isSmall, width } = useResponsive();
 
   return (
     <div
       style={{
         backgroundColor: "var(--dark-blue)",
-        borderRadius: " 3vh",
-        paddingTop: "3vh",
         color: "white",
-        alignContent: "center",
-        justifyItems: "center",
-        ...style,
         overflow: "hidden",
         display: "flex",
         flexDirection: "column",
+        justifyContent: "flex-start",
         alignItems: "center",
+        borderRadius: "var(--radius-lg)",
+        padding: isLarge?"var(--space-md)":"var(--space-lg)",
+        gap: "var(--space-md)",
+        ...style,
       }}
     >
       <h3
         style={{
-          fontSize: "1.1rem",
-          marginBottom: "1vh",
+          fontSize: "var(--text-md)",
           fontFamily: "var(--font-nova-square)",
         }}
       >
         Journey Progress
       </h3>
 
-      {isLoading ? (
-        <div
-          style={{
-            color: "#D7E3FF",
-            fontFamily: "var(--font-jura)",
-            fontSize: "0.95rem",
-            marginTop: "auto",
-            marginBottom: "auto",
-          }}
-        >
-          Loading progress...
-        </div>
-      ) : (
+      <div
+        style={{
+          width: "100%",
+          flex: 1,
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          overflow: "hidden",
+        }}
+      >
         <img
           src={`/home/journey-progress/${percentage}.svg`}
           alt="Progress"
           style={{
-            position: "relative",
-            height: "70%"
+            maxWidth: isLarge?"100%":"90%",
+            maxHeight: isLarge?"100%":"90%",
+            width: "auto",
+            height: "auto",
+            objectFit: "contain",
+            display: "block",
           }}
         />
-      )}
-
+      </div>
     </div>
   );
 };

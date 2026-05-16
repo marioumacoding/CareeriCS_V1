@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import Script from "next/script";
 import { Jura, Nova_Square } from "next/font/google";
 import { Providers } from "@/providers";
-import "../styles/globals.scss"; 
-import "../styles/variables.css"; 
+import "../styles/globals.scss";
+import "../styles/variables.css";
+import { AppReadyProvider } from "@/components/AppReadyProvider";
 
 const jura = Jura({
   subsets: ["latin"],
@@ -36,9 +37,11 @@ export default function RootLayout({
         style={{ backgroundColor: "var(--bg-color)" }}
       >
         <Script src="https://accounts.google.com/gsi/client" strategy="afterInteractive" />
-        <Providers>
-          {children}
-        </Providers>
+        <AppReadyProvider>
+          <Providers>
+            {children}
+          </Providers>
+        </AppReadyProvider>
       </body>
     </html>
   );

@@ -29,7 +29,8 @@ const baseStyle: CSSProperties = {
   transition: "all 0.2s ease-in-out",
   fontFamily: "var(--font-nova-square), sans-serif",
   fontWeight: 500,
-  flex: 1,
+  flexGrow: 0,
+  flexShrink: 0,
 };
 
 const variantStyles: Record<ButtonVariant, { default: CSSProperties; hover: CSSProperties }> = {
@@ -62,19 +63,19 @@ const variantStyles: Record<ButtonVariant, { default: CSSProperties; hover: CSSP
     hover: { backgroundColor: "var(--primary-green)" }
   },
   "popup": {
-    default: { backgroundColor: "var(--medium-blue)", color:"white" },
+    default: { backgroundColor: "var(--medium-blue)", color: "white" },
     hover: { backgroundColor: "white", color: "black" }
   },
   "popup-inverted": {
     default: { backgroundColor: "white", color: "black" },
-    hover: { backgroundColor: "var(--medium-blue)", color:"white" }
+    hover: { backgroundColor: "var(--medium-blue)", color: "white" }
   },
 };
 
 const sizeStyles: Record<ButtonSize, CSSProperties> = {
-  sm: { fontSize: "1.6vh", padding: "2vh" },
-  md: { fontSize: "2.2vh", padding: "3vh", height: "1vh" },
-  lg: { fontSize: "2.8vh", padding: "1.5vh 3vh", height: "1vh" },
+  sm: { fontSize: "var(--text-sm)", paddingBlock: "var(--button-padding-y)", paddingInline: "var(--space-md)" },
+  md: { fontSize: "var(--text-base)", paddingBlock: "var(--button-padding-y)", paddingInline: "var(--space-xl)" },
+  lg: { fontSize: "var(--text-lg)", paddingBlock: "var(--button-padding-y)", paddingInline: "var(--space-2xl)" },
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
@@ -90,7 +91,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       ...(variant === "text" && {
         display: "inline",
         padding: 0,
-        height: "auto",
+        height: "fit-content",
         verticalAlign: "baseline",
         fontSize: "inherit",
       }),
@@ -101,34 +102,42 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
 
     if (variant === "text" && textContent) {
       return (
-        <p
+        <div
           style={{
-            flex: 0,
-            alignItems: "center",
-            fontSize: "2vh",
-            color: "white",
-            textAlign: "left",
-            fontFamily: "var(--font-nova-square)",
-            padding: "0vh",
-            marginTop: "1vh",
-            ...style
+            display: "flex",
+            whiteSpace: "nowrap",
+            gap: "0",
           }}
         >
-          {textContent.before}{"\u00A0"}
-          <button
-            ref={ref}
+
+          <p
             style={{
-              ...combinedStyle,
-              fontWeight: "normal",
-              padding: 0,
+              flex: 0,
+              alignItems: "center",
+              fontSize: "var(--text-sm)",
+              color: "white",
+              textAlign: "left",
+              fontFamily: "var(--font-nova-square)",
+              marginTop: "1vh",
+              ...style
             }}
-            onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => setIsHovered(false)}
-            {...props}
           >
-            {textContent.buttonText}
-          </button>
-        </p>
+            {textContent.before}{"\u00A0"}
+            <button
+              ref={ref}
+              style={{
+                ...combinedStyle,
+                fontWeight: "normal",
+                padding: 0,
+              }}
+              onMouseEnter={() => setIsHovered(true)}
+              onMouseLeave={() => setIsHovered(false)}
+              {...props}
+            >
+              {textContent.buttonText}
+            </button>
+          </p>
+        </div>
       );
     }
 

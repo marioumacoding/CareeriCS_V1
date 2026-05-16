@@ -21,9 +21,14 @@ import {
   normalizeRoadmapListPayload,
   syncBackendRoadmapBookmarksToUnifiedList,
 } from "@/lib/roadmap-bookmark-sync";
+import {
+  registerTrackRoadmapLink,
+  resolveTrackLinkForRoadmap,
+} from "@/lib/track-roadmap-links";
 import { useAuth } from "@/providers/auth-provider";
-import { roadmapService } from "@/services";
+import { careerService, roadmapService } from "@/services";
 import type {
+  APICareerTrack,
   ApiResponse,
   RoadmapListItem,
   RoadmapRead,
@@ -46,6 +51,7 @@ export default function RoadmapPage() {
   const userId = user?.id ?? null;
 
   const [roadmaps, setRoadmaps] = useState<RoadmapListItem[]>([]);
+  const [careerTracks, setCareerTracks] = useState<APICareerTrack[]>([]);
   const [selectedRoadmapPreferenceId, setSelectedRoadmapPreferenceId] = useState<string>(
     DEFAULT_PATH_OPTION,
   );
@@ -117,9 +123,13 @@ export default function RoadmapPage() {
   }, [roadmaps]);
 
   const bookmarkedRoadmapIds = useMemo(() => {
-    return unifiedBookmarks
-      .filter((bookmark) => bookmark.kind === "roadmap")
-      .map((bookmark) => bookmark.entity_id);
+    return unifiedBookmarks.flatMap((bookmark) => {
+      if (bookmark.kind === "roadmap") {
+        return [bookmark.entity_id];
+      }
+
+      return [bookmark.metadata?.roadmap_id].filter((value): value is string => Boolean(value));
+    });
   }, [unifiedBookmarks]);
 
   const selectedRoadmapId = useMemo(() => {
@@ -182,17 +192,22 @@ export default function RoadmapPage() {
     let alive = true;
 
     const loadRoadmaps = async () => {
-      const response = await roadmapService.listRoadmaps();
+      const [roadmapsResponse, tracksResponse] = await Promise.all([
+        roadmapService.listRoadmaps(),
+        careerService.listTracks(),
+      ]);
       if (!alive) {
         return;
       }
 
-      if (!response.success) {
+      if (!roadmapsResponse.success) {
         setRoadmaps([]);
+        setCareerTracks(tracksResponse.success && tracksResponse.data ? tracksResponse.data : []);
         return;
       }
 
-      setRoadmaps(normalizeRoadmapListPayload(response.data));
+      setRoadmaps(normalizeRoadmapListPayload(roadmapsResponse.data));
+      setCareerTracks(tracksResponse.success && tracksResponse.data ? tracksResponse.data : []);
     };
 
     void loadRoadmaps();
@@ -338,22 +353,23 @@ export default function RoadmapPage() {
     }
 
     const roadmapId = selectedRoadmap.id;
-    const currentlyBookmarked = unifiedBookmarks.some((bookmark) => {
-      return bookmark.kind === "roadmap" && bookmark.entity_id === roadmapId;
+    const existingBookmark = unifiedBookmarks.find((bookmark) => {
+      if (bookmark.kind === "roadmap") {
+        return bookmark.entity_id === roadmapId;
+      }
+
+      return bookmark.metadata?.roadmap_id === roadmapId;
     });
+    const currentlyBookmarked = Boolean(existingBookmark);
 
     setBookmarkError(null);
 
     if (currentlyBookmarked) {
-      const bookmarkToRemove = unifiedBookmarks.find((bookmark) => {
-        return bookmark.kind === "roadmap" && bookmark.entity_id === roadmapId;
-      });
-
-      if (!bookmarkToRemove) {
+      if (!existingBookmark) {
         return;
       }
 
-      const removal = await removeBookmarkEntryFromUnifiedList(bookmarkToRemove, userId);
+      const removal = await removeBookmarkEntryFromUnifiedList(existingBookmark, userId);
       if (!removal.success) {
         setBookmarkError(removal.message || "Unable to update bookmark right now. Please try again.");
         return;
@@ -365,10 +381,32 @@ export default function RoadmapPage() {
       return;
     }
 
+    const roadmapTitle =
+      roadmapTitleById.get(roadmapId) ||
+      selectedRoadmapDetails?.title ||
+      selectedRoadmap.title ||
+      "Roadmap";
+    const resolvedTrackLink = resolveTrackLinkForRoadmap({
+      roadmapId,
+      roadmapTitle,
+      tracks: careerTracks,
+    });
+
+    if (resolvedTrackLink?.trackId) {
+      registerTrackRoadmapLink({
+        trackId: resolvedTrackLink.trackId,
+        roadmapId,
+        trackName: resolvedTrackLink.trackName || null,
+        roadmapTitle,
+      });
+    }
+
     const candidate = createRoadmapUnifiedBookmark({
       roadmapId,
-      title: roadmapTitleById.get(roadmapId) || selectedRoadmap.title || "Roadmap",
+      title: roadmapTitle,
       description: roadmaps.find((roadmap) => roadmap.id === roadmapId)?.description ?? null,
+      trackId: resolvedTrackLink?.trackId || null,
+      trackName: resolvedTrackLink?.trackName || null,
     });
 
     if (unifiedBookmarks.length >= MAX_UNIFIED_BOOKMARKS) {
@@ -403,7 +441,16 @@ export default function RoadmapPage() {
       setBookmarkError(null);
       setIsReplacingBookmark(true);
 
-      let addedRoadmap = false;
+      const removal = await removeBookmarkEntryFromUnifiedList(bookmarkToReplace, userId);
+      if (!removal.success) {
+        setBookmarkError(removal.message || "Unable to replace bookmark right now. Please try again.");
+        setIsReplacingBookmark(false);
+        return;
+      }
+
+      if (removal.removedRoadmapId) {
+        removeLocalBackendRoadmap(removal.removedRoadmapId);
+      }
 
       const alreadyInBackend = backendRoadmapBookmarks.some(
         (bookmark) => bookmark.roadmap_id === pendingRoadmapBookmark.entity_id,
@@ -416,38 +463,26 @@ export default function RoadmapPage() {
         );
 
         if (!addResponse.success || !addResponse.data?.bookmarked) {
+          if (bookmarkToReplace.kind === "roadmap") {
+            const rollbackResponse = await roadmapService.toggleRoadmapBookmark(
+              bookmarkToReplace.entity_id,
+              userId,
+            );
+
+            if (rollbackResponse.success && rollbackResponse.data?.bookmarked) {
+              addLocalBackendRoadmap(bookmarkToReplace.entity_id, bookmarkToReplace.saved_at);
+            }
+          }
+
+          replaceUnifiedBookmark(pendingRoadmapBookmark, bookmarkToReplace, userId);
           setBookmarkError(addResponse.message || "Unable to save the new bookmark right now.");
           setIsReplacingBookmark(false);
           return;
         }
-
-        addedRoadmap = true;
       }
 
       if (userId) {
         addLocalBackendRoadmap(pendingRoadmapBookmark.entity_id, pendingRoadmapBookmark.saved_at);
-      }
-
-      const removal = await removeBookmarkEntryFromUnifiedList(bookmarkToReplace, userId);
-      if (!removal.success) {
-        if (addedRoadmap && userId) {
-          const rollbackResponse = await roadmapService.toggleRoadmapBookmark(
-            pendingRoadmapBookmark.entity_id,
-            userId,
-          );
-
-          if (rollbackResponse.success && rollbackResponse.data && !rollbackResponse.data.bookmarked) {
-            removeLocalBackendRoadmap(pendingRoadmapBookmark.entity_id);
-          }
-        }
-
-        setBookmarkError(removal.message || "Unable to replace bookmark right now. Please try again.");
-        setIsReplacingBookmark(false);
-        return;
-      }
-
-      if (removal.removedRoadmapId) {
-        removeLocalBackendRoadmap(removal.removedRoadmapId);
       }
 
       replaceUnifiedBookmark(bookmarkToReplace, pendingRoadmapBookmark, userId);

@@ -1,7 +1,7 @@
 "use client";
+
 import { useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { supabase } from "@/lib/supabase";
 import {
   consumePendingPostAuthPath,
   DEFAULT_POST_AUTH_PATH,
@@ -77,13 +77,18 @@ function readOAuthHashResult(): OAuthHashResult | null {
   };
 }
 
+function closePopupWindow() {
+  window.setTimeout(() => {
+    window.close();
+  }, 50);
+}
+
 /**
- * OAuth callback page — Supabase redirects here after Google sign-in.
+ * OAuth callback page â€” Supabase redirects here after Google sign-in.
  *
- * The URL contains a hash fragment with the access_token & refresh_token.
- * Supabase JS picks this up automatically via `detectSessionInUrl: true`
- * (configured in our client). We just wait for the session to be available,
- * then redirect the user to home.
+ * The regular sign-in flow stores the Supabase session and redirects back to the app.
+ * The Drive popup flow only extracts the Google provider token, reports back to the opener,
+ * and avoids touching the main app session.
  */
 export default function AuthCallback() {
   const router = useRouter();
@@ -92,6 +97,9 @@ export default function AuthCallback() {
   useEffect(() => {
     let redirected = false;
     let profileSynced = false;
+    let isDisposed = false;
+    let subscription: { unsubscribe: () => void } | null = null;
+
     const isDriveAuthCallback =
       isGoogleDrivePopupAuth(searchParams.get("popup")) ||
       isGoogleDriveAuthCallback(searchParams.get(GOOGLE_DRIVE_AUTH_CALLBACK_QUERY_PARAM));
@@ -102,7 +110,7 @@ export default function AuthCallback() {
       pendingTargetPath ??
       DEFAULT_POST_AUTH_PATH;
 
-    const postDriveAuthResult = (payload: { success: boolean; error?: string }) => {
+    const postDriveAuthResult = (payload: { success: boolean; error?: string; accessToken?: string }) => {
       if (!isDriveAuthCallback) {
         return false;
       }
@@ -111,6 +119,7 @@ export default function AuthCallback() {
         type: GOOGLE_DRIVE_AUTH_COMPLETED_MESSAGE,
         success: payload.success,
         error: payload.error,
+        accessToken: payload.accessToken,
         timestamp: Date.now(),
       };
 
@@ -135,6 +144,7 @@ export default function AuthCallback() {
 
     const redirectToLoginWithError = (message: string) => {
       if (postDriveAuthResult({ success: false, error: message })) {
+        closePopupWindow();
         return;
       }
 
@@ -171,6 +181,26 @@ export default function AuthCallback() {
       window.location.replace(targetPath);
     };
 
+    if (isDriveAuthCallback) {
+      if (hashResult?.providerToken) {
+        postDriveAuthResult({
+          success: true,
+          accessToken: hashResult.providerToken,
+        });
+        return;
+      }
+
+      const timeoutId = window.setTimeout(() => {
+        if (!redirected) {
+          redirectToLoginWithError("Google Drive permission was not granted. Please try again.");
+        }
+      }, 10_000);
+
+      return () => {
+        window.clearTimeout(timeoutId);
+      };
+    }
+
     const syncProfileAndRedirect = (accessToken: string | null | undefined) => {
       if (profileSynced) return;
       profileSynced = true;
@@ -183,12 +213,19 @@ export default function AuthCallback() {
       redirectIfNeeded();
     };
 
+    const loadSupabase = async () => {
+      const module = await import("@/lib/supabase");
+      return module.supabase;
+    };
+
     if (hashResult?.accessToken && hashResult?.refreshToken) {
-      void supabase.auth
-        .setSession({
-          access_token: hashResult.accessToken,
-          refresh_token: hashResult.refreshToken,
-        })
+      void loadSupabase()
+        .then((supabase) =>
+          supabase.auth.setSession({
+            access_token: hashResult.accessToken!,
+            refresh_token: hashResult.refreshToken!,
+          }),
+        )
         .then(({ data: { session } }) => {
           if (session?.user?.id && hashResult.providerToken) {
             persistGoogleProviderToken({
@@ -212,58 +249,59 @@ export default function AuthCallback() {
       return;
     }
 
-    const timeoutId = setTimeout(() => {
+    const timeoutId = window.setTimeout(() => {
       if (!redirected) {
-        if (postDriveAuthResult({
-          success: false,
-          error: "Google sign-in timed out. Please try again.",
-        })) {
+        const timeoutMessage = "Google sign-in timed out. Please try again.";
+        redirectToLoginWithError(timeoutMessage);
+      }
+    }, 10_000);
+
+    void loadSupabase()
+      .then((supabase) => {
+        if (isDisposed) {
           return;
         }
 
-        const loginUrl = new URLSearchParams({
-          error: "Google sign-in timed out",
-        });
-        if (targetPath !== DEFAULT_POST_AUTH_PATH) {
-          loginUrl.set("callbackUrl", targetPath);
-        }
-        router.replace(`/auth/login?${loginUrl.toString()}`);
-      }
-    }, 10000);
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        if (session.user?.id && session.provider_token) {
-          persistGoogleProviderToken({
-            accessToken: session.provider_token,
-            refreshToken: session.provider_refresh_token ?? null,
-            userId: session.user.id,
-          });
-        }
-        clearTimeout(timeoutId);
-        void syncProfileAndRedirect(session.access_token);
-      }
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        if (session) {
-          if (session.user?.id && session.provider_token) {
-            persistGoogleProviderToken({
-              accessToken: session.provider_token,
-              refreshToken: session.provider_refresh_token ?? null,
-              userId: session.user.id,
-            });
+        supabase.auth.getSession().then(({ data: { session } }) => {
+          if (session) {
+            if (session.user?.id && session.provider_token) {
+              persistGoogleProviderToken({
+                accessToken: session.provider_token,
+                refreshToken: session.provider_refresh_token ?? null,
+                userId: session.user.id,
+              });
+            }
+            window.clearTimeout(timeoutId);
+            void syncProfileAndRedirect(session.access_token);
           }
-          clearTimeout(timeoutId);
-          void syncProfileAndRedirect(session.access_token);
-        }
-      },
-    );
+        });
+
+        const authSubscription = supabase.auth.onAuthStateChange(
+          (_event, session) => {
+            if (session) {
+              if (session.user?.id && session.provider_token) {
+                persistGoogleProviderToken({
+                  accessToken: session.provider_token,
+                  refreshToken: session.provider_refresh_token ?? null,
+                  userId: session.user.id,
+                });
+              }
+              window.clearTimeout(timeoutId);
+              void syncProfileAndRedirect(session.access_token);
+            }
+          },
+        );
+
+        subscription = authSubscription.data.subscription;
+      })
+      .catch(() => {
+        // The timeout fallback will surface the auth failure.
+      });
 
     return () => {
-      clearTimeout(timeoutId);
-      subscription.unsubscribe();
+      isDisposed = true;
+      window.clearTimeout(timeoutId);
+      subscription?.unsubscribe();
     };
   }, [router, searchParams]);
 

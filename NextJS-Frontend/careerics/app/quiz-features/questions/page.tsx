@@ -17,6 +17,7 @@ import {
   normalizeRoadmapListPayload,
   syncBackendRoadmapBookmarksToUnifiedList,
 } from "@/lib/roadmap-bookmark-sync";
+import { registerTrackRoadmapLinksFromRecommendations } from "@/lib/track-roadmap-links";
 import { removeBookmarkEntryFromUnifiedList } from "@/lib/unified-bookmark-actions";
 import {
   addOrMoveUnifiedBookmark,
@@ -195,6 +196,7 @@ export default function CareerQuestionsPage() {
           return;
         }
 
+        registerTrackRoadmapLinksFromRecommendations(resultsResponse.data.track_scores);
         setResults(resultsResponse.data);
         setQuestionGroups([]);
         setRatings({});
@@ -290,6 +292,29 @@ export default function CareerQuestionsPage() {
   }, [applyUnifiedBookmarks, isAuthLoading, isFinished, userId]);
 
   useEffect(() => {
+    if (isAuthLoading || !isFinished || !userId || !results?.track_scores?.length) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadBookmarksForResults = async () => {
+      const nextBookmarks = await getLatestUnifiedBookmarks();
+      if (cancelled) {
+        return;
+      }
+
+      applyUnifiedBookmarks(nextBookmarks);
+    };
+
+    void loadBookmarksForResults();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [applyUnifiedBookmarks, getLatestUnifiedBookmarks, isAuthLoading, isFinished, results, userId]);
+
+  useEffect(() => {
     if (!isFinished) {
       return;
     }
@@ -355,6 +380,7 @@ export default function CareerQuestionsPage() {
 
     const evaluateResponse = await careerService.evaluateCareerQuiz(sessionId);
     if (evaluateResponse.success && evaluateResponse.data) {
+      registerTrackRoadmapLinksFromRecommendations(evaluateResponse.data.track_scores);
       setResults(evaluateResponse.data);
       setIsFinished(true);
       setIsSubmitting(false);
@@ -364,6 +390,7 @@ export default function CareerQuestionsPage() {
     // Fallback if evaluation already exists for this session.
     const cachedResponse = await careerService.getCareerResults(sessionId);
     if (cachedResponse.success && cachedResponse.data) {
+      registerTrackRoadmapLinksFromRecommendations(cachedResponse.data.track_scores);
       setResults(cachedResponse.data);
       setIsFinished(true);
       setIsSubmitting(false);

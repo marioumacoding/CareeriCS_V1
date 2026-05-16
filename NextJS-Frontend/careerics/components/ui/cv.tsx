@@ -3,6 +3,12 @@
 import React, { useEffect, useRef, useState } from "react";
 
 import { useGoogleDriveUpload } from "@/hooks";
+import {
+  closeGoogleDriveWindow,
+  navigateGoogleDriveWindow,
+  openGoogleDriveLoadingWindow,
+  renderGoogleDriveLoadingWindow,
+} from "@/lib/google-drive-popup";
 import { useAuth } from "@/providers/auth-provider";
 import { cvService } from "@/services";
 import { Button } from "@/components/ui/button";
@@ -34,6 +40,7 @@ export default function CV() {
     isUploading: isSavingToDrive,
     uploadError: driveUploadError,
     uploadedFile: uploadedDriveFile,
+    ensureGoogleDriveAccess,
     resetUploadState,
     uploadToGoogleDrive,
   } = useGoogleDriveUpload();
@@ -145,24 +152,28 @@ export default function CV() {
       return;
     }
 
-    const driveTab = window.open("", "_blank");
+    const driveTab = openGoogleDriveLoadingWindow();
+    const hasDriveAccess = await ensureGoogleDriveAccess({
+      popupWindow: driveTab,
+    });
+    if (!hasDriveAccess) {
+      closeGoogleDriveWindow(driveTab);
+      return;
+    }
+
+    renderGoogleDriveLoadingWindow(driveTab);
     const uploaded = await uploadToGoogleDrive(downloadBlob, {
       fileName: downloadName,
       mimeType: downloadBlob?.type || "application/pdf",
-      popupWindow: driveTab,
     });
 
     const nextDriveLink = uploaded?.webViewLink ?? uploaded?.webContentLink ?? null;
     if (nextDriveLink) {
-      if (driveTab && !driveTab.closed) {
-        driveTab.location.href = nextDriveLink;
-      } else {
-        window.open(nextDriveLink, "_blank", "noopener,noreferrer");
-      }
+      navigateGoogleDriveWindow(driveTab, nextDriveLink);
       return;
     }
 
-    driveTab?.close();
+    closeGoogleDriveWindow(driveTab);
   };
 
   return (
